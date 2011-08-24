@@ -5,7 +5,6 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.signals.SignalEvent;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;

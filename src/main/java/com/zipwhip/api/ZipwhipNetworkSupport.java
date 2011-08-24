@@ -13,17 +13,15 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 7/5/11
- * Time: 8:26 PM
+ * Created by IntelliJ IDEA. User: Michael Date: 7/5/11 Time: 8:26 PM
  * <p/>
  * A base class for future implementation to extend.
  * <p/>
  * It takes all the non-API specific stuff out of ZipwhipClient implementations.
  * <p/>
- * If some class wants to communicate with Zipwhip, then it needs to extend this class. This class gives functionality
- * that can be used to parse Zipwhip API. This naming convention was copied from Spring (JmsSupport) base class.
+ * If some class wants to communicate with Zipwhip, then it needs to extend this
+ * class. This class gives functionality that can be used to parse Zipwhip API.
+ * This naming convention was copied from Spring (JmsSupport) base class.
  */
 public abstract class ZipwhipNetworkSupport extends DestroyableBase {
 
@@ -54,9 +52,10 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
 
     protected static final Logger logger = Logger.getLogger(ZipwhipNetworkSupport.class);
 
-    protected SignalProvider signalProvider;
     protected Connection connection;
+    protected SignalProvider signalProvider;
     protected ResponseParser responseParser;
+
     protected ParallelBulkExecutor executor = new ParallelBulkExecutor(ZipwhipNetworkSupport.class);
 
     public ZipwhipNetworkSupport() {
@@ -130,11 +129,11 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
             return;
         }
 
-//        if (getSignalProvider().getSignalReceivedCallback() == null){
-//            return;
-//        }
+        //        if (getSignalProvider().getSignalReceivedCallback() == null){
+        //            return;
+        //        }
 
-//        getSignalProvider().getSignalReceivedCallback().onSignalReceived(this, serverResponse.sessions);
+        //        getSignalProvider().getSignalReceivedCallback().onSignalReceived(this, serverResponse.sessions);
         // todo FIX THIS?
     }
 
@@ -205,8 +204,8 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         return task;
     }
 
-//    @Override
-//    public void destroy() {
-//        super.destroy();
-//    }
+    //    @Override
+    //    public void destroy() {
+    //        super.destroy();
+    //    }
 }

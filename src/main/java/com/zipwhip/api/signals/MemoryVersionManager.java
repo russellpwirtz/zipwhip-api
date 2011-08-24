@@ -4,10 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by IntelliJ IDEA.
- * User: jed
- * Date: 6/27/11
- * Time: 6:13 PM
+ * Created by IntelliJ IDEA. User: jed Date: 6/27/11 Time: 6:13 PM
  * <p/>
  * Simple in-memory signal version manager for use in testing.
  */

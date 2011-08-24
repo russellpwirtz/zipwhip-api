@@ -18,14 +18,13 @@ import java.util.concurrent.*;
 import static org.jboss.netty.buffer.ChannelBuffers.copiedBuffer;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 8/2/11
- * Time: 11:49 AM
+ * Created by IntelliJ IDEA. User: Michael Date: 8/2/11 Time: 11:49 AM
  * <p/>
  * Connects to the SignalServer via Netty
  */
 public class NettySignalConnection extends DestroyableBase implements SignalConnection, ChannelPipelineFactory {
+    
+    public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private ExecutorService executor;
 
@@ -37,9 +36,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private Channel channel;
     private ChannelFactory channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
-
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
+
         this.channel = channelFactory.newChannel(getPipeline());
 
         final ChannelFuture channelFuture = channel.connect(remoteAddress);
@@ -49,7 +48,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             @Override
             public Boolean call() throws Exception {
 
-                channelFuture.await(45, TimeUnit.SECONDS);
+                channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                 boolean socketConnected = !(channelFuture.isCancelled() || !channelFuture.isSuccess()) && channelFuture.getChannel().isConnected();
 
@@ -66,7 +65,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         return task;
     }
-
 
     @Override
     public synchronized Future<Void> disconnect() {
@@ -99,7 +97,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         channel.write(command);
     }
 
-
     @Override
     public boolean isConnected() {
         return channel != null && channel.isConnected();
@@ -117,17 +114,13 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     @Override
     public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-                new DelimiterBasedFrameDecoder(65535, true, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())),
-                new StringToChannelBuffer(),
-                new StringDecoder(),
-                new MessageDecoder(),
-                new SignalCommandEncoder(),
-                new SimpleChannelHandler() {
+
+        return Channels.pipeline(new DelimiterBasedFrameDecoder(65535, true, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())), new StringToChannelBuffer(), new StringDecoder(), new MessageDecoder(),
+                new SignalCommandEncoder(), new SimpleChannelHandler() {
 
                     /**
                      * the entry point for signal traffic
-                     *
+                     * 
                      * @param ctx
                      * @param e
                      * @throws Exception
@@ -138,28 +131,19 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         Object msg = e.getMessage();
 
                         if (!(msg instanceof Command)) {
-//                            if (!isConnected()) {
-//                                // TODO: what was a smoking
-////                                connectLatch.countDown();
-////                                connectLatch = null;
-//
-////                                disconnect();
-//                            }
-                            return; // not parsable?
+                            return;
                         }
 
                         Command command = (Command) msg;
 
                         receiveEvent.notifyObservers(this, command);
-
                     }
-                }
-        );
+                });
     }
 
     @Override
     protected void onDestroy() {
-        if (this.isConnected()){
+        if (this.isConnected()) {
             this.disconnect();
         }
     }

@@ -10,17 +10,14 @@ import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 7/5/11
- * Time: 6:24 PM
+ * Created by IntelliJ IDEA. User: Michael Date: 7/5/11 Time: 6:24 PM
  * <p/>
  * This factory produces ZipwhipClient's that are authenticated
  */
 public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
-    Factory<Connection> connectionFactory;
-    Factory<SignalProvider> signalProviderFactory;
+    private Factory<Connection> connectionFactory;
+    private Factory<SignalProvider> signalProviderFactory;
 
     public ZipwhipClientFactory(HttpConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
@@ -47,16 +44,17 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
         connectionFactory.setSessionKey(sessionKey);
 
-         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
+        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
 
-         zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
+        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
 
-         return zipwhipClientFactory.create();
+        return zipwhipClientFactory.create();
     }
 
     /**
-     * Create a ZipwhipClient that is ready to go. You just have to call "Login" on it.
-     *
+     * Create a ZipwhipClient that is ready to go. You just have to call "Login"
+     * on it.
+     * 
      * @return
      * @throws Exception
      */
@@ -94,8 +92,9 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
         if (client.getConnection() != null && client.getSignalProvider() != null) {
             String sessionKey = client.getConnection().getSessionKey();
             if (!StringUtil.isNullOrEmpty(sessionKey)) {
-//                client.getSignalProvider().addSessionKey(sessionKey);
+                //                client.getSignalProvider().addSessionKey(sessionKey);
             }
         }
     }
+    
 }

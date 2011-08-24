@@ -6,6 +6,7 @@ import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.signals.SignalEvent;
+import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lib.Address;
@@ -15,15 +16,13 @@ import org.apache.log4j.Logger;
 import java.util.*;
 import java.util.concurrent.*;
 
-//import com.zipwhip.performance.QOSAgent;
-//import com.zipwhip.performance.QOSMonitor;
-
 /**
- * * Date: Jul 17, 2009
- * Time: 7:25:37 PM
+ * Date: Jul 17, 2009 Time: 7:25:37 PM
  * <p/>
- * This provides an Object Oriented way to access the Zipwhip API. It uses a Connection internally for low-level Zipwhip
- * access. This class does not manage your authentication, the Connection abstracts this away from the"Zipwhip" class.
+ * This provides an Object Oriented way to access the Zipwhip API. It uses a
+ * Connection internally for low-level Zipwhip access. This class does not
+ * manage your authentication, the Connection abstracts this away from
+ * the "Zipwhip" class.
  */
 public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements ZipwhipClient {
 
@@ -33,64 +32,73 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         super();
     }
 
-    public DefaultZipwhipClient(final Connection connection) {
-        super(connection);
+    // TODO this constructor is always going to crash since signalProvider is null
+//    public DefaultZipwhipClient(final Connection connection) {
+//        super(connection);
+//
+//        this.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
+//            @Override
+//            public void notify(Object sender, String clientId) {
+//                if (StringUtil.isNullOrEmpty(clientId)) {
+//                    return; // it must not have connected successfully.
+//                }
+//
+//                // lets do a signals connect!
+//                Map<String, Object> params = new HashMap<String, Object>();
+//
+//                params.put("clientId", clientId);
+//                params.put("session", connection.getSessionKey());
+//
+//                try {
+//                    executeSync("signals/connect", params);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//    }
 
-        this.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
-            @Override
-            public void notify(Object sender, String clientId) {
-                if (StringUtil.isNullOrEmpty(clientId)){
-                    return; // it must not have connected successfully.
-                }
-
-                // lets do a signals connect!
-                Map<String, Object> params = new HashMap<String, Object>();
-
-                params.put("clientId", clientId);
-                params.put("session", connection.getSessionKey());
-
-                try {
-                    executeSync("signals/connect", params);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    public DefaultZipwhipClient(Connection connection, SignalProvider signalProvider) {
+        super(connection, signalProvider);
     }
-
+    
     @Override
     public Future<Boolean> connect() throws Exception {
+
         if (connection == null) {
-            throw new NullPointerException("The connection is null");
+            throw new NullPointerException("The connection can not be null");
         }
-        if (getSignalProvider() == null) {
+        
+        if (signalProvider == null) {
             throw new NullPointerException("The signalProvider cannot be null");
         }
 
         // we need to determine if we're authenticated enough
-        if (!connection.isConnected()){
+        if (!connection.isConnected()) {
             throw new Exception("The connection cannot operate at this time");
         }
 
-        if (!connection.isAuthenticated()){
+        if (!connection.isAuthenticated()) {
             throw new Exception("The connection isn't authenticated, we can't move forward");
         }
 
-        if (!getSignalProvider().isConnected()) {
+        if (!signalProvider.isConnected()) {
             // this will NOT block until you're connected
             // it's asynchronous
-            return getSignalProvider().connect();
+            return signalProvider.connect();
         }
 
-        // todo: figure this method out
-//        return wrapVoid(executeAsync(USER_ENROLL, params));
+        // TODO: figure this method out
+        //        return wrapVoid(executeAsync(USER_ENROLL, params));
         return new FakeFuture<Boolean>(true);
     }
 
+    @Override
     public List<MessageToken> sendMessage(Address address, String body) throws Exception {
         return sendMessage(Arrays.asList(address.toString()), body, null, null);
     }
 
+    @Override
     public List<MessageToken> sendMessage(Address address, String body, String fromName) throws Exception {
         return sendMessage(Arrays.asList(address.toString()), body, fromName, null);
     }
@@ -100,18 +108,22 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return sendMessage(Arrays.asList(address), body);
     }
 
+    @Override
     public List<MessageToken> sendMessage(Message message) throws Exception {
         return sendMessage(Arrays.asList(message.getAddress()), message.getBody(), message.getFromName(), message.getAdvertisement());
     }
 
+    @Override
     public List<MessageToken> sendMessage(Collection<String> address, String body) throws Exception {
         return sendMessage(address, body, null, null);
     }
 
+    @Override
     public List<MessageToken> sendMessage(Collection<String> address, String body, String fromName) throws Exception {
         return sendMessage(address, body, fromName, null);
     }
 
+    @Override
     public List<MessageToken> sendMessage(Collection<String> addresses, String body, String fromName, String advertisement) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -132,6 +144,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return sendMessage(Arrays.asList(address), body, fromName, advertisement);
     }
 
+    @Override
     public Message getMessage(String uuid) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -140,6 +153,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
+    @Override
     public MessageStatus getMessageStatus(String uuid) throws Exception {
         Message message = getMessage(uuid);
         if (message == null) {
@@ -149,6 +163,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return new MessageStatus(message);
     }
 
+    @Override
     public Contact getContact(long id) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -157,6 +172,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
+    @Override
     public Contact getContact(String mobileNumber) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -165,6 +181,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
+    @Override
     public void sendSignal(String scope, String channel, String event, String payload) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -181,10 +198,12 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         executeSync(SIGNAL_SEND, params);
     }
 
+    @Override
     public Contact addMember(String groupAddress, String contactAddress) throws Exception {
         return addMember(groupAddress, contactAddress, null, null, null, null);
     }
 
+    @Override
     public Contact addMember(String groupAddress, String contactAddress, String firstName, String lastName, String phoneKey, String notes) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -210,15 +229,18 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     public void addSignalsConnectionObserver(Observer<Boolean> observer) {
         getSignalProvider().onConnectionChanged(observer);
     }
-
+    
+    @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey) throws Exception {
         saveContact(address, firstName, lastName, phoneKey, null);
     }
 
+    @Override
     public Contact saveGroup() throws Exception {
         return saveGroup(null, null);
     }
 
+    @Override
     public Contact saveUser(Contact contact) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -236,6 +258,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     }
 
+    @Override
     public Contact saveGroup(String type, String advertisement) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -255,6 +278,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         return responseParser.parseContact(executeSync(GROUP_SAVE, params));
     }
 
+    @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
@@ -270,36 +294,36 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         executeSync(CONTACT_SAVE, params);
     }
 
-
-//    public void requestSockets(final String clientId) throws Exception {
+    //    public void requestSockets(final String clientId) throws Exception {
 
     //    }
-//
-//        });
-//            }
-//                return connection.requestSockets(requestBuilder.build());
-//            public String run() {
-//
-//        ServerResponse> serverResponse = execute(new StringRunnable() {
-//
-//        }
-//            params.put("index", String.valueOf(index));
-//        if (index != -1) {
-//
-//        }
-//            params.put("subscriptionId", subscriptionId);
-//        if (subscriptionId != null) {
-//
-//        params.put("clientId", clientId);
-//
-//        final RequestBuilder requestBuilder = new RequestBuilder();
-//    public void requestSockets(final String clientId, final String subscriptionId, final int index) throws Exception {
-//
-//    }
-//        requestSockets(clientId, null, -1);
+    //
+    //        });
+    //            }
+    //                return connection.requestSockets(requestBuilder.build());
+    //            public String run() {
+    //
+    //        ServerResponse> serverResponse = execute(new StringRunnable() {
+    //
+    //        }
+    //            params.put("index", String.valueOf(index));
+    //        if (index != -1) {
+    //
+    //        }
+    //            params.put("subscriptionId", subscriptionId);
+    //        if (subscriptionId != null) {
+    //
+    //        params.put("clientId", clientId);
+    //
+    //        final RequestBuilder requestBuilder = new RequestBuilder();
+    //    public void requestSockets(final String clientId, final String subscriptionId, final int index) throws Exception {
+    //
+    //    }
+    //        requestSockets(clientId, null, -1);
 
     @Override
     protected void onDestroy() {
 
     }
+    
 }

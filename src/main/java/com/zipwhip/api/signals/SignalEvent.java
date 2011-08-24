@@ -3,10 +3,7 @@ package com.zipwhip.api.signals;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 8/1/11
- * Time: 3:07 PM
+ * Created by IntelliJ IDEA. User: Michael Date: 8/1/11 Time: 3:07 PM
  */
 public class SignalEvent {
 

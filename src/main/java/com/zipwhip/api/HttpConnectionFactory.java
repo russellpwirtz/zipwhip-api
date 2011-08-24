@@ -5,13 +5,11 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.lib.SignTool;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
@@ -32,7 +30,7 @@ public class HttpConnectionFactory implements Factory<Connection> {
     private String apiKey;
     private String secret;
     private String sessionKey;
-    private boolean debug = true;
+    private boolean debug = false;
 
     /**
      * Creates a generic unauthenticated HttpConnection.

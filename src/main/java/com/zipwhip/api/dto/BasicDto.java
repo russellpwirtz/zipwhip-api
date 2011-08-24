@@ -3,18 +3,15 @@ package com.zipwhip.api.dto;
 import java.util.Date;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 7/6/11
- * Time: 2:10 PM
+ * Created by IntelliJ IDEA. User: Michael Date: 7/6/11 Time: 2:10 PM
  * <p/>
  * A base class for most of our DTO's (data transfer objects).
  */
 public class BasicDto {
 
-    Date dateCreated;
-    Date lastUpdated;
-    int version;
+    private Date dateCreated;
+    private Date lastUpdated;
+    private int version;
 
     public Date getDateCreated() {
         return dateCreated;
@@ -39,4 +36,5 @@ public class BasicDto {
     public void setVersion(int version) {
         this.version = version;
     }
+
 }

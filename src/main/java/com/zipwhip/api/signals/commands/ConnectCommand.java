@@ -4,10 +4,7 @@ import com.zipwhip.util.Serializer;
 import com.zipwhip.util.StringUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 8/2/11
- * Time: 11:28 AM
+ * Created by IntelliJ IDEA. User: Michael Date: 8/2/11 Time: 11:28 AM
  * <p/>
  * for the {action:CONNECT} command
  */
@@ -20,7 +17,7 @@ public class ConnectCommand extends Command implements Serializer<ConnectCommand
     }
 
     public boolean isSuccessful() {
-        return !StringUtil.isNullOrEmpty(clientId);
+        return StringUtil.exists(clientId);
     }
 
     public String getClientId() {
@@ -39,4 +36,5 @@ public class ConnectCommand extends Command implements Serializer<ConnectCommand
             return "{action:\"CONNECT\",clientId:\"" + item.getClientId() + "\"}";
         }
     }
+
 }

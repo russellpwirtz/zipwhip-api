@@ -5,10 +5,7 @@ import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 6/27/11
- * Time: 5:21 PM
+ * Created by IntelliJ IDEA. User: Michael Date: 6/27/11 Time: 5:21 PM
  */
 public class JsonSignalParser implements SignalParser<JSONObject> {
 
@@ -66,6 +63,5 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
 
         return signal;
     }
-
 
 }

@@ -3,9 +3,7 @@ package com.zipwhip.api.dto;
 import java.util.Date;
 
 /**
- * User: Michael
- * Date: Apr 26, 2010
- * Time: 6:35:06 PM
+ * User: Michael Date: Apr 26, 2010 Time: 6:35:06 PM
  * <p/>
  * A Contact is added by the user to a Device.
  * <p/>
@@ -234,4 +232,5 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nLast Updated: ").append(lastUpdated);
         return toStringBuilder.toString();
     }
+
 }

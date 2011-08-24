@@ -13,7 +13,6 @@ public class Signal implements Serializable {
      * Some signals can be parsed as DTO's. If that's possible it will be in the content.
      */
     Object content;
-
     String type;
     String scope;
     String uuid;

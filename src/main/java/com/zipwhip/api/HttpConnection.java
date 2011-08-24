@@ -11,13 +11,13 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * * Date: Jul 17, 2009
- * Time: 8:34:02 PM
+ * Date: Jul 17, 2009 Time: 8:34:02 PM
  * <p/>
  * Provides a persistent connection to a User on Zipwhip.
  * <p/>
- * You initialize this class with a sessionKey and then can execute raw requests on behalf of the user. If you want a more
- * Object oriented way to interact with Zipwhip, use Consumer instead of Connection.
+ * You initialize this class with a sessionKey and then can execute raw requests
+ * on behalf of the user. If you want a more Object oriented way to interact
+ * with Zipwhip, use Consumer instead of Connection.
  * <p/>
  * This class is thread safe.
  */
@@ -80,7 +80,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
     @Override
     public boolean isAuthenticated() {
-        return !StringUtil.isNullOrEmpty(sessionKey);
+        return StringUtil.exists(sessionKey);
     }
 
     @Override
@@ -93,9 +93,11 @@ public class HttpConnection extends DestroyableBase implements Connection {
     }
 
     /**
-     * Send a request across Zipwhip and get the result back. No parsing is done, this is a low level transport.
-     *
-     * @param method each method has a name. example: user/get
+     * Send a request across Zipwhip and get the result back. No parsing is
+     * done, this is a low level transport.
+     * 
+     * @param method
+     *        each method has a name. example: user/get
      * @param params
      * @return
      */
@@ -109,7 +111,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
         return send(method, rb.build());
     }
 
-    private Future<String> send(final String method, final String params){
+    private Future<String> send(final String method, final String params) {
         // put them together to form the full url
         FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
             @Override
@@ -117,7 +119,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
                 // this is the base url+api+method
                 final String url = getUrl(method);
 
-                // this is the querystring part
+                // this is the query string part
                 return DownloadURL.get(url + sign(method, params)); //TODO: replace with Ning. (netty http client)
             }
         });
@@ -150,7 +152,6 @@ public class HttpConnection extends DestroyableBase implements Connection {
             result += "&signature=" + signature;
         }
 
-
         url = host + apiVersion + method + result;
 
         if (this.debug) {
@@ -178,4 +179,5 @@ public class HttpConnection extends DestroyableBase implements Connection {
         // it returns a list of runnables that haven't executed, but we don't care...
         executor.shutdownNow();
     }
+
 }

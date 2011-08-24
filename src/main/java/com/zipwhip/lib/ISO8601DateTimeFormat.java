@@ -26,6 +26,11 @@ import java.util.TimeZone;
 public class ISO8601DateTimeFormat extends DateFormat {
 
     /**
+	 * 
+	 */
+	private static final long serialVersionUID = -526312109289758574L;
+
+	/**
      * Construct a new ISO8601DateTimeFormat using the default time zone.
      */
     public ISO8601DateTimeFormat() {
