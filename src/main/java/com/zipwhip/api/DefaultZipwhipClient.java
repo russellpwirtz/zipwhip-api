@@ -11,6 +11,8 @@ import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lib.Address;
+import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
@@ -177,6 +179,18 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         params.put("mobileNumber", mobileNumber);
 
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
+    }
+
+    @Override
+    public List<Presence> getPresence(PresenceCategory category) throws Exception {
+
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        if (!category.equals(PresenceCategory.NONE)) {
+            params.put("category", category.toString());
+        }
+
+       return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.commands;
 
-import org.json.JSONObject;
+import com.zipwhip.api.signals.SignalsUtil;
+import com.zipwhip.signals.presence.Presence;
 
 /**
  * Created by IntelliJ IDEA.
@@ -8,28 +9,33 @@ import org.json.JSONObject;
  * Date: 8/24/11
  * Time: 4:28 PM
  */
-public class PresenceCommand extends SerializingCommand<PresenceCommand> {
+public class PresenceCommand extends SerializingCommand {
 
     public static final String ACTION = "presence";
 
-    private JSONObject presence;
+    private Presence presence;
 
     /**
      * Create a new PresenceCommand
      *
      * @param presence JSONObject representing the signal
      */
-    public PresenceCommand(JSONObject presence) {
+    public PresenceCommand(Presence presence) {
         this.presence = presence;
     }
 
-    public JSONObject getPresence() {
+    public Presence getPresence() {
         return presence;
     }
 
     @Override
-    public String serialize(PresenceCommand item) {
-        // TODO serialize
-        return null;
+    public String serialize() {
+        return SignalsUtil.serializePresence(presence);
     }
+
+    @Override
+    public String toString() {
+        return serialize();
+    }
+
 }

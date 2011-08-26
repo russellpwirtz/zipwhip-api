@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.sun.istack.internal.Nullable;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;
@@ -9,11 +10,13 @@ import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -40,6 +43,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private String clientId;
     private String originalClientId; //so we can detect change
+    private Presence presence;
     private CountDownLatch connectLatch;
 
     public SocketSignalProvider() {
@@ -120,7 +124,27 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public Future<Boolean> connect(final String clientId) throws Exception {
+    public Presence getPresence() {
+        return presence;
+    }
+
+    @Override
+    public void setPresence(Presence presence) {
+        this.presence = presence;
+    }
+
+    @Override
+    public Future<Boolean> connect() throws Exception {
+        return connect(originalClientId);
+    }
+
+    @Override
+    public Future<Boolean> connect(String clientId) throws Exception {
+        return connect(clientId, null);
+    }
+
+    @Override
+    public Future<Boolean> connect(final String clientId, final Map<String, Long> versions) throws Exception {
 
         if (isConnected()) {
             logger.debug("Connect requested but already connected");
@@ -152,8 +176,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
                 if (connection.isConnected()) {
 
-                    // TODO also send Presence and Versions
-                    connection.send(new ConnectCommand(clientId));
+                    connection.send(new ConnectCommand(clientId, versions, presence));
 
                     // block while the signal server is thinking/hanging.
                     try {
@@ -178,11 +201,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public Future<Boolean> connect() throws Exception {
-        return connect(originalClientId);
-    }
-
-    @Override
     public Future<Void> disconnect() throws Exception {
         return connection.disconnect();
     }
@@ -203,7 +221,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void onNewSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer) {
+    public void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer) {
         subscriptionCompleteEvent.addObserver(observer);
     }
 

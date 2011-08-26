@@ -2,6 +2,7 @@ package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
@@ -26,13 +27,14 @@ public class JsonResponseParser implements ResponseParser {
 
     private JsonDtoParser parser = JsonDtoParser.getInstance();
 
-    /**
-     * Parse out a ServerResponse from a
-     *
-     * @param response
-     * @return
-     * @throws JSONException
-     */
+    public synchronized static ResponseParser getInstance() {
+        if (instance == null){
+            instance = new JsonResponseParser();
+        }
+        return instance;
+    }
+
+    @Override
     public ServerResponse parse(String response) throws JSONException {
 
         logger.debug("Parsing" + response);
@@ -51,11 +53,10 @@ public class JsonResponseParser implements ResponseParser {
 
         JSONObject sessionsObject = thing.optJSONObject("sessions");
         if (sessionsObject != null && !EMPTY_OBJECT.equals(sessionsObject.toString())) {
-//             logger.debug(":NOTNULL: " + sessionsObject);
-            // we dont need to support this anymore?
-//            sessions = parseSessionSignals(sessionsObject);
+            logger.debug(":NOTNULL: " + sessionsObject);
+            //sessions = parseSessionSignals(sessionsObject);
         } else {
-//             logger.debug(":NULL: " + sessionsObject);
+             logger.debug(":NULL: " + sessionsObject);
         }
 
         /// IS THIS A COMPLEX OBJECT?
@@ -83,6 +84,7 @@ public class JsonResponseParser implements ResponseParser {
         return new BooleanServerResponse(response, success, bool, sessions);
     }
 
+    @Override
     public List<MessageToken> parseMessageTokens(ServerResponse serverResponse) throws Exception {
 
         List<MessageToken> result = null;
@@ -101,6 +103,7 @@ public class JsonResponseParser implements ResponseParser {
         return result;
     }
 
+    @Override
     public Message parseMessage(ServerResponse serverResponse) throws Exception {
         Message result = null;
         if (serverResponse instanceof ObjectServerResponse) {
@@ -111,6 +114,7 @@ public class JsonResponseParser implements ResponseParser {
         return result;
     }
 
+    @Override
     public String parseString(ServerResponse serverResponse) throws Exception {
         String result = null;
         if (serverResponse instanceof StringServerResponse) {
@@ -122,6 +126,7 @@ public class JsonResponseParser implements ResponseParser {
         return result;
     }
 
+    @Override
     public Contact parseContact(ServerResponse serverResponse) throws Exception {
         if (!(serverResponse instanceof ObjectServerResponse)) {
             return null;
@@ -132,6 +137,7 @@ public class JsonResponseParser implements ResponseParser {
         return parser.parseContact(cplx.response);
     }
 
+    @Override
     public DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception {
         DeviceToken result = null;
         if (serverResponse instanceof ObjectServerResponse) {
@@ -158,10 +164,10 @@ public class JsonResponseParser implements ResponseParser {
         return result;
     }
 
-    public synchronized static ResponseParser getInstance() {
-        if (instance == null){
-            instance = new JsonResponseParser();
-        }
-        return instance;
+    @Override
+    public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
+        // TODO PARSE THIS SHIT
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
+
 }

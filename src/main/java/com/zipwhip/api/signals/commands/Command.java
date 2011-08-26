@@ -7,4 +7,23 @@ package com.zipwhip.api.signals.commands;
  */
 public abstract class Command {
 
+    String versionKey;
+    Long version;
+
+    public String getVersionKey() {
+        return versionKey;
+    }
+
+    public void setVersionKey(String versionKey) {
+        this.versionKey = versionKey;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
 }

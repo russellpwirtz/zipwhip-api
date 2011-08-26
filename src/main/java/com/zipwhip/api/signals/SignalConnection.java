@@ -39,7 +39,7 @@ public interface SignalConnection extends Destroyable {
      * 
      * @param command the Command to send
      */
-    void send(SerializingCommand<?> command);
+    void send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected
@@ -51,14 +51,14 @@ public interface SignalConnection extends Destroyable {
     /**
      * Allows you to listen for things that are received by the API.
      * 
-     * @param observer
+     * @param observer An observer to receive callbacks on when this event fires
      */
     void onMessageReceived(Observer<Command> observer);
 
     /**
      * Allows you to observe the connection changes
      * 
-     * @param observer
+     * @param observer An observer to receive callbacks on when this event fires
      */
     void onConnectionStateChanged(Observer<Boolean> observer);
 

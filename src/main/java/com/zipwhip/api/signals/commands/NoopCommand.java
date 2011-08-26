@@ -8,12 +8,12 @@ package com.zipwhip.api.signals.commands;
  * @author jed
  *
  */
-public class NoopCommand extends SerializingCommand<NoopCommand> {
+public class NoopCommand extends SerializingCommand {
 
     public static final String ACTION = "noop";
 
     @Override
-    public String serialize(NoopCommand item) {
+    public String serialize() {
         return "{action:'NOOP'}";
     }
                

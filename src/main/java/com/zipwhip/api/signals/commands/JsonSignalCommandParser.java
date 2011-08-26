@@ -43,10 +43,9 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         
         JSONObject json = new JSONObject(string);
 
+        // TODO Store versionKey and version
         String versionKey = json.optString("versionKey", StringUtil.EMPTY_STRING);
         Long version = json.optLong("version", -1);
-
-        // TODO Store versionKey and version
 
         String action = json.optString("action");
 
@@ -57,7 +56,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         Parser<JSONObject, Command> parser = parsers.get(action);
 
         if (parser == null) {
-            throw new RuntimeException("The parser for " + action + " was not found.");
+            throw new RuntimeException("No parser for " + action + " was found.");
         }
 
         logger.debug("Parsing" + string);
@@ -167,8 +166,10 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 logger.warn("PRESENCE command received with no presence object.");
                 return null;
             }
-            
-            return new PresenceCommand(object.optJSONObject("presence"));
+
+            // TODO parse the presence object
+            //return new PresenceCommand(object.optJSONObject("presence"));
+            return new PresenceCommand(null);
         }
     };
     

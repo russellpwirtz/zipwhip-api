@@ -11,6 +11,6 @@ import com.zipwhip.util.Serializer;
  * Base class for SignalServer commands that are bidirectional.
  *
  */
-public abstract class SerializingCommand<T extends SerializingCommand> extends Command implements Serializer<T> {
+public abstract class SerializingCommand extends Command implements Serializer {
 
 }

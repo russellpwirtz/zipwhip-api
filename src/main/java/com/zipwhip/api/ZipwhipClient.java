@@ -10,6 +10,8 @@ import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
 import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
 
 import java.util.Collection;
 import java.util.List;
@@ -49,7 +51,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param uuid - message uuid
      * @return
-     * @throws Exception
+     * @throws Exception if an error occurs communicating with Zipwhip
      */
     Message getMessage(String uuid) throws Exception;
 
@@ -58,7 +60,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param uuid - message uuid
      * @return
-     * @throws Exception
+     * @throws Exception if an error occurs communicating with Zipwhip
      */
     MessageStatus getMessageStatus(String uuid) throws Exception;
 
@@ -67,7 +69,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param id
      * @return contact
-     * @throws Exception
+     * @throws Exception if an error occurs communicating with Zipwhip
      */
     Contact getContact(long id) throws Exception;
 
@@ -76,9 +78,18 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param mobileNumber
      * @return contact
-     * @throws Exception
+     * @throws Exception if an error occurs communicating with Zipwhip
      */
     Contact getContact(String mobileNumber) throws Exception;
+
+    /**
+     * Query for the list of presences for your session
+     *
+     * @param category The category of presence to query for
+     * @return List of presences for category and session
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
+    List<Presence> getPresence(PresenceCategory category) throws Exception;
 
     void sendSignal(String scope, String channel, String event, String payload) throws Exception;
 

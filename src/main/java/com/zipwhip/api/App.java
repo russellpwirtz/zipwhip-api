@@ -34,7 +34,6 @@ public class App {
         ZipwhipClient client = new DefaultZipwhipClient(connection);
 
         client.connect();
-
         client.sendMessage("2069308934", "Yo");
 
         while (true) {

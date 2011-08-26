@@ -29,6 +29,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String CONTACT_DELETE = "contact/delete";
     public static final String CONTACT_SAVE = "contact/save";
     public static final String CONTACT_GET = "contact/get";
+    public static final String PRESENCE_GET = "presence/get";
     public static final String PHONE_LOOKUP = "phone/lookup";
     public static final String MESSAGE_SEND = "message/send";
     public static final String VENDOR_MESSAGE_SEND = "vendor/message/send";

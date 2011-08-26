@@ -3,9 +3,11 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.PresenceCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
+import com.zipwhip.signals.presence.Presence;
 
 import javax.security.auth.Destroyable;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 
 /**
@@ -36,43 +38,57 @@ public interface SignalProvider extends Destroyable {
      */
     void setClientId(String clientId);
 
-    // TODO: Add presence
-//    /**
-//     * 
-//     * @return
-//     */
-//    public Presence getPresence();
-//    
-//    /**
-//     * 
-//     * @param presence
-//     */
-//    public void setPresence(Presence presence);
-
     /**
-     * Tell it to connect.
-     * 
-     * @param clientId
-     *        Pass in null if you dont have one.
-     * @return A future that tells you when the connecting is complete. The
-     *         string result is the clientId.
-     * @throws Exception
+     * Get a Presence that was previously set.
+     *
+     * @return Presence previously set
      */
-    Future<Boolean> connect(String clientId) throws Exception;
+    public Presence getPresence();
+
+    /**
+     * Set Presence to be used on the NEXT connection
+     *
+     * @param presence Presence to be used on the Next connection.
+     */
+    public void setPresence(Presence presence);
 
     /**
      * Tell it to connect.
-     * 
+     *
      * @return
      * @throws Exception
      */
     Future<Boolean> connect() throws Exception;
 
     /**
+     * Tell it to connect.
+     * 
+     * @param clientId
+     *        Pass in null if you don't have one.
+     * @return A future that tells you when the connecting is complete. The
+     *         string result is the clientId.
+     * @throws Exception if an I/O happens while connecting
+     */
+    Future<Boolean> connect(String clientId) throws Exception;
+
+    /**
+     * Tell it to connect.
+     *
+     * @param clientId
+     *        Pass in null if you don't have one.
+     * @param versions a Map of the current signal version per subscription.
+     * @return A future that tells you when the connecting is complete. The
+     *         string result is the clientId.
+     * @throws Exception if an I/O happens while connecting.
+     */
+
+    Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
+
+    /**
      * Tell it to disconnect.
      * 
      * @return an event that tells you its complete
-     * @throws Exception
+     * @throws Exception if an I/O happens while disconnecting
      */
     Future<Void> disconnect() throws Exception;
 
@@ -109,7 +125,7 @@ public interface SignalProvider extends Destroyable {
      *
      * @param observer
      */
-    void onNewSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
+    void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
 
     /**
      * Observe when we receive a presence update.

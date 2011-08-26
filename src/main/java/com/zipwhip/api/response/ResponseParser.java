@@ -4,6 +4,7 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.DeviceToken;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Parser;
 
 import java.util.List;
@@ -26,5 +27,7 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
     DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception;
 
     List<MessageToken> parseMessageTokens(ServerResponse serverResponse) throws Exception;
+
+    List<Presence> parsePresence(ServerResponse serverResponse) throws Exception;
 
 }

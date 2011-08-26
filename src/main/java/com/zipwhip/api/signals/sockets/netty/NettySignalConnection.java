@@ -32,7 +32,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
 
     private String host = "signals.zipwhip.com";
-    private int port = 3000;
+    private int port = 80;
 
     private ExecutorService executor;
 
@@ -100,7 +100,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public void send(SerializingCommand<?> command) {
+    public void send(SerializingCommand command) {
         // send this over the wire.
         channel.write(command);
     }
