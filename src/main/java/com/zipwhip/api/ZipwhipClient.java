@@ -5,7 +5,7 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.api.signals.SignalEvent;
+import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
@@ -103,7 +103,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param observer
      */
-    void addSignalObserver(Observer<SignalEvent> observer);
+    void addSignalObserver(Observer<List<Signal>> observer);
 
     /**
      * Listen for connection changes. This is a convenience method

@@ -25,16 +25,17 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
     public static final String DEFAULT_HOST = "http://network.zipwhip.com";
 
-    private Logger logger = Logger.getLogger(HttpConnection.class);
+    private static final Logger logger = Logger.getLogger(HttpConnection.class);
+
     private String apiVersion = "/api/v1/";
     private String host = DEFAULT_HOST;
+
     private String sessionKey;
     private SignTool authenticator;
-    private boolean debug = true;
     private ExecutorService executor = Executors.newCachedThreadPool();
 
     public HttpConnection() {
-
+        super();
     }
 
     public HttpConnection(String apiKey, String secret) throws Exception {
@@ -44,14 +45,6 @@ public class HttpConnection extends DestroyableBase implements Connection {
     public HttpConnection(SignTool authenticator) {
         this();
         this.setAuthenticator(authenticator);
-    }
-
-    public void setDebug(boolean debug) {
-        this.debug = debug;
-    }
-
-    public boolean getDebug() {
-        return this.debug;
     }
 
     public void setAuthenticator(SignTool authenticator) {
@@ -85,37 +78,36 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
     @Override
     public boolean isConnected() {
-        return true;
+        // TODO define what it means to be connected... is this socket connection?
+        return StringUtil.exists(sessionKey);
     }
 
-    private String getUrl(String method) {
-        return host + apiVersion + method;
-    }
-
-    /**
-     * Send a request across Zipwhip and get the result back. No parsing is
-     * done, this is a low level transport.
-     * 
-     * @param method
-     *        each method has a name. example: user/get
-     * @param params
-     * @return
-     */
     @Override
     public Future<String> send(String method, Map<String, Object> params) {
+
         RequestBuilder rb = new RequestBuilder();
 
         // convert the map into a key/value HTTP params string
         rb.params(params);
 
+        // TODO TEMP
+        if (method.equals("login")) {
+            method = "user/login";
+            apiVersion = "/";
+        } else {
+            //apiVersion = "/api/v1/";
+        }
+
         return send(method, rb.build());
     }
 
     private Future<String> send(final String method, final String params) {
+
         // put them together to form the full url
         FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
             @Override
             public String call() throws Exception {
+
                 // this is the base url+api+method
                 final String url = getUrl(method);
 
@@ -131,6 +123,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
     }
 
     private String sign(String method, String params) throws Exception {
+
         String result = params;
         String connector = "&";
 
@@ -154,29 +147,28 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
         url = host + apiVersion + method + result;
 
-        if (this.debug) {
-            logger.debug("Signed: " + url);
-        }
-
+        logger.debug("Signed url: " + url);
         return result;
     }
 
     private String getSignature(String url) throws Exception {
+
         if (this.authenticator == null) {
             return null;
         }
 
         String result = this.authenticator.sign(url);
-        if (this.debug) {
-            logger.debug("Signing: " + url);
-            System.out.println("Signing: " + url);
-        }
+        logger.debug("Signing: " + url);
+
         return result;
+    }
+
+    private String getUrl(String method) {
+        return host + apiVersion + method;
     }
 
     @Override
     protected void onDestroy() {
-        // it returns a list of runnables that haven't executed, but we don't care...
         executor.shutdownNow();
     }
 

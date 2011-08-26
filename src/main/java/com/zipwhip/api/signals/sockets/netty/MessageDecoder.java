@@ -21,8 +21,8 @@ public class MessageDecoder extends OneToOneDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, Object o) throws Exception {
+        
         // comes in as a string, leaves as a SignalCommand
-
         if (o instanceof String) {
             if (parser == null) {
                 return o;

@@ -1,16 +1,19 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
-import com.zipwhip.api.signals.SignalEvent;
 import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
+import org.apache.log4j.Logger;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -23,16 +26,21 @@ import java.util.concurrent.*;
  */
 public class SocketSignalProvider extends DestroyableBase implements SignalProvider {
 
+    private static final Logger logger = Logger.getLogger(SocketSignalProvider.class);
+
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
-    private ObservableHelper<SignalEvent> signalEvent = new ObservableHelper<SignalEvent>();
+    private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
+    private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
+    private ObservableHelper<PresenceCommand> presenceReceivedEvent = new ObservableHelper<PresenceCommand>();
+    private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-    private String clientId = null;
-    // so we can detect change.
-    private String originalClientId = null;
     private SignalConnection connection = new NettySignalConnection();
-    private CountDownLatch connectLatch = null;
+
+    private String clientId;
+    private String originalClientId; //so we can detect change
+    private CountDownLatch connectLatch;
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
@@ -46,6 +54,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this.link(connectEvent);
         this.link(newClientIdEvent);
         this.link(signalEvent);
+        this.link(subscriptionCompleteEvent);
+        this.link(presenceReceivedEvent);
+        this.link(signalVerificationEvent);
 
         connection.onMessageReceived(new Observer<Command>() {
             /**
@@ -56,39 +67,39 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
              *        The sender might not be the same object every time, so
              *        we'll let it just be object, rather than generics.
              * @param item
-             *        - Rich object representing the notification.
+             *        Rich object representing the notification.
              */
             @Override
             public void notify(Object sender, Command item) {
+
                 if (item instanceof ConnectCommand) {
-                    ConnectCommand command = (ConnectCommand) item;
-                    if (command.isSuccessful()) {
-                        // copy it over for stale checking
-                        originalClientId = clientId;
-
-                        clientId = command.getClientId();
-
-                        if (!StringUtil.equals(clientId, originalClientId)) {
-                            // not the same, lets announce
-                            // announce on a separate thread
-                            newClientIdEvent.notifyObservers(this, clientId);
-                        }
-
-                        if (connectLatch != null) {
-                            // we need to countDown the latch, when it hits zero (after this call)
-                            // the connect Future will complete. This gives the caller a way to block on our connection
-                            connectLatch.countDown();
-                        }
-                    }
+                    handleConnectCommand((ConnectCommand) item);
                 }
-
-                //                if (item instanceof SignalSignalServerMessage){
-                //                    // we're being notified that we received a signal.
-                //                    SignalEvent signalEvent = new SignalEvent();
-                //                    signalEvent.setSessionKey(item.getSubscriptionId());
-                //                    signalEvent.setSignals(signals);
-                //                }
-
+                else if (item instanceof DisconnectCommand) {
+                    handleDisconnectCommand((DisconnectCommand) item);
+                }
+                else if (item instanceof SubscriptionCompleteCommand) {
+                    handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) item);
+                }
+                else if (item instanceof BacklogCommand) {
+                    logger.debug("Processing BacklogCommand");
+                    //TODO: Need to bulk backlog commands before we get here...
+                }
+                else if (item instanceof SignalCommand) {
+                    handleSignalCommand((SignalCommand) item);
+                }
+                else if (item instanceof PresenceCommand) {
+                    handlePresenceCommand((PresenceCommand) item);
+                }
+                else if (item instanceof SignalVerificationCommand) {
+                    handleSignalVerificationCommand((SignalVerificationCommand) item);
+                }
+                else if (item instanceof NoopCommand) {
+                    handleNoopCommand((NoopCommand) item);
+                }
+                else {
+                    logger.warn("Unrecognised command: " + item.toString());
+                }
             }
         });
     }
@@ -103,6 +114,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         return clientId;
     }
 
+    @Override
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
@@ -111,21 +123,21 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     public Future<Boolean> connect(final String clientId) throws Exception {
 
         if (isConnected()) {
-            throw new Exception("You are already connected");
+            logger.debug("Connect requested but already connected");
+            return new FakeFuture<Boolean>(true);
         }
 
         // keep track of the original one, so we can detect change
-        this.originalClientId = clientId;
+        originalClientId = clientId;
 
         // this will help us do the connect synchronously
         connectLatch = new CountDownLatch(1);
         final Future<Boolean> connectFuture = connection.connect();
 
-        FutureTask<Boolean> asdf = new FutureTask<Boolean>(new Callable<Boolean>() {
+        FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
 
             @Override
             public Boolean call() {
-                // TODO: notify callers somehow?
 
                 try {
                     connectFuture.get(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -139,11 +151,13 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 }
 
                 if (connection.isConnected()) {
+
+                    // TODO also send Presence and Versions
                     connection.send(new ConnectCommand(clientId));
 
                     // block while the signal server is thinking/hanging.
                     try {
-                        connectLatch.await(45, TimeUnit.SECONDS);
+                        connectLatch.await(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -159,9 +173,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         });
 
         // this background thread stops us from blocking.
-        executor.execute(asdf);
-
-        return asdf;
+        executor.execute(task);
+        return task;
     }
 
     @Override
@@ -175,7 +188,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void onSignalReceived(Observer<SignalEvent> observer) {
+    public void onSignalReceived(Observer<List<Signal>> observer) {
         signalEvent.addObserver(observer);
     }
 
@@ -190,8 +203,106 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    protected void onDestroy() {
-      
-        executor.shutdownNow(); // will return a list of runnables that have not fired yet, but we dont care.
+    public void onNewSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer) {
+        subscriptionCompleteEvent.addObserver(observer);
     }
+
+    @Override
+    public void onPresenceReceived(Observer<PresenceCommand> observer) {
+        presenceReceivedEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onSignalVerificationReceived(Observer<Void> observer) {
+        signalVerificationEvent.addObserver(observer);
+    }
+
+    @Override
+    protected void onDestroy() {
+        executor.shutdownNow();
+    }
+
+    private void handleConnectCommand(ConnectCommand command) {
+
+        logger.debug("Handling ConnectCommand");
+
+        if (command.isSuccessful()) {
+            // copy it over for stale checking
+            originalClientId = clientId;
+
+            clientId = command.getClientId();
+
+            if (!StringUtil.equals(clientId, originalClientId)) {
+                // not the same, lets announce
+                // announce on a separate thread
+                newClientIdEvent.notifyObservers(this, clientId);
+            }
+
+            if (connectLatch != null) {
+                // we need to countDown the latch, when it hits zero (after this call)
+                // the connect Future will complete. This gives the caller a way to block on our connection
+                connectLatch.countDown();
+            }
+        }
+    }
+
+    private void handleDisconnectCommand(DisconnectCommand command) {
+
+        logger.debug("Handling DisconnectCommand");
+
+        try {
+            disconnect();
+        } catch (Exception e) {
+            logger.error("Error disconnecting", e);
+        }
+
+        if (!command.isStop()) {
+
+            if (!StringUtil.EMPTY_STRING.equals(command.getHost())) {
+                connection.setHost(command.getHost());
+            }
+
+            if (command.getPort() > 0) {
+                connection.setPort(command.getPort());
+            }
+
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        connect();
+                    } catch (Exception e) {
+                        logger.error("Error disconnecting", e);
+                    }
+                }
+            }, command.getReconnectDelay(), TimeUnit.SECONDS);
+        }
+    }
+
+    private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
+        logger.debug("Handling SubscriptionCompleteCommand");
+        subscriptionCompleteEvent.notifyObservers(this, command);
+    }
+
+    private void handleSignalCommand(SignalCommand command) {
+        logger.debug("Handling SignalCommand");
+        signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
+    }
+
+    private void handlePresenceCommand(PresenceCommand command) {
+        logger.debug("Handling PresenceCommand");
+        presenceReceivedEvent.notifyObservers(this, command);
+    }
+
+    private void handleSignalVerificationCommand(SignalVerificationCommand command) {
+        logger.debug("Processing SignalVerificationCommand");
+        signalVerificationEvent.notifyObservers(this, null);
+    }
+
+    private void handleNoopCommand(NoopCommand command) {
+        logger.debug("Handling NoopCommand");
+        //NOOP - for now we are just logging this
+    }
+
 }

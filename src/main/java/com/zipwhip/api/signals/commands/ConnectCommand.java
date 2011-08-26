@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.util.Serializer;
 import com.zipwhip.util.StringUtil;
 
 /**
@@ -8,7 +7,9 @@ import com.zipwhip.util.StringUtil;
  * <p/>
  * for the {action:CONNECT} command
  */
-public class ConnectCommand extends Command implements Serializer<ConnectCommand> {
+public class ConnectCommand extends SerializingCommand<ConnectCommand> {
+
+    public static final String ACTION = "connect";
 
     private String clientId;
 
@@ -31,9 +32,9 @@ public class ConnectCommand extends Command implements Serializer<ConnectCommand
     @Override
     public String serialize(ConnectCommand item) {
         if (StringUtil.isNullOrEmpty(item.getClientId())) {
-            return "{action:CONNECT}";
+            return "{'action':'CONNECT'}";
         } else {
-            return "{action:\"CONNECT\",clientId:\"" + item.getClientId() + "\"}";
+            return "{'action':'CONNECT', 'clientId':'" + item.getClientId() + "'}";
         }
     }
 

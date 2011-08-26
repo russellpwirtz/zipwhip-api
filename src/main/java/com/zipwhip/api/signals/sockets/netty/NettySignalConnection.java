@@ -2,16 +2,18 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.concurrent.*;
 
@@ -23,12 +25,16 @@ import static org.jboss.netty.buffer.ChannelBuffers.copiedBuffer;
  * Connects to the SignalServer via Netty
  */
 public class NettySignalConnection extends DestroyableBase implements SignalConnection, ChannelPipelineFactory {
-    
+
     public static final int CONNECTION_TIMEOUT_SECONDS = 45;
+    public static final int MAX_FRAME_SIZE = 65535;
+
+    private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
+
+    private String host = "signals.zipwhip.com";
+    private int port = 3000;
 
     private ExecutorService executor;
-
-    private SocketAddress remoteAddress = new InetSocketAddress("signals.zipwhip.com", 3000);
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
@@ -39,9 +45,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
-        this.channel = channelFactory.newChannel(getPipeline());
-
-        final ChannelFuture channelFuture = channel.connect(remoteAddress);
+        channel = channelFactory.newChannel(getPipeline());
+        final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
 
         FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
 
@@ -73,26 +78,29 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             @Override
             public Void call() throws Exception {
 
-                if (channel != null)
+                if (channel != null) {
                     channel.disconnect().await();
-
-                if (channelFactory != null)
-                    channelFactory.releaseExternalResources();
+                }
+                    
+                if (channelFactory != null) {
+                    channelFactory.releaseExternalResources();   
+                }                    
 
                 executor.shutdownNow();
                 executor = null;
+
+                connectEvent.notifyObservers(this, false);
 
                 return null;
             }
         });
 
         executor.execute(task);
-
         return task;
     }
 
     @Override
-    public void send(Command command) {
+    public void send(SerializingCommand<?> command) {
         // send this over the wire.
         channel.write(command);
     }
@@ -113,16 +121,31 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    @Override
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
 
-        return Channels.pipeline(new DelimiterBasedFrameDecoder(65535, true, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())), new StringToChannelBuffer(), new StringDecoder(), new MessageDecoder(),
-                new SignalCommandEncoder(), new SimpleChannelHandler() {
+        return Channels.pipeline(
+                new DelimiterBasedFrameDecoder(MAX_FRAME_SIZE, true, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())), 
+                new StringToChannelBuffer(), 
+                new StringDecoder(), 
+                new MessageDecoder(),
+                new SignalCommandEncoder(), 
+                new SimpleChannelHandler() {
 
                     /**
-                     * the entry point for signal traffic
+                     * The entry point for signal traffic
                      * 
-                     * @param ctx
-                     * @param e
+                     * @param ctx ChannelHandlerContext
+                     * @param e MessageEvent
                      * @throws Exception
                      */
                     @Override
@@ -131,6 +154,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         Object msg = e.getMessage();
 
                         if (!(msg instanceof Command)) {
+                            logger.warn("Received a message that was not a command!");
                             return;
                         }
 
@@ -138,7 +162,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         receiveEvent.notifyObservers(this, command);
                     }
-                });
+                }
+        );
     }
 
     @Override
@@ -147,4 +172,5 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             this.disconnect();
         }
     }
+
 }

@@ -16,16 +16,9 @@ import java.util.concurrent.Future;
 public interface Connection extends Destroyable {
 
     /**
-     * Enable or disable debug logging in this connection.
-     * 
-     * @param debug
-     */
-    void setDebug(boolean debug);
-
-    /**
      * Set the sessionKey for this connection
      * 
-     * @param sessionKey
+     * @param sessionKey the client's Zipwhip sessionKey
      */
     void setSessionKey(String sessionKey);
 
@@ -40,7 +33,7 @@ public interface Connection extends Destroyable {
      * Determines if this connection is authenticated with Zipwhip. (it has the
      * necessary communication fields)
      * 
-     * @return
+     * @return true if authenticated otherwise false
      */
     boolean isAuthenticated();
 
@@ -56,9 +49,9 @@ public interface Connection extends Destroyable {
      * 
      * @param method
      *        each method has a name. example: user/get
-     * @param params
-     * @return
-     * @throws Exception
+     * @param params Map of query params to append to the method
+     * @return A Future task representing the asynchronous call to Zipwhip
+     * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
      */
     Future<String> send(String method, Map<String, Object> params) throws Exception;
 

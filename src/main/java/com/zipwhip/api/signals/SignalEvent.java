@@ -8,21 +8,12 @@ import java.util.List;
 public class SignalEvent {
 
     /**
-     * The sessionKey that the signals happened for.
-     */
-    String sessionKey;
-
-    /**
      * The set of signals that occurred.
      */
     List<Signal> signals;
 
-    public String getSessionKey() {
-        return sessionKey;
-    }
-
-    public void setSessionKey(String sessionKey) {
-        this.sessionKey = sessionKey;
+    public SignalEvent(List<Signal> signals) {
+        this.signals = signals;
     }
 
     public List<Signal> getSignals() {
@@ -32,4 +23,5 @@ public class SignalEvent {
     public void setSignals(List<Signal> signals) {
         this.signals = signals;
     }
+
 }

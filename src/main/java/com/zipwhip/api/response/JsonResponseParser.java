@@ -34,8 +34,8 @@ public class JsonResponseParser implements ResponseParser {
      * @throws JSONException
      */
     public ServerResponse parse(String response) throws JSONException {
-        logger.debug(">>>>> " + response);
-        System.out.println(">>>"  + response);
+
+        logger.debug("Parsing" + response);
 
         if (StringUtil.isNullOrEmpty(response)) {
             return null;

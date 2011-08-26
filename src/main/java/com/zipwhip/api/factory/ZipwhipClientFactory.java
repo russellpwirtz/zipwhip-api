@@ -27,6 +27,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     }
 
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
+
         HttpConnectionFactory connectionFactory = new HttpConnectionFactory();
 
         connectionFactory.setUsername(username);
@@ -60,6 +61,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() throws Exception {
+
         DefaultZipwhipClient client = new DefaultZipwhipClient();
 
         client.setConnection(connectionFactory.create());
@@ -86,13 +88,17 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     }
 
     protected void setup(ZipwhipClient client) throws Exception {
+
         if (signalProviderFactory != null) {
             client.setSignalProvider(signalProviderFactory.create());
         }
+
         if (client.getConnection() != null && client.getSignalProvider() != null) {
+
             String sessionKey = client.getConnection().getSessionKey();
-            if (!StringUtil.isNullOrEmpty(sessionKey)) {
-                //                client.getSignalProvider().addSessionKey(sessionKey);
+
+            if (StringUtil.exists(sessionKey)) {
+                //client.getSignalProvider().(sessionKey);
             }
         }
     }

@@ -5,8 +5,9 @@ import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.ServerResponse;
-import com.zipwhip.api.signals.SignalEvent;
+import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lib.Address;
@@ -29,37 +30,40 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
 
     public DefaultZipwhipClient() {
-        super();
+        this(new HttpConnection(), new SocketSignalProvider());
     }
 
-    // TODO this constructor is always going to crash since signalProvider is null
-//    public DefaultZipwhipClient(final Connection connection) {
-//        super(connection);
-//
-//        this.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
-//            @Override
-//            public void notify(Object sender, String clientId) {
-//                if (StringUtil.isNullOrEmpty(clientId)) {
-//                    return; // it must not have connected successfully.
-//                }
-//
-//                // lets do a signals connect!
-//                Map<String, Object> params = new HashMap<String, Object>();
-//
-//                params.put("clientId", clientId);
-//                params.put("session", connection.getSessionKey());
-//
-//                try {
-//                    executeSync("signals/connect", params);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//    }
+    public DefaultZipwhipClient(Connection connection) {
+        this(connection, new SocketSignalProvider());
+    }
 
-    public DefaultZipwhipClient(Connection connection, SignalProvider signalProvider) {
+    public DefaultZipwhipClient(final Connection connection, final SignalProvider signalProvider) {
+
         super(connection, signalProvider);
+
+        getSignalProvider().onNewClientIdReceived(new Observer<String>() {
+
+            @Override
+            public void notify(Object sender, String clientId) {
+
+                if (StringUtil.isNullOrEmpty(clientId)) {
+                    logger.warn("Received CONNECT without clientId");
+                    return;
+                }
+
+                // lets do a signals connect!
+                Map<String, Object> params = new HashMap<String, Object>();
+
+                params.put("clientId", clientId);
+                params.put("sessions", connection.getSessionKey());
+
+                try {
+                    executeSync("signals/connect", params);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
     
     @Override
@@ -74,12 +78,8 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         }
 
         // we need to determine if we're authenticated enough
-        if (!connection.isConnected()) {
+        if (!connection.isConnected() || !connection.isAuthenticated()) {
             throw new Exception("The connection cannot operate at this time");
-        }
-
-        if (!connection.isAuthenticated()) {
-            throw new Exception("The connection isn't authenticated, we can't move forward");
         }
 
         if (!signalProvider.isConnected()) {
@@ -88,8 +88,6 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
             return signalProvider.connect();
         }
 
-        // TODO: figure this method out
-        //        return wrapVoid(executeAsync(USER_ENROLL, params));
         return new FakeFuture<Boolean>(true);
     }
 
@@ -221,7 +219,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     }
 
     @Override
-    public void addSignalObserver(Observer<SignalEvent> observer) {
+    public void addSignalObserver(Observer<List<Signal>> observer) {
         getSignalProvider().onSignalReceived(observer);
     }
 

@@ -1,8 +1,11 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.api.signals.commands.PresenceCommand;
+import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
 
 import javax.security.auth.Destroyable;
+import java.util.List;
 import java.util.concurrent.Future;
 
 /**
@@ -74,12 +77,11 @@ public interface SignalProvider extends Destroyable {
     Future<Void> disconnect() throws Exception;
 
     /**
-     * You can Observe this event to capture things that come thru
+     * You can Observe this event to capture things that come through
      * 
      * @param observer
-     * @return
      */
-    void onSignalReceived(Observer<SignalEvent> observer);
+    void onSignalReceived(Observer<List<Signal>> observer);
 
     /**
      * Observe the changes in connection. This is when your clientId is used for
@@ -88,7 +90,6 @@ public interface SignalProvider extends Destroyable {
      * This is a low level TCP connection observable.
      * 
      * @param observer
-     * @return
      */
     void onConnectionChanged(Observer<Boolean> observer);
 
@@ -98,8 +99,30 @@ public interface SignalProvider extends Destroyable {
      * once.
      * 
      * @param observer
-     * @return
      */
     void onNewClientIdReceived(Observer<String> observer);
+
+    /**
+     * Observe when receive the subscription complete event indicating
+     * that we are subscribed to the SignalServer and will begin to
+     * receive events.
+     *
+     * @param observer
+     */
+    void onNewSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
+
+    /**
+     * Observe when we receive a presence update.
+     *
+     * @param observer
+     */
+    void onPresenceReceived(Observer<PresenceCommand> observer);
+
+    /**
+     * Observe a signal verification sent by another connected client.
+     *
+     * @param observer
+     */
+    void onSignalVerificationReceived(Observer<Void> observer);
 
 }

@@ -4,6 +4,7 @@ import com.zipwhip.api.dto.DeviceToken;
 import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
+import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.lib.SignTool;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
@@ -30,7 +31,15 @@ public class HttpConnectionFactory implements Factory<Connection> {
     private String apiKey;
     private String secret;
     private String sessionKey;
-    private boolean debug = false;
+
+    private static HttpConnectionFactory instance;
+
+    public static HttpConnectionFactory getInstance() {
+        if (instance == null) {
+            instance = new HttpConnectionFactory();
+        }
+        return instance;
+    }
 
     /**
      * Creates a generic unauthenticated HttpConnection.
@@ -40,20 +49,20 @@ public class HttpConnectionFactory implements Factory<Connection> {
      */
     @Override
     public Connection create() throws Exception {
-        final HttpConnection connection = new HttpConnection();
+
+        HttpConnection connection = new HttpConnection();
 
         connection.setSessionKey(sessionKey);
         connection.setHost(host);
-        connection.setDebug(debug);
         connection.setAuthenticator(new SignTool(apiKey, secret));
 
-        if (!StringUtil.isNullOrEmpty(apiKey) && !StringUtil.isNullOrEmpty(secret)) {
+        if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
             // good, the authenticator should be ready go to.
             if (StringUtil.isNullOrEmpty(sessionKey)) {
                 // we need a sessionKey
                 requestSessionKey(connection);
             }
-        } else if (!StringUtil.isNullOrEmpty(username) && !StringUtil.isNullOrEmpty(password)) {
+        } else if (StringUtil.exists(username) && StringUtil.exists(password)) {
             // we have a username/password
 
             Map<String, Object> params = new HashMap<String, Object>();
@@ -63,10 +72,14 @@ public class HttpConnectionFactory implements Factory<Connection> {
 
             Future<String> future = connection.send("login", params);
             ServerResponse serverResponse = responseParser.parse(future.get());
-            DeviceToken token = responseParser.parseDeviceToken(serverResponse);
+//            DeviceToken token = responseParser.parseDeviceToken(serverResponse);
 
-            connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
-            connection.setSessionKey(token.sessionKey);
+//            connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
+//            connection.setSessionKey(token.sessionKey);
+
+            if (serverResponse instanceof StringServerResponse) {
+                connection.setSessionKey(((StringServerResponse) serverResponse).response);
+            }
         }
 
         return connection;
@@ -89,87 +102,39 @@ public class HttpConnectionFactory implements Factory<Connection> {
         connection.setSessionKey(sessionKey);
     }
 
-//    protected ServerResponse execute(Callable<String> runnable) throws Exception {
-//
-//        // execute the request
-//        String response = runnable.call();
-//
-//        // parse the response
-//        ServerResponse serverResponse = responseParser.parse(response);
-//
-//        if (serverResponse == null) {
-//            throw new Exception("The serverResponse was null");
-//        }
-//
-//        if (!serverResponse.success) {
-//            throw new Exception(serverResponse.raw);
-//        }
-//
-//        // return the successful response
-//        return serverResponse;
-//    }
-
-    public ResponseParser getResponseParser() {
-        return responseParser;
-    }
-
-    public void setResponseParser(ResponseParser responseParser) {
+    public HttpConnectionFactory setResponseParser(ResponseParser responseParser) {
         this.responseParser = responseParser;
+        return this;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
+    public HttpConnectionFactory setUsername(String username) {
         this.username = username;
+        return this;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
+    public HttpConnectionFactory setPassword(String password) {
         this.password = password;
+        return this;
     }
 
-    public String getApiKey() {
-        return apiKey;
-    }
-
-    public void setApiKey(String apiKey) {
+    public HttpConnectionFactory setApiKey(String apiKey) {
         this.apiKey = apiKey;
+        return this;
     }
 
-    public String getSecret() {
-        return secret;
-    }
-
-    public void setSecret(String secret) {
+    public HttpConnectionFactory setSecret(String secret) {
         this.secret = secret;
+        return this;
     }
 
-    public String getSessionKey() {
-        return sessionKey;
-    }
-
-    public void setSessionKey(String sessionKey) {
+    public HttpConnectionFactory setSessionKey(String sessionKey) {
         this.sessionKey = sessionKey;
+        return this;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
+    public HttpConnectionFactory setHost(String host) {
         this.host = host;
+        return this;
     }
 
-    public boolean isDebug() {
-        return debug;
-    }
-
-    public void setDebug(boolean debug) {
-        this.debug = debug;
-    }
 }

@@ -5,6 +5,6 @@ package com.zipwhip.api.signals.commands;
  * 
  * This represents a command that the SignalServer will respond to.
  */
-public class Command {
+public abstract class Command {
 
 }

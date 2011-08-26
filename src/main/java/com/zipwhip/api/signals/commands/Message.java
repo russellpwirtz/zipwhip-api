@@ -1,11 +1,8 @@
 package com.zipwhip.api.signals.commands;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 8/19/11
- * Time: 4:37 PM
- *
+ * Created by IntelliJ IDEA. User: Michael Date: 8/19/11 Time: 4:37 PM
+ * 
  * This is the basic envelope of a SignalServer packet.
  */
 public class Message {
@@ -52,4 +49,5 @@ public class Message {
     public void setHeaders(Headers headers) {
         this.headers = headers;
     }
+
 }

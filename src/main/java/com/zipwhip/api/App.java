@@ -1,6 +1,7 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.signals.sockets.SocketSignalProvider;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 
 /**
  * An example application to demonstrate connecting to Zipwhip and sending and
@@ -9,12 +10,36 @@ import com.zipwhip.api.signals.sockets.SocketSignalProvider;
  */
 public class App {
 
+    private static Logger logger = Logger.getLogger(App.class);
+
+    public static final String USERNAME = "4252466003";
+    public static final String PASSWORD = "zipwhip1";
+
     public static void main(String[] args) {
-        startApp();
+
+        // Configure basic console logging
+        BasicConfigurator.configure();
+
+        try {
+            startApp();
+        } catch (Exception e) {
+            logger.error("Error connecting", e);
+        }
     }
     
-    private static void startApp() {        
-        ZipwhipClient client = new DefaultZipwhipClient(new HttpConnection(), new SocketSignalProvider());
+    private static void startApp() throws Exception {
+
+        //ZipwhipClient client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
+        Connection connection = HttpConnectionFactory.getInstance().setUsername(USERNAME).setPassword(PASSWORD).create();
+        ZipwhipClient client = new DefaultZipwhipClient(connection);
+
+        client.connect();
+
+        client.sendMessage("2069308934", "Yo");
+
+        while (true) {
+
+        }
     }
 
 }

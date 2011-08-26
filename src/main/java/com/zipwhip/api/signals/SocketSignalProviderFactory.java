@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.util.Factory;
 
