@@ -1,5 +1,6 @@
 package com.zipwhip.api;
 
+import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
@@ -35,6 +36,8 @@ public class App {
 
         client.connect();
         client.sendMessage("2069308934", "Yo");
+
+        client.getPresence(PresenceCategory.NONE);
 
         while (true) {
 

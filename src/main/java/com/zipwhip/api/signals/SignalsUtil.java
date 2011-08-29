@@ -100,4 +100,107 @@ public class SignalsUtil {
         return array.toString();
     }
 
+    public static List<Presence> parsePresence(String object) {
+
+//        PresenceCommand command = new PresenceCommand();
+//
+//        JSONArray presenceList = null;
+//        // try to find map in the presence key, if not, then try using the map directly
+//        Object presenceObject = ParamUtil.getParam(properties, KEY_PRESENCE_ID);
+//        if(presenceObject == null) {
+//            return command;
+//        }
+//
+//        String presenceJson = presenceObject.toString();
+//        if(StringUtil.isNullOrEmpty(presenceJson)) {
+//            return command;
+//        }
+//
+//        presenceList = new JSONArray(presenceJson);
+//        if (presenceList == null) {
+//            return command;
+//        }
+//
+//        PresenceGroup _presenceGroup = new PresenceGroup();
+//
+//
+//        int len = presenceList.length();
+//
+//        for(int i = 0; i < len; i++){
+//            Object obj = null;
+//            try {
+//                obj = presenceList.get(i);
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//                continue;
+//            }
+//
+//            Map presenceMap = (Map) obj;
+//
+//            Presence presence = new Presence();
+//
+//            presence.setConnected(ParamUtil.getBoolean(presenceMap, "connected"));
+//
+//            // subscriptionId can be NULL, its ok
+//            presence.setSubscriptionId(ParamUtil.getString(presenceMap, "subscriptionId"));
+//
+//            String cat = ParamUtil.getString(presenceMap, "category");
+//            if (StringUtil.isNullOrEmpty(cat)) {
+//                presence.setCategory(PresenceCategory.NONE);
+//            } else {
+//                presence.setCategory(PresenceCategory.valueOf(cat));
+//            }
+//
+//            String status = ParamUtil.getString(presenceMap, "status");
+//            if (StringUtil.isNullOrEmpty(status)) {
+//                // TODO assumed
+//                presence.setStatus(PresenceStatus.OFFLINE);
+//            } else {
+//                presence.setStatus(PresenceStatus.valueOf(status));
+//            }
+//
+//            Map _extraInfo = ParamUtil.getMap(presenceMap, "extraInfo");
+//            if (_extraInfo != null) {
+//                PresenceExtraInfo info = new PresenceExtraInfo();
+//
+//                Set keys = _extraInfo.keySet();
+//                for (Object key : keys) {
+//                    info.put((String) key, ParamUtil.getString(_extraInfo, (String) key));
+//                }
+//
+//                presence.setExtraInfo(info);
+//            }
+//
+//            Map _userAgent = ParamUtil.getMap(presenceMap, "userAgent");
+//            if (_userAgent != null) {
+//                UserAgent userAgent = new UserAgent();
+//                userAgent.setMakeModel(ParamUtil.getString(_userAgent, "makeModel"));
+//                userAgent.setBuild(ParamUtil.getString(_userAgent, "build"));
+//
+//                // product
+//                Map _product = ParamUtil.getMap(_userAgent, "product");
+//                if (_product != null) {
+//                    Product product = new Product();
+//                    String productName = ParamUtil.getString(_product, "name");
+//                    if (!StringUtil.isNullOrEmpty(productName)) {
+//                        product.setName(ProductLine.valueOf(productName));
+//                    }
+//                    product.setVersion(ParamUtil.getString(_product, "version"));
+//                    product.setBuild(ParamUtil.getString(_product, "build"));
+//                    userAgent.setProduct(product);
+//                }
+//
+//                presence.setUserAgent(userAgent);
+//            }
+//
+//            _presenceGroup.add(presence);
+//        }
+//
+//        if (_presenceGroup.size() > 0) {
+//            command.setPresenceGroup(_presenceGroup);
+//        }
+
+        return null;
+    }
+
 }

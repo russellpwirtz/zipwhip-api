@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.sun.istack.internal.Nullable;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;
@@ -34,9 +33,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
-    private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
-    private ObservableHelper<PresenceCommand> presenceReceivedEvent = new ObservableHelper<PresenceCommand>();
     private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
+    private ObservableHelper<PresenceCommand> presenceReceivedEvent = new ObservableHelper<PresenceCommand>();
+    private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private SignalConnection connection = new NettySignalConnection();
@@ -106,6 +105,23 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 }
             }
         });
+
+        connection.onConnectionStateChanged(new Observer<Boolean>() {
+            /**
+             * The NettySignalConnection will call this method when the connection
+             * state has changed.
+             *
+             * @param sender
+             *        The sender might not be the same object every time, so
+             *        we'll let it just be object, rather than generics.
+             * @param item
+             *        True, if connected, False if disconnected
+             */
+            @Override
+            public void notify(Object sender, Boolean item) {
+                connectEvent.notifyObservers(sender, item);
+            }
+        });
     }
 
     @Override
@@ -171,7 +187,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                     e.printStackTrace();
                 } catch (TimeoutException e) {
                     e.printStackTrace();
-
                 }
 
                 if (connection.isConnected()) {

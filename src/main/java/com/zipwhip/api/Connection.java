@@ -6,8 +6,7 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 /**
- * A connection encapsulates the way to communicate to Zipwhip on behalf of a
- * user.
+ * A connection encapsulates the way to communicate to Zipwhip on behalf of user.
  * 
  * A connection needs to be authenticated as a specific user.
  * 
