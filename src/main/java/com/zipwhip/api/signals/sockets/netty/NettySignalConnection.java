@@ -99,6 +99,14 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 executor.shutdownNow();
                 executor = null;
 
+                if (pingTimeoutFuture != null) {
+                    pingTimeoutFuture.cancel(true);
+                }
+
+                if (pongTimeoutFuture != null) {
+                    pongTimeoutFuture.cancel(true);
+                }
+
                 connectEvent.notifyObservers(this, false);
 
                 return null;
