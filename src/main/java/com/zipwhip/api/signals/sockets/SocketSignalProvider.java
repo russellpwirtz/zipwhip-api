@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
@@ -13,6 +14,7 @@ import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
     private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
-    private ObservableHelper<PresenceCommand> presenceReceivedEvent = new ObservableHelper<PresenceCommand>();
+    private ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
+    private ObservableHelper<List<Presence>> presenceReceivedEvent = new ObservableHelper<List<Presence>>();
     private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -85,8 +88,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                     handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) item);
                 }
                 else if (item instanceof BacklogCommand) {
-                    logger.debug("Processing BacklogCommand");
-                    //TODO: Need to bulk backlog commands before we get here...
+                    handleBacklogCommand((BacklogCommand) item);
                 }
                 else if (item instanceof SignalCommand) {
                     handleSignalCommand((SignalCommand) item);
@@ -241,13 +243,18 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void onPresenceReceived(Observer<PresenceCommand> observer) {
+    public void onPresenceReceived(Observer<List<Presence>> observer) {
         presenceReceivedEvent.addObserver(observer);
     }
 
     @Override
     public void onSignalVerificationReceived(Observer<Void> observer) {
         signalVerificationEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onVersionChanged(Observer<VersionMapEntry> observer) {
+        newVersionEvent.addObserver(observer);
     }
 
     @Override
@@ -313,19 +320,49 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         }
     }
 
-    private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
-        logger.debug("Handling SubscriptionCompleteCommand");
-        subscriptionCompleteEvent.notifyObservers(this, command);
+    private void handleBacklogCommand(BacklogCommand command) {
+
+        logger.debug("Handling BacklogCommand");
+
+        List<Signal> signals = new ArrayList<Signal>();
+
+        for (SignalCommand signalCommand : command.getCommands()) {
+
+            signals.add(signalCommand.getSignal());
+
+            if (signalCommand.getVersion() != null && signalCommand.getVersion().getValue() >= 0) {
+                newVersionEvent.notifyObservers(this, signalCommand.getVersion());
+            }
+        }
+
+        signalEvent.notifyObservers(this, signals);
     }
 
     private void handleSignalCommand(SignalCommand command) {
+
         logger.debug("Handling SignalCommand");
+
+        if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
+            newVersionEvent.notifyObservers(this, command.getVersion());
+        }
+
         signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
+    }
+
+    private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
+
+        logger.debug("Handling SubscriptionCompleteCommand");
+
+        if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
+            newVersionEvent.notifyObservers(this, command.getVersion());
+        }
+
+        subscriptionCompleteEvent.notifyObservers(this, command);
     }
 
     private void handlePresenceCommand(PresenceCommand command) {
         logger.debug("Handling PresenceCommand");
-        presenceReceivedEvent.notifyObservers(this, command);
+        presenceReceivedEvent.notifyObservers(this, command.getPresence());
     }
 
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {

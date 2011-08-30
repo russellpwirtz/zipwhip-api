@@ -16,7 +16,6 @@ public class DateUtil {
 
         Date date = null;
 
-        // TODO: resolve this
 //        try {
 //            date = JsonDateUtil.getDate(content.getString(key));
 //        } catch (JSONException e) {

@@ -14,10 +14,12 @@ import java.util.Map;
  * Represents an Array of data.
  */
 public class ArrayServerResponse extends ServerResponse {
+
     public JSONArray response;
 
     public ArrayServerResponse(String raw, boolean success, JSONArray response, Map<String, Map<String, List<Signal>>> sessions) {
         super(raw, success, sessions);
         this.response = response;
     }
+
 }

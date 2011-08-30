@@ -19,6 +19,16 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
 
     private JsonDtoParser parser = JsonDtoParser.getInstance();
 
+    private static JsonSignalParser instance;
+
+    public static JsonSignalParser getInstance() {
+        if (instance == null) {
+            instance = new JsonSignalParser();
+        }
+
+        return instance;
+    }
+
     @Override
     public Signal parseSignal(JSONObject object) throws Exception {
 

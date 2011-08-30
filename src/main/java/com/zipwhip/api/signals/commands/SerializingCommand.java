@@ -1,7 +1,5 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.util.Serializer;
-
 /**
  * Created by IntelliJ IDEA.
  * User: jed
@@ -11,6 +9,6 @@ import com.zipwhip.util.Serializer;
  * Base class for SignalServer commands that are bidirectional.
  *
  */
-public abstract class SerializingCommand extends Command implements Serializer {
+public abstract class SerializingCommand extends Command implements CommandSerializer {
 
 }

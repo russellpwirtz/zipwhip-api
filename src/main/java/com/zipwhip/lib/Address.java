@@ -23,16 +23,22 @@ public class Address {
     }
 
     public Address parse(String parsable) {
+
         if (parsable == null) return null;
+
         this.value = parsable;
+
         String[] parts = value.split("/");
+
         if (parts != null && parts.length > 1) {
             this.scheme = parts[0].replace(":", "");
             this.authority = parts[1];
         }
+
         if (parts != null && parts.length > 2) {
             this.query = parts[2];
         }
+
         return this;
     }
 

@@ -143,23 +143,23 @@ public class JsonResponseParser implements ResponseParser {
         if (serverResponse instanceof ObjectServerResponse) {
             ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
             result = new DeviceToken();
-            result.device = new Device();
+            result.setDevice(new Device());
 
             System.out.println(cplx.response.toString());
 
             if (cplx.response.has("device")) {
-                result.device.setAddress(cplx.response.getJSONObject("device").getString("address"));
-                result.device.setDeviceNumber(cplx.response.getJSONObject("device").getInt("deviceId"));
-                result.device.setId(cplx.response.getJSONObject("device").getLong("id"));
+                result.getDevice().setAddress(cplx.response.getJSONObject("device").getString("address"));
+                result.getDevice().setDeviceNumber(cplx.response.getJSONObject("device").getInt("deviceId"));
+                result.getDevice().setId(cplx.response.getJSONObject("device").getLong("id"));
             } else {
-                result.device.setAddress(cplx.response.getString("address"));
-                result.device.setId(cplx.response.getLong("deviceId"));
-                result.device.setDeviceNumber(cplx.response.getInt("deviceNumber"));
+                result.getDevice().setAddress(cplx.response.getString("address"));
+                result.getDevice().setId(cplx.response.getLong("deviceId"));
+                result.getDevice().setDeviceNumber(cplx.response.getInt("deviceNumber"));
             }
 
-            result.apiKey = cplx.response.getString("apiKey");
-            result.secret = cplx.response.getString("secret");
-            result.sessionKey = cplx.response.getString("sessionKey");
+            result.setApiKey(cplx.response.getString("apiKey"));
+            result.setSecret(cplx.response.getString("secret"));
+            result.setSessionKey(cplx.response.getString("sessionKey"));
         }
         return result;
     }

@@ -1,8 +1,14 @@
 package com.zipwhip.api.signals.commands;
 
+import com.zipwhip.api.signals.PresenceUtil;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+import org.apache.log4j.Logger;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -13,6 +19,8 @@ import java.util.Map;
 public class ConnectCommand extends SerializingCommand {
 
     public static final String ACTION = "connect";
+
+    private static Logger logger = Logger.getLogger(ConnectCommand.class);
 
     private String clientId;
     private Map<String, Long> versions;
@@ -43,13 +51,29 @@ public class ConnectCommand extends SerializingCommand {
     @Override
     public String serialize() {
 
-        // TODO Serialize these
+        JSONObject json = new JSONObject();
 
-        if (StringUtil.isNullOrEmpty(clientId)) {
-            return "{'action':'CONNECT'}";
-        } else {
-            return "{'action':'CONNECT', 'clientId':'" + clientId + "'}";
+        try {
+
+            json.put("action", "CONNECT");
+
+            if (StringUtil.exists(clientId)) {
+                json.put("clientId", clientId);
+            }
+
+            if (!CollectionUtil.isNullOrEmpty(versions)) {
+                json.put("versions", new JSONObject(versions));
+            }
+
+            if (presence != null) {
+                json.put("presence", PresenceUtil.getInstance().serialize(Collections.singletonList(presence)));
+            }
+
+        } catch (JSONException e) {
+            logger.error("Error serializing ConnectCommand", e);
         }
+
+        return json.toString();
     }
 
 }

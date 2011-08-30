@@ -9,12 +9,41 @@ package com.zipwhip.api.dto;
  */
 public class DeviceToken {
 
-    public Device device;
+    Device device;
+    String sessionKey;
+    String apiKey;
+    String secret;
 
-    public String sessionKey;
+    public Device getDevice() {
+        return device;
+    }
 
-    public String apiKey;
+    public void setDevice(Device device) {
+        this.device = device;
+    }
 
-    public String secret;
+    public String getSessionKey() {
+        return sessionKey;
+    }
+
+    public void setSessionKey(String sessionKey) {
+        this.sessionKey = sessionKey;
+    }
+
+    public String getApiKey() {
+        return apiKey;
+    }
+
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
 
 }

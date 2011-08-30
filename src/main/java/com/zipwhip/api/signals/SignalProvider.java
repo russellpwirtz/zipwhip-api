@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.api.signals.commands.PresenceCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
@@ -34,7 +33,7 @@ public interface SignalProvider extends Destroyable {
      * Set the clientId. NOTE: This will only have an effect if you set it
      * BEFORE calling connect.
      * 
-     * @param clientId
+     * @param clientId a persisted clientId that will be passed on connect.
      */
     void setClientId(String clientId);
 
@@ -55,8 +54,8 @@ public interface SignalProvider extends Destroyable {
     /**
      * Tell it to connect.
      *
-     * @return
-     * @throws Exception
+     * @return a Future task indicating if the connection was successful.
+     * @throws Exception if an error is encountered when connecting
      */
     Future<Boolean> connect() throws Exception;
 
@@ -95,17 +94,17 @@ public interface SignalProvider extends Destroyable {
     /**
      * You can Observe this event to capture things that come through
      * 
-     * @param observer
+     * @param observer an Observer of type List<Signal> to listen for new signal events.
      */
     void onSignalReceived(Observer<List<Signal>> observer);
 
     /**
      * Observe the changes in connection. This is when your clientId is used for
-     * the first time.
+     * the first time. True is connected and False is disconnected.
      * 
      * This is a low level TCP connection observable.
      * 
-     * @param observer
+     * @param observer an Observer of type Boolean to listen for connection changes events.
      */
     void onConnectionChanged(Observer<Boolean> observer);
 
@@ -113,8 +112,10 @@ public interface SignalProvider extends Destroyable {
      * Observe when we authenticate with the SignalServer. This means a new
      * clientId has been given to us for the first time. This should only fire
      * once.
+     *
+     * The String param is the clientId.
      * 
-     * @param observer
+     * @param observer an Observer of type String to listen for the event.
      */
     void onNewClientIdReceived(Observer<String> observer);
 
@@ -123,22 +124,29 @@ public interface SignalProvider extends Destroyable {
      * that we are subscribed to the SignalServer and will begin to
      * receive events.
      *
-     * @param observer
+     * @param observer an Observer of type SubscriptionCompleteCommand to listen for the event.
      */
     void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
 
     /**
      * Observe when we receive a presence update.
      *
-     * @param observer
+     * @param observer an Observer of type List<Presence> to listen for the event.
      */
-    void onPresenceReceived(Observer<PresenceCommand> observer);
+    void onPresenceReceived(Observer<List<Presence>> observer);
 
     /**
      * Observe a signal verification sent by another connected client.
      *
-     * @param observer
+     * @param observer an Observer of type Void to listen for the event.
      */
     void onSignalVerificationReceived(Observer<Void> observer);
+
+    /**
+     * Observe a new signal version for a given subscription and channel.
+     *
+     * @param observer an Observer of type  to listen for the event.
+     */
+    void onVersionChanged(Observer<VersionMapEntry> observer);
 
 }

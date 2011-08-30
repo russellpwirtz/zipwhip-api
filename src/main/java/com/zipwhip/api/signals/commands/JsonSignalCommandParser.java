@@ -1,6 +1,8 @@
 package com.zipwhip.api.signals.commands;
 
 import com.zipwhip.api.signals.JsonSignalParser;
+import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.util.Parser;
 import com.zipwhip.util.StringUtil;
 
@@ -42,10 +44,6 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
     public Command parse(String string) throws Exception {
         
         JSONObject json = new JSONObject(string);
-
-        // TODO Store versionKey and version
-        String versionKey = json.optString("versionKey", StringUtil.EMPTY_STRING);
-        Long version = json.optLong("version", -1);
 
         String action = json.optString("action");
 
@@ -110,8 +108,11 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
             }
 
             String subscriptionId = object.optString("subscriptionId");
+
+            SubscriptionCompleteCommand subscriptionCompleteCommand = new SubscriptionCompleteCommand(subscriptionId, channels);
+            subscriptionCompleteCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
                         
-            return new SubscriptionCompleteCommand(subscriptionId, channels);
+            return subscriptionCompleteCommand;
         }
     };
         
@@ -130,18 +131,18 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 return null;
             }
 
-            List<JSONObject> messageList = new ArrayList<JSONObject>();
+            List<SignalCommand> signalCommands = new ArrayList<SignalCommand>();
 
             for (int i = 0; i < messages.length(); i++) {
 
-                JSONObject message = messages.optJSONObject(i);
+                JSONObject signalJson = messages.optJSONObject(i);
 
-                if (message != null) {
-                    messageList.add(message);
+                if (signalJson != null && signalJson.has("signal")) {
+                    signalCommands.add((SignalCommand) SIGNAL_PARSER.parse(signalJson));
                 }
             }
 
-            return new BacklogCommand(messageList);
+            return new BacklogCommand(signalCommands);
         }
     };
 
@@ -154,7 +155,10 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 return null;
             }
 
-            return new SignalCommand(JSON_SIGNAL_PARSER.parseSignal(object));
+            SignalCommand signalCommand = new SignalCommand(JsonSignalParser.getInstance().parseSignal(object));
+            signalCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+
+            return signalCommand;
         }
     };
 
@@ -167,9 +171,10 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 return null;
             }
 
-            // TODO parse the presence object
-            //return new PresenceCommand(object.optJSONObject("presence"));
-            return new PresenceCommand(null);
+            PresenceCommand presenceCommand = new PresenceCommand(PresenceUtil.getInstance().parse(object.optJSONArray("presence")));
+            presenceCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+
+            return presenceCommand;
         }
     };
     
@@ -186,7 +191,5 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
             return new NoopCommand();
         }
     };
-
-    private static final JsonSignalParser JSON_SIGNAL_PARSER = new JsonSignalParser();
 
 }

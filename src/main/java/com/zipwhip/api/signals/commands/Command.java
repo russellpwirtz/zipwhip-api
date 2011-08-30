@@ -1,5 +1,7 @@
 package com.zipwhip.api.signals.commands;
 
+import com.zipwhip.api.signals.VersionMapEntry;
+
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/12/11 Time: 5:43 PM
  * 
@@ -7,22 +9,13 @@ package com.zipwhip.api.signals.commands;
  */
 public abstract class Command {
 
-    String versionKey;
-    Long version;
+    VersionMapEntry version;
 
-    public String getVersionKey() {
-        return versionKey;
-    }
-
-    public void setVersionKey(String versionKey) {
-        this.versionKey = versionKey;
-    }
-
-    public Long getVersion() {
+    public VersionMapEntry getVersion() {
         return version;
     }
 
-    public void setVersion(Long version) {
+    public void setVersion(VersionMapEntry version) {
         this.version = version;
     }
 

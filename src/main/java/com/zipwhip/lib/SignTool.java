@@ -26,7 +26,12 @@ public class SignTool {
         this.apiKey = APIKey;
     }
 
-    // This method converts AWSSecretKey into crypto instance.
+    /**
+     * This method converts SecretKey into crypto instance.
+     *
+     * @param secret SecretKey
+     * @throws Exception
+     */
     public void setSecret(String secret) throws Exception {
         if (secret == null){
             mac = null;

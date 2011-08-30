@@ -139,9 +139,9 @@ public class JsonDtoParser {
             JSONObject json = array.getJSONObject(i);
             MessageToken token = new MessageToken();
 
-            token.message = json.getString("message");
-            token.deviceId = json.optLong("device"); // will be 0 if it is a self message
-            token.contactId = json.optLong("contact"); // will be 0 if it is a self message
+            token.setMessage(json.getString("message"));
+            token.setDeviceId(json.optLong("device")); // will be 0 if it is a self message
+            token.setContactId(json.optLong("contact")); // will be 0 if it is a self message
 
             result.add(token);
         }
