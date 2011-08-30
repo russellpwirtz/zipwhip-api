@@ -2,6 +2,7 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
@@ -27,7 +28,10 @@ import static org.jboss.netty.buffer.ChannelBuffers.copiedBuffer;
 public class NettySignalConnection extends DestroyableBase implements SignalConnection, ChannelPipelineFactory {
 
     public static final int CONNECTION_TIMEOUT_SECONDS = 45;
-    public static final int MAX_FRAME_SIZE = 65535;
+
+    private static final int MAX_FRAME_SIZE = 65535;
+    private static final int PING_TIMEOUT = 1000 * 30; // when to ping, inactive seconds
+    private static final int PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
 
@@ -35,6 +39,12 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private int port = 80;
 
     private ExecutorService executor;
+
+    private ScheduledFuture<?> pingTimeoutFuture;
+    private ScheduledExecutorService pingTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
+
+    private ScheduledFuture<?> pongTimeoutFuture;
+    private ScheduledExecutorService pongTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
@@ -134,7 +144,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     public ChannelPipeline getPipeline() throws Exception {
 
         return Channels.pipeline(
-                new DelimiterBasedFrameDecoder(MAX_FRAME_SIZE, true, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())), 
+                new DelimiterBasedFrameDecoder(MAX_FRAME_SIZE, false, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())),
                 new StringToChannelBuffer(), 
                 new StringDecoder(), 
                 new MessageDecoder(),
@@ -157,10 +167,23 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                             logger.warn("Received a message that was not a command!");
                             return;
                         }
+                        else if (msg instanceof PingPongCommand) {
+                            receivePong();
+                            return;
+                        }
+                        else {
+                            schedulePing();
+                        }
 
                         Command command = (Command) msg;
 
                         receiveEvent.notifyObservers(this, command);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+                        // TODO queue and report to the server
+                        logger.error(e);
                     }
                 }
         );
@@ -168,9 +191,66 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     @Override
     protected void onDestroy() {
+
         if (this.isConnected()) {
             this.disconnect();
         }
+
+        pingTimeoutFuture.cancel(true);
+        pongTimeoutFuture.cancel(true);
+
+        pongTimeoutExecutor.shutdownNow();
+        pongTimeoutExecutor.shutdownNow();
+    }
+
+    private void schedulePing() {
+
+        if (!pingTimeoutExecutor.isShutdown() && !pingTimeoutExecutor.isTerminated()) {
+
+            if (pingTimeoutFuture != null) {
+
+                logger.debug("Resetting scheduled PING");
+
+                pingTimeoutFuture.cancel(false);
+            }
+        }
+
+        logger.debug("Scheduling a PING");
+
+        pingTimeoutFuture = pingTimeoutExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
+
+                logger.debug("Sending a PING");
+
+                send(PingPongCommand.getInstance());
+
+                pongTimeoutFuture = pongTimeoutExecutor.schedule(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        logger.warn("PONG timeout, disconnecting...");
+
+                        disconnect();
+                    }
+                }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
+
+            }
+        }, PING_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+
+    private void receivePong() {
+
+        logger.debug("Received a PONG");
+
+        if (!pongTimeoutExecutor.isShutdown() && !pongTimeoutExecutor.isTerminated()) {
+
+            logger.debug("Resetting timeout PONG");
+
+            pongTimeoutFuture.cancel(false);
+        }
+
+        schedulePing();
     }
 
 }

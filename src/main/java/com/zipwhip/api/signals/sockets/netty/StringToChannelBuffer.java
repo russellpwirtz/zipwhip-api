@@ -13,7 +13,7 @@ public class StringToChannelBuffer extends OneToOneEncoder implements ChannelHan
 
     private static Logger logger = Logger.getLogger(StringToChannelBuffer.class);
 
-    static final String CRLF = new String(new byte[] { 13, 10 }); // \x0D\x0A
+    public static final String CRLF = new String(new byte[] { 13, 10 }); // \x0D\x0A
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {

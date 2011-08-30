@@ -58,11 +58,14 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
         this.link(connection);
         this.link(connectEvent);
+
+        this.link(connectEvent);
         this.link(newClientIdEvent);
         this.link(signalEvent);
-        this.link(subscriptionCompleteEvent);
-        this.link(presenceReceivedEvent);
         this.link(signalVerificationEvent);
+        this.link(newVersionEvent);
+        this.link(presenceReceivedEvent);
+        this.link(subscriptionCompleteEvent);
 
         connection.onMessageReceived(new Observer<Command>() {
             /**

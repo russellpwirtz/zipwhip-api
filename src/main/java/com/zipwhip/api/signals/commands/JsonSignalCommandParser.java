@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.commands;
 import com.zipwhip.api.signals.JsonSignalParser;
 import com.zipwhip.api.signals.PresenceUtil;
 import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.sockets.netty.StringToChannelBuffer;
 import com.zipwhip.util.Parser;
 import com.zipwhip.util.StringUtil;
 
@@ -42,6 +43,11 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
 
     @Override
     public Command parse(String string) throws Exception {
+
+        // First check if it is a PONG
+        if (StringToChannelBuffer.CRLF.equals(string)) {
+            return PingPongCommand.getInstance();
+        }
         
         JSONObject json = new JSONObject(string);
 
