@@ -74,7 +74,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         if (connection == null) {
             throw new NullPointerException("The connection can not be null");
         }
-        
+
         if (signalProvider == null) {
             throw new NullPointerException("The signalProvider cannot be null");
         }

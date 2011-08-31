@@ -40,8 +40,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<List<Presence>> presenceReceivedEvent = new ObservableHelper<List<Presence>>();
     private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
 
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private SignalConnection connection = new NettySignalConnection();
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private String clientId;
     private String originalClientId; //so we can detect change
@@ -52,12 +52,10 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this(new NettySignalConnection());
     }
 
-    public SocketSignalProvider(SignalConnection conn) {
+    public SocketSignalProvider(SignalConnection connection) {
         
-        this.connection = conn;
-
-        this.link(connection);
-        this.link(connectEvent);
+        this.connection = connection;
+        this.link(this.connection);
 
         this.link(connectEvent);
         this.link(newClientIdEvent);
@@ -156,7 +154,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Boolean> connect() throws Exception {
-        return connect(originalClientId);
+        return connect(originalClientId, null);
     }
 
     @Override
