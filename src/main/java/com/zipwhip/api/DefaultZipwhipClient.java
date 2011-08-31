@@ -5,11 +5,9 @@ import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.ServerResponse;
-import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lib.Address;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -31,20 +29,43 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
 
+    private VersionManager versionManager = new PreferencesVersionManager();
+
+    /**
+     * Create a new DefaultZipwhipClient with pre-configured Connection and SignalProvider.
+     */
     public DefaultZipwhipClient() {
+        // TODO: get these objects via a factory
         this(new HttpConnection(), new SocketSignalProvider());
     }
 
+    /**
+     * Create a new DefaultZipwhipClient with pre-configured SignalProvider.
+     *
+     * @param connection A low level connection to Zipwhip
+     */
     public DefaultZipwhipClient(Connection connection) {
+        // TODO: SocketSignalProvider object via a factory
         this(connection, new SocketSignalProvider());
     }
 
+    /**
+     * Create a new DefaultZipwhipClient.
+     *
+     * @param connection The connection to Zipwhip API
+     * @param signalProvider The connection client for Zipwhip SignalServer.
+     */
     public DefaultZipwhipClient(final Connection connection, final SignalProvider signalProvider) {
 
         super(connection, signalProvider);
 
-        getSignalProvider().onNewClientIdReceived(new Observer<String>() {
+        // Start listening to provider events that interest us
+        initSignalProviderEvents();
+    }
 
+    private void initSignalProviderEvents() {
+
+        signalProvider.onNewClientIdReceived(new Observer<String>() {
             @Override
             public void notify(Object sender, String clientId) {
 
@@ -52,6 +73,29 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                     logger.warn("Received CONNECT without clientId");
                     return;
                 }
+
+                // TODO clientId handling
+                if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
+//                    clientIdManager.setClientId(clientId);
+//                    return;
+                }
+
+//                String managedClientId = clientIdManager.getClientId();
+//
+//                if (StringUtil.exists(managedClientId)) {
+//
+//                    // clientId changed, unsub the old one, and sub the new one
+//                    if (!managedClientId.equals(clientId)) {
+//                        unsubscribeSessions(managedClientId, sessions);
+//                        clientIdManager.setClientId(clientId);
+//                        subscribeSessions(clientId, sessions);
+//                    }
+//                } else {
+//                    clientIdManager.setClientId(clientId);
+//                    subscribeSessions(clientId, sessions);
+//                }
+
+                // TODO if the clientId is different than our managed one, clear versions
 
                 // lets do a signals connect!
                 Map<String, Object> params = new HashMap<String, Object>();
@@ -66,31 +110,26 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                 }
             }
         });
+
+        signalProvider.onVersionChanged(new Observer<VersionMapEntry>() {
+            @Override
+            public void notify(Object sender, VersionMapEntry item) {
+                versionManager.setVersion(item.getKey(), item.getValue());
+            }
+        });
+
     }
-    
+
     @Override
     public Future<Boolean> connect() throws Exception {
-
-        if (connection == null) {
-            throw new NullPointerException("The connection can not be null");
-        }
-
-        if (signalProvider == null) {
-            throw new NullPointerException("The signalProvider cannot be null");
-        }
 
         // we need to determine if we're authenticated enough
         if (!connection.isConnected() || !connection.isAuthenticated()) {
             throw new Exception("The connection cannot operate at this time");
         }
 
-        if (!signalProvider.isConnected()) {
-            // this will NOT block until you're connected
-            // it's asynchronous
-            return signalProvider.connect();
-        }
-
-        return new FakeFuture<Boolean>(true);
+        // Will NOT block until you're connected it's asynchronous
+        return signalProvider.connect(versionManager.getVersions());
     }
 
     @Override

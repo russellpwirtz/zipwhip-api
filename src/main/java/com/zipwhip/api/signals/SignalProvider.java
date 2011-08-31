@@ -52,7 +52,8 @@ public interface SignalProvider extends Destroyable {
     public void setPresence(Presence presence);
 
     /**
-     * Tell it to connect.
+     * Tell it to connect. This call is idempotent, so if multiple calls to
+     * a connection provider will have no effect.
      *
      * @return a Future task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
@@ -73,6 +74,16 @@ public interface SignalProvider extends Destroyable {
     /**
      * Tell it to connect.
      *
+     * @param versions a Map of the current signal version per subscription.
+     * @return A future that tells you when the connecting is complete. The
+     *         string result is the clientId.
+     * @throws Exception if an I/O happens while connecting.
+     */
+    Future<Boolean> connect(Map<String, Long> versions) throws Exception;
+
+    /**
+     * Tell it to connect.
+     *
      * @param clientId
      *        Pass in null if you don't have one.
      * @param versions a Map of the current signal version per subscription.
@@ -80,12 +91,12 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-
     Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
 
     /**
+     *
      * Tell it to disconnect.
-     * 
+     *
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */

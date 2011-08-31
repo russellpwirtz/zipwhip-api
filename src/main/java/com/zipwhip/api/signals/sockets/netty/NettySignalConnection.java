@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
@@ -30,21 +31,20 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private static final int MAX_FRAME_SIZE = 65535;
-    private static final int PING_TIMEOUT = 1000 * 30; // when to ping, inactive seconds
+    private static final int PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
     private static final int PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
 
+    private ReconnectStrategy reconnectStrategy;
     private String host = "signals.zipwhip.com";
     private int port = 80;
 
     private ExecutorService executor;
 
     private ScheduledFuture<?> pingTimeoutFuture;
-    private ScheduledExecutorService pingTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
-
     private ScheduledFuture<?> pongTimeoutFuture;
-    private ScheduledExecutorService pongTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
@@ -52,8 +52,15 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private Channel channel;
     private ChannelFactory channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
+    public NettySignalConnection() {
+        this.link(receiveEvent);
+        this.link(connectEvent);
+    }
+
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
+
+        // TODO we need to check to reconnectStrategy here...
 
         channel = channelFactory.newChannel(getPipeline());
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
@@ -82,7 +89,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public synchronized Future<Void> disconnect() {
+    public synchronized Future<Void> disconnect(boolean reconnect) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -91,10 +98,10 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 if (channel != null) {
                     channel.disconnect().await();
                 }
-                    
+
                 if (channelFactory != null) {
-                    channelFactory.releaseExternalResources();   
-                }                    
+                    channelFactory.releaseExternalResources();
+                }
 
                 executor.shutdownNow();
                 executor = null;
@@ -114,6 +121,12 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         });
 
         executor.execute(task);
+
+        if (reconnect) {
+            // TODO this is not implemented yet
+            reconnectStrategy.requestReconnect(this);
+        }
+
         return task;
     }
 
@@ -149,19 +162,25 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
+    public void setReconnectStrategy(ReconnectStrategy strategy) {
+        this.reconnectStrategy = strategy;
+    }
+
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
 
         return Channels.pipeline(
+                // Second arg must be set to false. This tells Netty not to strip the frame delimiter so we can recognise PONGs upstream.
                 new DelimiterBasedFrameDecoder(MAX_FRAME_SIZE, false, copiedBuffer(StringToChannelBuffer.CRLF, Charset.defaultCharset())),
-                new StringToChannelBuffer(), 
-                new StringDecoder(), 
+                new StringToChannelBuffer(),
+                new StringDecoder(),
                 new MessageDecoder(),
-                new SignalCommandEncoder(), 
+                new SignalCommandEncoder(),
                 new SimpleChannelHandler() {
 
                     /**
                      * The entry point for signal traffic
-                     * 
+                     *
                      * @param ctx ChannelHandlerContext
                      * @param e MessageEvent
                      * @throws Exception
@@ -174,12 +193,12 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         if (!(msg instanceof Command)) {
                             logger.warn("Received a message that was not a command!");
                             return;
-                        }
-                        else if (msg instanceof PingPongCommand) {
+                        } else if (msg instanceof PingPongCommand) {
+                            // We received a PONG, cancel the PONG timeout.
                             receivePong();
                             return;
-                        }
-                        else {
+                        } else {
+                            // We have activity on the wire, reschedule the next PING
                             schedulePing();
                         }
 
@@ -200,20 +219,18 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     protected void onDestroy() {
 
-        if (this.isConnected()) {
-            this.disconnect();
+        if (isConnected()) {
+            disconnect(false);
         }
 
         pingTimeoutFuture.cancel(true);
         pongTimeoutFuture.cancel(true);
-
-        pongTimeoutExecutor.shutdownNow();
-        pongTimeoutExecutor.shutdownNow();
+        scheduledExecutor.shutdownNow();
     }
 
     private void schedulePing() {
 
-        if (!pingTimeoutExecutor.isShutdown() && !pingTimeoutExecutor.isTerminated()) {
+        if (pingTimeoutFuture != null && !pingTimeoutFuture.isCancelled()) {
 
             if (pingTimeoutFuture != null) {
 
@@ -225,7 +242,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         logger.debug("Scheduling a PING");
 
-        pingTimeoutFuture = pingTimeoutExecutor.schedule(new Runnable() {
+        pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
             @Override
             public void run() {
 
@@ -233,13 +250,13 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                 send(PingPongCommand.getInstance());
 
-                pongTimeoutFuture = pongTimeoutExecutor.schedule(new Runnable() {
+                pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
                     @Override
                     public void run() {
 
                         logger.warn("PONG timeout, disconnecting...");
 
-                        disconnect();
+                        disconnect(true);
                     }
                 }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
 
@@ -251,7 +268,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         logger.debug("Received a PONG");
 
-        if (!pongTimeoutExecutor.isShutdown() && !pongTimeoutExecutor.isTerminated()) {
+        if (pongTimeoutFuture != null && !pongTimeoutFuture.isCancelled()) {
 
             logger.debug("Resetting timeout PONG");
 

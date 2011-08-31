@@ -163,6 +163,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
+    public Future<Boolean> connect(Map<String, Long> versions) throws Exception {
+        return connect(originalClientId, versions);
+    }
+
+    @Override
     public Future<Boolean> connect(final String clientId, final Map<String, Long> versions) throws Exception {
 
         if (isConnected()) {
@@ -220,7 +225,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Void> disconnect() throws Exception {
-        return connection.disconnect();
+        return connection.disconnect(false);
     }
 
     @Override

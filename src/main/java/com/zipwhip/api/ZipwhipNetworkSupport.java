@@ -1,5 +1,6 @@
 package com.zipwhip.api;
 
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
@@ -24,6 +25,8 @@ import java.util.concurrent.*;
  * This naming convention was copied from Spring (JmsSupport) base class.
  */
 public abstract class ZipwhipNetworkSupport extends DestroyableBase {
+
+    public static final long DEFAULT_TIMEOUT_SECONDS = 45;
 
     public static final String CONTACT_LIST = "contact/list";
     public static final String CONTACT_DELETE = "contact/delete";
@@ -60,102 +63,28 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     protected ParallelBulkExecutor executor = new ParallelBulkExecutor(ZipwhipNetworkSupport.class);
 
     public ZipwhipNetworkSupport() {
-        setResponseParser(JsonResponseParser.getInstance());
-        setConnection(new HttpConnection());
-
-        link(executor);
+        this(null, null);
     }
 
     public ZipwhipNetworkSupport(Connection connection) {
-        this();
-        this.connection = connection;
-    }
-
-    public ZipwhipNetworkSupport(Connection connection, SignalProvider signalProvider) {
-        this(connection);
-        this.signalProvider = signalProvider;
+        this(connection, null);
     }
 
     public ZipwhipNetworkSupport(SignalProvider signalProvider) {
-        this();
-        this.signalProvider = signalProvider;
+        this(null, signalProvider);
     }
 
-    protected ServerResponse executeSync(final String method, final Map<String, Object> params) throws Exception {
-        return get(executeAsync(method, params));
-    }
+    public ZipwhipNetworkSupport(Connection connection, SignalProvider signalProvider) {
 
-    protected Future<ServerResponse> executeAsync(final String method, final Map<String, Object> params) throws Exception {
-
-        FutureTask<ServerResponse> task = new FutureTask<ServerResponse>(new Callable<ServerResponse>() {
-            @Override
-            public ServerResponse call() throws Exception {
-
-                if (!connection.isAuthenticated()) {
-                    throw new Exception("The connection is not authenticated, can't continue.");
-                }
-
-                // execute the request
-                Future<String> future = connection.send(method, params);
-
-                String response = future.get(45, TimeUnit.SECONDS);
-
-                // parse the response
-                ServerResponse serverResponse = responseParser.parse(response);
-
-                // see if there are any signals we should announce
-                announceSignals(serverResponse);
-
-                // throw the error if the server returned false.
-                checkAndThrowError(serverResponse);
-
-                // return the successful response
-                return serverResponse;
-            }
-        });
-
-        executor.execute(task);
-
-        return task;
-    }
-
-    protected void announceSignals(ServerResponse serverResponse) {
-        if (serverResponse == null) {
-            return;
-        }
-        if (serverResponse.sessions == null) {
-            return;
-        }
-        if (getSignalProvider() == null) {
-            return;
+        if (connection == null || signalProvider == null) {
+            throw new IllegalArgumentException("Connection and SignalProvider must not be null");
         }
 
-        //        if (getSignalProvider().getSignalReceivedCallback() == null){
-        //            return;
-        //        }
+        setConnection(connection);
+        setSignalProvider(signalProvider);
+        setResponseParser(JsonResponseParser.getInstance());
 
-        //        getSignalProvider().getSignalReceivedCallback().onSignalReceived(this, serverResponse.sessions);
-        // todo FIX THIS?
-    }
-
-    void checkAndThrowError(ServerResponse serverResponse) throws Exception {
-        if (serverResponse == null) {
-            //throw new Exception("Server response object was null");
-            // its ok if the server returns null, right?
-            return;
-        }
-        if (!serverResponse.success) {
-            throwError(serverResponse);
-        }
-    }
-
-    void throwError(ServerResponse serverResponse) throws Exception {
-        if (serverResponse instanceof StringServerResponse) {
-            StringServerResponse string = (StringServerResponse) serverResponse;
-            throw new Exception(string.response);
-        } else {
-            throw new Exception(serverResponse.raw);
-        }
+        link(executor);
     }
 
     public SignalProvider getSignalProvider() {
@@ -186,8 +115,92 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         this.responseParser = responseParser;
     }
 
+    protected ServerResponse executeSync(final String method, final Map<String, Object> params) throws Exception {
+        return get(executeAsync(method, params));
+    }
+
+    protected Future<ServerResponse> executeAsync(final String method, final Map<String, Object> params) throws Exception {
+
+        FutureTask<ServerResponse> task = new FutureTask<ServerResponse>(new Callable<ServerResponse>() {
+            @Override
+            public ServerResponse call() throws Exception {
+
+                if (!connection.isAuthenticated()) {
+                    throw new Exception("The connection is not authenticated, can't continue.");
+                }
+
+                // execute the request
+                Future<String> future = connection.send(method, params);
+
+                String response = future.get(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+                // parse the response
+                ServerResponse serverResponse = responseParser.parse(response);
+
+                // see if there are any signals we should announce
+                announceSignals(serverResponse);
+
+                // throw the error if the server returned false.
+                checkAndThrowError(serverResponse);
+
+                // return the successful response
+                return serverResponse;
+            }
+        });
+
+        executor.execute(task);
+
+        return task;
+    }
+
+    protected void announceSignals(ServerResponse serverResponse) {
+
+        if (serverResponse == null) {
+            return;
+        }
+
+        if (serverResponse.sessions == null) {
+            return;
+        }
+
+        if (getSignalProvider() == null) {
+            return;
+        }
+
+        //        if (getSignalProvider().getSignalReceivedCallback() == null){
+        //            return;
+        //        }
+
+        //        getSignalProvider().getSignalReceivedCallback().onSignalReceived(this, serverResponse.sessions);
+        // TODO: What was the intention of this method?
+    }
+
+    protected void checkAndThrowError(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse == null) {
+            // A null response from the server is OK
+            return;
+        }
+
+        if (!serverResponse.success) {
+            throwError(serverResponse);
+        }
+    }
+
+    protected void throwError(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse instanceof StringServerResponse) {
+
+            StringServerResponse string = (StringServerResponse) serverResponse;
+            throw new Exception(string.response);
+
+        } else {
+            throw new Exception(serverResponse.raw);
+        }
+    }
+
     protected <T> T get(Future<T> task) throws ExecutionException, TimeoutException, InterruptedException {
-        return task.get(30, TimeUnit.SECONDS);
+        return task.get(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     protected Future<Void> wrapVoid(final Future<?> future) {
@@ -205,8 +218,4 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         return task;
     }
 
-    //    @Override
-    //    public void destroy() {
-    //        super.destroy();
-    //    }
 }

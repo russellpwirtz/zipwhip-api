@@ -28,11 +28,12 @@ public interface SignalConnection extends Destroyable {
 
     /**
      * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY
-     * 
-     * @return The future will tell you when the connection is terminated
+     *
+     * @param reconnect True to attempt a reconnect.
+     * @return The future will tell you when the connection is terminated,
      * @throws Exception if there is is an error disconnecting
      */
-    Future<Void> disconnect() throws Exception;
+    Future<Void> disconnect(boolean reconnect) throws Exception;
 
     /**
      * Send something to the SignalServer
@@ -77,5 +78,12 @@ public interface SignalConnection extends Destroyable {
      * @param port the port to be used on the NEXT connection
      */
     void setPort(int port);
+
+    /**
+     * Set the strategy to use when reconnecting.
+     *
+     * @param strategy The strategy to use when reconnecting.
+     */
+    void setReconnectStrategy(ReconnectStrategy strategy);
 
 }

@@ -1,9 +1,9 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
@@ -18,16 +18,7 @@ import java.util.concurrent.*;
  */
 public class MockSignalConnection extends DestroyableBase implements SignalConnection {
 
-    private static final int PING_TIMEOUT = 1000 * 30; // when to ping, inactive seconds
-    private static final int PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
-
     private ExecutorService executor;
-
-    private ScheduledFuture<?> pingTimeoutFuture;
-    private ScheduledExecutorService pingTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    private ScheduledFuture<?> pongTimeoutFuture;
-    private ScheduledExecutorService pongTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
@@ -57,7 +48,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
-    public synchronized Future<Void> disconnect() {
+    public synchronized Future<Void> disconnect(boolean reconnect) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -65,15 +56,6 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
 
                 executor.shutdownNow();
                 executor = null;
-
-                if (pingTimeoutFuture != null) {
-                    pingTimeoutFuture.cancel(true);
-                }
-
-                if (pongTimeoutFuture != null) {
-                    pongTimeoutFuture.cancel(true);
-                }
-
                 connectEvent.notifyObservers(this, false);
 
                 return null;
@@ -113,43 +95,15 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
+    public void setReconnectStrategy(ReconnectStrategy strategy) {
+    }
+
+    @Override
     protected void onDestroy() {
 
         if (this.isConnected()) {
-            this.disconnect();
+            this.disconnect(false);
         }
-
-        pingTimeoutFuture.cancel(true);
-        pongTimeoutFuture.cancel(true);
-
-        pongTimeoutExecutor.shutdownNow();
-        pongTimeoutExecutor.shutdownNow();
-    }
-
-    private void schedulePing() {
-
-        if (!pingTimeoutExecutor.isShutdown() && !pingTimeoutExecutor.isTerminated()) {
-
-            if (pingTimeoutFuture != null) {
-                pingTimeoutFuture.cancel(false);
-            }
-        }
-
-        pingTimeoutFuture = pingTimeoutExecutor.schedule(new Runnable() {
-            @Override
-            public void run() {
-
-                send(PingPongCommand.getInstance());
-
-                pongTimeoutFuture = pongTimeoutExecutor.schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        disconnect();
-                    }
-                }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
-
-            }
-        }, PING_TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
 }

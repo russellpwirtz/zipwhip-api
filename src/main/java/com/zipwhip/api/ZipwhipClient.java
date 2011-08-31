@@ -1,6 +1,5 @@
 package com.zipwhip.api;
 
-
 import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
@@ -142,18 +141,20 @@ public interface ZipwhipClient extends Destroyable {
     void setConnection(Connection connection);
 
     /**
-     * Allows you to receive signals.
+     * Getter for the SignalProvider. SignalProvider manages the connection to the SignalServer
+     * and provides events when messages are received or connection state changes.
      *
-     * @return
+     * @return An implementation of SignalProvider or null if none has been set.
      */
     SignalProvider getSignalProvider();
 
     /**
-     * Setter for signalProvider
+     * Setter for the SignalProvider. SignalProvider manages the connection to the SignalServer
+     * and provides events when messages are received or connection state changes.
      *
-     * @param client
+     * @param provider An implementation of SignalProvider.
      */
-    void setSignalProvider(SignalProvider client);
+    void setSignalProvider(SignalProvider provider);
 
 
 }
