@@ -74,9 +74,7 @@ public class PreferencesVersionManager implements VersionManager {
 
     private void loadVersions() {
         try {
-            String[] keys = versionPreferences.keys();
-
-            for (String key : keys) {
+            for (String key : versionPreferences.keys()) {
 
                 long value = versionPreferences.getLong(key, -1);
 

@@ -345,33 +345,6 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         executeSync(CONTACT_SAVE, params);
     }
 
-    //    public void requestSockets(final String clientId) throws Exception {
-
-    //    }
-    //
-    //        });
-    //            }
-    //                return connection.requestSockets(requestBuilder.build());
-    //            public String run() {
-    //
-    //        ServerResponse> serverResponse = execute(new StringRunnable() {
-    //
-    //        }
-    //            params.put("index", String.valueOf(index));
-    //        if (index != -1) {
-    //
-    //        }
-    //            params.put("subscriptionId", subscriptionId);
-    //        if (subscriptionId != null) {
-    //
-    //        params.put("clientId", clientId);
-    //
-    //        final RequestBuilder requestBuilder = new RequestBuilder();
-    //    public void requestSockets(final String clientId, final String subscriptionId, final int index) throws Exception {
-    //
-    //    }
-    //        requestSockets(clientId, null, -1);
-
     @Override
     protected void onDestroy() {
 

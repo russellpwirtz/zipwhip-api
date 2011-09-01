@@ -1,6 +1,5 @@
 package com.zipwhip.api;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
