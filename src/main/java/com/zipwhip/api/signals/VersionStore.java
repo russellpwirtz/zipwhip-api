@@ -13,7 +13,7 @@ import java.util.Map;
  * SharedPreferences, or SQLite. In a Java application, you might want to use a
  * File.
  */
-public interface VersionManager {
+public interface VersionStore {
 
     /**
      * Get all the current highest versions per key.

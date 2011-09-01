@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
@@ -33,7 +35,9 @@ public class App {
         Connection connection = HttpConnectionFactory.getInstance().setUsername(USERNAME).setPassword(PASSWORD).create();
         ZipwhipClient client = new DefaultZipwhipClient(connection);
 
-        client.connect();
+        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).build();
+
+        client.connect(presence);
 
         client.sendMessage("2069308934", "Yo");
 

@@ -5,6 +5,7 @@ import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SettingsStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
@@ -103,6 +104,15 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Connect to Zipwhip Signals if setup.
      *
+     * @param presence a Presence object to pass to the SignalServer
+     * @throws Exception any connection problem
+     * @return so you can wait until login succeeds
+     */
+    Future<Boolean> connect(Presence presence) throws Exception;
+
+    /**
+     * Connect to Zipwhip Signals if setup.
+     *
      * @throws Exception any connection problem
      * @return so you can wait until login succeeds
      */
@@ -111,7 +121,7 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Listen for signals. This is a convenience method
      *
-     * @param observer
+     * @param observer An observer object to receive callbacks on
      */
     void addSignalObserver(Observer<List<Signal>> observer);
 
@@ -122,7 +132,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * We lose our TCP/IP connection to the SignalServer
      *
-     * @param observer
+     * @param observer An observer object to receive callbacks on
      */
     void addSignalsConnectionObserver(Observer<Boolean> observer);
 
@@ -130,13 +140,13 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * A connection to Zipwhip over a medium.
      *
-     * @return
+     * @return the current connection
      */
     Connection getConnection();
 
     /**
      *
-     * @param connection
+     * @param connection the connection to use
      */
     void setConnection(Connection connection);
 
@@ -156,5 +166,18 @@ public interface ZipwhipClient extends Destroyable {
      */
     void setSignalProvider(SignalProvider provider);
 
+    /**
+     * Get the setting store
+     *
+     * @return the setting store
+     */
+    SettingsStore getSettingsStore();
+
+    /**
+     * Set the setting store
+     *
+     * @param store the setting store
+     */
+    void setSettingsStore(SettingsStore store);
 
 }

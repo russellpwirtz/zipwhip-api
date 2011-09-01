@@ -29,8 +29,6 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
 
-    private SignalClientSettingsStore store = new DefaultSignalClientSettingsStore();
-
     /**
      * Create a new DefaultZipwhipClient with pre-configured Connection and SignalProvider.
      */
@@ -52,7 +50,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     /**
      * Create a new DefaultZipwhipClient.
      *
-     * @param connection The connection to Zipwhip API
+     * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
      */
     public DefaultZipwhipClient(final Connection connection, final SignalProvider signalProvider) {
@@ -74,39 +72,50 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                     return;
                 }
 
-                // TODO clientId handling
                 if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
-//                    clientIdManager.setClientId(clientId);
-//                    return;
+                    store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                    return;
                 }
 
-//                String managedClientId = clientIdManager.getClientId();
-//
-//                if (StringUtil.exists(managedClientId)) {
-//
-//                    // clientId changed, unsub the old one, and sub the new one
-//                    if (!managedClientId.equals(clientId)) {
-//                        unsubscribeSessions(managedClientId, sessions);
-//                        clientIdManager.setClientId(clientId);
-//                        subscribeSessions(clientId, sessions);
-//                    }
-//                } else {
-//                    clientIdManager.setClientId(clientId);
-//                    subscribeSessions(clientId, sessions);
-//                }
+                String managedClientId = store.get(SettingsStore.Keys.CLIENT_ID);
 
-                // TODO if the clientId is different than our managed one, clear versions
+                if (StringUtil.exists(managedClientId)) {
 
-                // lets do a signals connect!
-                Map<String, Object> params = new HashMap<String, Object>();
+                    // clientId changed, unsubscribe the old one, and sub the new one
+                    if (!managedClientId.equals(clientId)) {
 
-                params.put("clientId", clientId);
-                params.put("sessions", connection.getSessionKey());
+                        store.clearVersions();
 
-                try {
-                    executeSync("signals/connect", params);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                        store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+
+                        // Do a disconnect then connect
+                        Map<String, Object> params = new HashMap<String, Object>();
+                        params.put("clientId", clientId);
+                        params.put("sessions", connection.getSessionKey());
+
+                        try {
+                            executeSync("signals/disconnect", params);
+
+                            executeSync("signals/connect", params);
+
+                        } catch (Exception e) {
+                            logger.error("Error calling signals/connect", e);
+                        }
+                    }
+                } else {
+
+                    store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+
+                    // lets do a signals connect!
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put("clientId", clientId);
+                    params.put("sessions", connection.getSessionKey());
+
+                    try {
+                        executeSync("signals/connect", params);
+                    } catch (Exception e) {
+                        logger.error("Error calling signals/connect", e);
+                    }
                 }
             }
         });
@@ -122,14 +131,25 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public Future<Boolean> connect() throws Exception {
+        return connect(null);
+    }
+
+    @Override
+    public Future<Boolean> connect(Presence presence) throws Exception {
 
         // we need to determine if we're authenticated enough
         if (!connection.isConnected() || !connection.isAuthenticated()) {
             throw new Exception("The connection cannot operate at this time");
         }
 
+        String managedClientId = store.get(SettingsStore.Keys.CLIENT_ID);
+
+        if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
+            store.clearVersions();
+        }
+
         // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(store.getVersions());
+        return signalProvider.connect(store.get(SettingsStore.Keys.CLIENT_ID), store.getVersions(), presence);
     }
 
     @Override
@@ -164,6 +184,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public List<MessageToken> sendMessage(Collection<String> addresses, String body, String fromName, String advertisement) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         for (String address : addresses) {
@@ -185,6 +206,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public Message getMessage(String uuid) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("uuid", uuid);
@@ -194,7 +216,9 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public MessageStatus getMessageStatus(String uuid) throws Exception {
+
         Message message = getMessage(uuid);
+
         if (message == null) {
             return null;
         }
@@ -204,6 +228,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public Contact getContact(long id) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("id", Long.toString(id));
@@ -213,6 +238,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public Contact getContact(String mobileNumber) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("mobileNumber", mobileNumber);
@@ -229,11 +255,12 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
             params.put("category", category.toString());
         }
 
-       return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
+        return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
 
     @Override
     public void sendSignal(String scope, String channel, String event, String payload) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         // is this a device signal or a session signal?
@@ -256,6 +283,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public Contact addMember(String groupAddress, String contactAddress, String firstName, String lastName, String phoneKey, String notes) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("firstName", firstName);
@@ -280,7 +308,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     public void addSignalsConnectionObserver(Observer<Boolean> observer) {
         getSignalProvider().onConnectionChanged(observer);
     }
-    
+
     @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey) throws Exception {
         saveContact(address, firstName, lastName, phoneKey, null);
@@ -303,14 +331,12 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
         ServerResponse serverResponse = executeSync(USER_SAVE, params);
 
-        // cplx.response.optJSONObject("user")
-        // TODO: this will crash. i need to fix build errors and will revisit.
         return responseParser.parseContact(serverResponse);
-
     }
 
     @Override
     public Contact saveGroup(String type, String advertisement) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         if (type == null) {
@@ -331,6 +357,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("address", address);
@@ -349,5 +376,5 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     protected void onDestroy() {
 
     }
-    
+
 }

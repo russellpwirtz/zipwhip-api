@@ -12,7 +12,7 @@ import com.zipwhip.lib.KeyValueStore;
  * A default implementation is provided in
  *
  */
-public interface SignalClientSettingsStore extends KeyValueStore<SignalClientSettingsStore.Keys, String>, VersionManager {
+public interface SettingsStore extends KeyValueStore<SettingsStore.Keys, String>, VersionManager {
 
     public enum Keys { SESSION_KEY, CLIENT_ID }
 

@@ -40,13 +40,15 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<List<Presence>> presenceReceivedEvent = new ObservableHelper<List<Presence>>();
     private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
 
+    private CountDownLatch connectLatch;
     private SignalConnection connection = new NettySignalConnection();
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private String clientId;
     private String originalClientId; //so we can detect change
-    private Presence presence;
-    private CountDownLatch connectLatch;
+
+    private boolean callerGeneratedDisconnect;
+    private boolean disconnectCommandDisconnect;
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
@@ -122,7 +124,19 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
              */
             @Override
             public void notify(Object sender, Boolean item) {
-                connectEvent.notifyObservers(sender, item);
+
+                // False = disconnected can be generated one of 3 ways
+                // 1. Caller calls this.disconnect() -- don't reconnect -- do notify
+                // 2. Disconnect command received -- don't reconnect -- don't notify
+                // 3. Connection disconnects -- reconnect -- don't notify
+
+                if (item || callerGeneratedDisconnect) {
+                    connectEvent.notifyObservers(sender, item);
+                }
+
+                // Reset flags
+                callerGeneratedDisconnect = false;
+                disconnectCommandDisconnect = false;
             }
         });
     }
@@ -138,37 +152,22 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    @Override
-    public Presence getPresence() {
-        return presence;
-    }
-
-    @Override
-    public void setPresence(Presence presence) {
-        this.presence = presence;
-    }
-
-    @Override
     public Future<Boolean> connect() throws Exception {
-        return connect(originalClientId, null);
+        return connect(originalClientId, null, null);
     }
 
     @Override
     public Future<Boolean> connect(String clientId) throws Exception {
-        return connect(clientId, null);
+        return connect(clientId, null, null);
     }
 
     @Override
-    public Future<Boolean> connect(Map<String, Long> versions) throws Exception {
-        return connect(originalClientId, versions);
+    public Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
+        return connect(clientId, versions, null);
     }
 
     @Override
-    public Future<Boolean> connect(final String clientId, final Map<String, Long> versions) throws Exception {
+    public Future<Boolean> connect(final String clientId, final Map<String, Long> versions, final Presence presence) throws Exception {
 
         if (isConnected()) {
             logger.debug("Connect requested but already connected");
@@ -176,7 +175,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         }
 
         // keep track of the original one, so we can detect change
-        originalClientId = clientId;
+        if (StringUtil.exists(clientId)) {
+            originalClientId = clientId;
+        }
 
         // this will help us do the connect synchronously
         connectLatch = new CountDownLatch(1);
@@ -225,7 +226,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Void> disconnect() throws Exception {
-        return connection.disconnect(false);
+        callerGeneratedDisconnect = true;
+        return connection.disconnect();
     }
 
     @Override
@@ -297,6 +299,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         logger.debug("Handling DisconnectCommand");
 
         try {
+            disconnectCommandDisconnect = true;
             disconnect();
         } catch (Exception e) {
             logger.error("Error disconnecting", e);

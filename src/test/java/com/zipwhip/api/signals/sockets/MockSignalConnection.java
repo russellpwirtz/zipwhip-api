@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
@@ -48,7 +47,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
-    public synchronized Future<Void> disconnect(boolean reconnect) {
+    public synchronized Future<Void> disconnect() {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -95,14 +94,10 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
-    public void setReconnectStrategy(ReconnectStrategy strategy) {
-    }
-
-    @Override
     protected void onDestroy() {
 
         if (this.isConnected()) {
-            this.disconnect(false);
+            this.disconnect();
         }
     }
 

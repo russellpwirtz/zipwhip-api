@@ -14,9 +14,9 @@ import java.util.Map;
  * Date: 9/1/11
  * Time: 11:02 AM
  */
-public class DefaultSignalClientSettingsStoreTest {
+public class DefaultSettingsStoreTest {
 
-    SignalClientSettingsStore store;
+    SettingsStore store;
 
     @Before
     public void setUp() throws Exception {
@@ -32,15 +32,15 @@ public class DefaultSignalClientSettingsStoreTest {
     @Test
     public void testPutGetSessionKey() throws Exception {
 
-        store.put(SignalClientSettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
+        store.put(SettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
 
-        String sessionId = store.get(SignalClientSettingsStore.Keys.SESSION_KEY);
+        String sessionId = store.get(SettingsStore.Keys.SESSION_KEY);
 
         Assert.assertNotNull(sessionId);
         Assert.assertEquals("1234-1234-5678-5678:123456", sessionId);
 
-        store.put(SignalClientSettingsStore.Keys.SESSION_KEY, "4321-4321-9876-9876:9876543");
-        sessionId = store.get(SignalClientSettingsStore.Keys.SESSION_KEY);
+        store.put(SettingsStore.Keys.SESSION_KEY, "4321-4321-9876-9876:9876543");
+        sessionId = store.get(SettingsStore.Keys.SESSION_KEY);
 
         Assert.assertEquals("4321-4321-9876-9876:9876543", sessionId);
     }
@@ -48,15 +48,15 @@ public class DefaultSignalClientSettingsStoreTest {
     @Test
     public void testPutGetClientId() throws Exception {
 
-        store.put(SignalClientSettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
+        store.put(SettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
 
-        String clientId = store.get(SignalClientSettingsStore.Keys.CLIENT_ID);
+        String clientId = store.get(SettingsStore.Keys.CLIENT_ID);
 
         Assert.assertNotNull(clientId);
         Assert.assertEquals("1234-1234-5678-5678", clientId);
 
-        store.put(SignalClientSettingsStore.Keys.CLIENT_ID, "4321-4321-9876-9876");
-        clientId = store.get(SignalClientSettingsStore.Keys.CLIENT_ID);
+        store.put(SettingsStore.Keys.CLIENT_ID, "4321-4321-9876-9876");
+        clientId = store.get(SettingsStore.Keys.CLIENT_ID);
 
         Assert.assertEquals("4321-4321-9876-9876", clientId);
     }
@@ -64,40 +64,40 @@ public class DefaultSignalClientSettingsStoreTest {
     @Test
     public void testClear() throws Exception {
 
-        store.put(SignalClientSettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
-        String sessionId = store.get(SignalClientSettingsStore.Keys.SESSION_KEY);
+        store.put(SettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
+        String sessionId = store.get(SettingsStore.Keys.SESSION_KEY);
         Assert.assertNotNull(sessionId);
         Assert.assertEquals("1234-1234-5678-5678:123456", sessionId);
 
-        store.put(SignalClientSettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
-        String clientId = store.get(SignalClientSettingsStore.Keys.CLIENT_ID);
+        store.put(SettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
+        String clientId = store.get(SettingsStore.Keys.CLIENT_ID);
         Assert.assertNotNull(clientId);
         Assert.assertEquals("1234-1234-5678-5678", clientId);
 
-        store.clear(SignalClientSettingsStore.Keys.SESSION_KEY);
-        store.clear(SignalClientSettingsStore.Keys.CLIENT_ID);
+        store.clear(SettingsStore.Keys.SESSION_KEY);
+        store.clear(SettingsStore.Keys.CLIENT_ID);
 
-        Assert.assertEquals("", store.get(SignalClientSettingsStore.Keys.SESSION_KEY));
-        Assert.assertEquals("", store.get(SignalClientSettingsStore.Keys.CLIENT_ID));
+        Assert.assertEquals("", store.get(SettingsStore.Keys.SESSION_KEY));
+        Assert.assertEquals("", store.get(SettingsStore.Keys.CLIENT_ID));
     }
 
     @Test
     public void testClearAll() throws Exception {
 
-        store.put(SignalClientSettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
-        String sessionId = store.get(SignalClientSettingsStore.Keys.SESSION_KEY);
+        store.put(SettingsStore.Keys.SESSION_KEY, "1234-1234-5678-5678:123456");
+        String sessionId = store.get(SettingsStore.Keys.SESSION_KEY);
         Assert.assertNotNull(sessionId);
         Assert.assertEquals("1234-1234-5678-5678:123456", sessionId);
 
-        store.put(SignalClientSettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
-        String clientId = store.get(SignalClientSettingsStore.Keys.CLIENT_ID);
+        store.put(SettingsStore.Keys.CLIENT_ID, "1234-1234-5678-5678");
+        String clientId = store.get(SettingsStore.Keys.CLIENT_ID);
         Assert.assertNotNull(clientId);
         Assert.assertEquals("1234-1234-5678-5678", clientId);
 
         store.clearAll();
 
-        Assert.assertEquals("", store.get(SignalClientSettingsStore.Keys.SESSION_KEY));
-        Assert.assertEquals("", store.get(SignalClientSettingsStore.Keys.CLIENT_ID));
+        Assert.assertEquals("", store.get(SettingsStore.Keys.SESSION_KEY));
+        Assert.assertEquals("", store.get(SettingsStore.Keys.CLIENT_ID));
     }
 
     @Test

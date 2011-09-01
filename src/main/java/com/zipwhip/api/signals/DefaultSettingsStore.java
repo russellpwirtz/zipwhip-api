@@ -16,17 +16,17 @@ import java.util.prefs.Preferences;
  * Date: 8/31/11
  * Time: 5:29 PM
  */
-public class DefaultSignalClientSettingsStore implements SignalClientSettingsStore {
+public class DefaultSettingsStore implements SettingsStore {
 
     private static final String VERSIONS_KEY = "VERSIONS";
 
-    private static Logger logger = Logger.getLogger(DefaultSignalClientSettingsStore.class);
+    private static Logger logger = Logger.getLogger(DefaultSettingsStore.class);
 
     private Map<String, Long> memoryVersions = new HashMap<String, Long>();
 
-    private Preferences prefs = Preferences.userRoot().node(DefaultSignalClientSettingsStore.class.getCanonicalName());
+    private Preferences prefs = Preferences.userRoot().node(DefaultSettingsStore.class.getCanonicalName());
 
-    public DefaultSignalClientSettingsStore() {
+    public DefaultSettingsStore() {
         // Prefetch any persisted versions
         loadVersions();
     }

@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
@@ -36,7 +35,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
 
-    private ReconnectStrategy reconnectStrategy;
     private String host = "signals.zipwhip.com";
     private int port = 80;
 
@@ -59,8 +57,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
-
-        // TODO we need to check to reconnectStrategy here...
 
         channel = channelFactory.newChannel(getPipeline());
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
@@ -89,7 +85,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public synchronized Future<Void> disconnect(boolean reconnect) {
+    public synchronized Future<Void> disconnect() {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -121,11 +117,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         });
 
         executor.execute(task);
-
-        if (reconnect) {
-            // TODO this is not implemented yet
-            reconnectStrategy.requestReconnect(this);
-        }
 
         return task;
     }
@@ -159,11 +150,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public void setPort(int port) {
         this.port = port;
-    }
-
-    @Override
-    public void setReconnectStrategy(ReconnectStrategy strategy) {
-        this.reconnectStrategy = strategy;
     }
 
     @Override
@@ -220,7 +206,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     protected void onDestroy() {
 
         if (isConnected()) {
-            disconnect(false);
+            disconnect();
         }
 
         pingTimeoutFuture.cancel(true);
@@ -256,7 +242,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         logger.warn("PONG timeout, disconnecting...");
 
-                        disconnect(true);
+                        disconnect();
                     }
                 }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
 
