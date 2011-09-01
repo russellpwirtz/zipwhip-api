@@ -1,7 +1,5 @@
 package com.zipwhip.api.signals;
 
-import java.util.Map;
-
 /**
  * Created by IntelliJ IDEA.
  * User: jed
@@ -11,7 +9,7 @@ import java.util.Map;
  * Simple way to store and update versions.
  *
  */
-public class VersionMapEntry implements Map.Entry<String, Long> {
+public class VersionMapEntry {
 
     private String key;
     private Long value;
@@ -21,17 +19,14 @@ public class VersionMapEntry implements Map.Entry<String, Long> {
         this.value = value;
     }
 
-    @Override
     public String getKey() {
         return key;
     }
 
-    @Override
     public Long getValue() {
         return value;
     }
 
-    @Override
     public Long setValue(Long value) {
 
         Long oldValue = this.value;

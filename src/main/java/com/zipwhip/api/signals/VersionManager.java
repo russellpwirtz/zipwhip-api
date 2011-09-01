@@ -11,7 +11,7 @@ import java.util.Map;
  * <p/>
  * In an android environment, you will want to implement this via
  * SharedPreferences, or SQLite. In a Java application, you might want to use a
- * File. For easy testing or simple application see {@link MemoryVersionManager}.
+ * File.
  */
 public interface VersionManager {
 

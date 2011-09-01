@@ -29,7 +29,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
     private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
 
-    private VersionManager versionManager = new PreferencesVersionManager();
+    private SignalClientSettingsStore store = new DefaultSignalClientSettingsStore();
 
     /**
      * Create a new DefaultZipwhipClient with pre-configured Connection and SignalProvider.
@@ -114,7 +114,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         signalProvider.onVersionChanged(new Observer<VersionMapEntry>() {
             @Override
             public void notify(Object sender, VersionMapEntry item) {
-                versionManager.setVersion(item.getKey(), item.getValue());
+                store.setVersion(item.getKey(), item.getValue());
             }
         });
 
@@ -129,7 +129,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         }
 
         // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(versionManager.getVersions());
+        return signalProvider.connect(store.getVersions());
     }
 
     @Override
