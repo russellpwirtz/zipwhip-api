@@ -20,7 +20,7 @@ public class DefaultSettingsStoreTest {
 
     @Before
     public void setUp() throws Exception {
-        store = new DefaultSignalClientSettingsStore();
+        store = new DefaultSettingsStore();
     }
 
     @After
