@@ -24,13 +24,11 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20090211</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss.netty</groupId>
             <artifactId>netty</artifactId>
             <version>3.2.5.Final</version>
-            <scope>compile</scope>
         </dependency>
 		<dependency>
 		    <groupId>com.ning</groupId>
@@ -41,7 +39,6 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.12</version>
-            <scope>compile</scope>
         </dependency>		
         <dependency>
             <groupId>junit</groupId>
@@ -59,6 +56,14 @@
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
                 </configuration>
             </plugin>
         </plugins>

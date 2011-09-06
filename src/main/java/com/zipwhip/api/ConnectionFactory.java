@@ -20,7 +20,7 @@ import java.util.concurrent.Future;
  * <p/>
  * Creates HttpConnection.
  */
-public class HttpConnectionFactory implements Factory<Connection> {
+public class ConnectionFactory implements Factory<Connection> {
 
     private ResponseParser responseParser = new JsonResponseParser();
 
@@ -31,13 +31,8 @@ public class HttpConnectionFactory implements Factory<Connection> {
     private String secret;
     private String sessionKey;
 
-    private static HttpConnectionFactory instance;
-
-    public static HttpConnectionFactory getInstance() {
-        if (instance == null) {
-            instance = new HttpConnectionFactory();
-        }
-        return instance;
+    public static ConnectionFactory newInstance() {
+        return new ConnectionFactory();
     }
 
     /**
@@ -101,37 +96,37 @@ public class HttpConnectionFactory implements Factory<Connection> {
         connection.setSessionKey(sessionKey);
     }
 
-    public HttpConnectionFactory setResponseParser(ResponseParser responseParser) {
+    public ConnectionFactory responseParser(ResponseParser responseParser) {
         this.responseParser = responseParser;
         return this;
     }
 
-    public HttpConnectionFactory setUsername(String username) {
+    public ConnectionFactory username(String username) {
         this.username = username;
         return this;
     }
 
-    public HttpConnectionFactory setPassword(String password) {
+    public ConnectionFactory password(String password) {
         this.password = password;
         return this;
     }
 
-    public HttpConnectionFactory setApiKey(String apiKey) {
+    public ConnectionFactory apiKey(String apiKey) {
         this.apiKey = apiKey;
         return this;
     }
 
-    public HttpConnectionFactory setSecret(String secret) {
+    public ConnectionFactory secret(String secret) {
         this.secret = secret;
         return this;
     }
 
-    public HttpConnectionFactory setSessionKey(String sessionKey) {
+    public ConnectionFactory sessionKey(String sessionKey) {
         this.sessionKey = sessionKey;
         return this;
     }
 
-    public HttpConnectionFactory setHost(String host) {
+    public ConnectionFactory host(String host) {
         this.host = host;
         return this;
     }

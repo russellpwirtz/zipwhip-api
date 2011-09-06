@@ -177,13 +177,20 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         Object msg = e.getMessage();
 
                         if (!(msg instanceof Command)) {
+
                             logger.warn("Received a message that was not a command!");
+
                             return;
+
                         } else if (msg instanceof PingPongCommand) {
+
                             // We received a PONG, cancel the PONG timeout.
                             receivePong();
+
                             return;
+
                         } else {
+
                             // We have activity on the wire, reschedule the next PING
                             schedulePing();
                         }

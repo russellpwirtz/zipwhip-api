@@ -32,11 +32,12 @@ public class App {
     private static void startApp() throws Exception {
 
         //ZipwhipClient client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
-        Connection connection = HttpConnectionFactory.getInstance().setUsername(USERNAME).setPassword(PASSWORD).create();
+
+        Connection connection = ConnectionFactory.newInstance().username(USERNAME).password(PASSWORD).create();
         ZipwhipClient client = new DefaultZipwhipClient(connection);
 
+        // Connect to SignalServer passing in our presence
         Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).build();
-
         client.connect(presence);
 
         client.sendMessage("2069308934", "Yo");

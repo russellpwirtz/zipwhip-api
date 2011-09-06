@@ -1,11 +1,6 @@
-package com.zipwhip.api.factory;
+package com.zipwhip.api;
 
-import com.zipwhip.api.Connection;
-import com.zipwhip.api.DefaultZipwhipClient;
-import com.zipwhip.api.HttpConnectionFactory;
-import com.zipwhip.api.ZipwhipClient;
 import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 
@@ -28,26 +23,22 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
 
-        HttpConnectionFactory connectionFactory = new HttpConnectionFactory();
-
-        connectionFactory.setUsername(username);
-        connectionFactory.setPassword(password);
+        HttpConnectionFactory connectionFactory = HttpConnectionFactory.newInstance().username(username).password(password);
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
 
-        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
+//        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
 
         return zipwhipClientFactory.create();
     }
 
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
-        HttpConnectionFactory connectionFactory = new HttpConnectionFactory();
 
-        connectionFactory.setSessionKey(sessionKey);
+        HttpConnectionFactory connectionFactory = HttpConnectionFactory.newInstance().sessionKey(sessionKey);
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
 
-        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
+//        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
 
         return zipwhipClientFactory.create();
     }
@@ -71,21 +62,21 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
         return client;
     }
 
-    public Factory<Connection> getConnectionFactory() {
-        return connectionFactory;
-    }
-
-    public void setConnectionFactory(Factory<Connection> connectionFactory) {
-        this.connectionFactory = connectionFactory;
-    }
-
-    public Factory<SignalProvider> getSignalProviderFactory() {
-        return signalProviderFactory;
-    }
-
-    public void setSignalProviderFactory(Factory<SignalProvider> signalProviderFactory) {
-        this.signalProviderFactory = signalProviderFactory;
-    }
+//    public Factory<Connection> getConnectionFactory() {
+//        return connectionFactory;
+//    }
+//
+//    public void setConnectionFactory(Factory<Connection> connectionFactory) {
+//        this.connectionFactory = connectionFactory;
+//    }
+//
+//    public Factory<SignalProvider> getSignalProviderFactory() {
+//        return signalProviderFactory;
+//    }
+//
+//    public void setSignalProviderFactory(Factory<SignalProvider> signalProviderFactory) {
+//        this.signalProviderFactory = signalProviderFactory;
+//    }
 
     protected void setup(ZipwhipClient client) throws Exception {
 

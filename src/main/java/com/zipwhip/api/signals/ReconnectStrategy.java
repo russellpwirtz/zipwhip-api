@@ -10,17 +10,39 @@ import com.zipwhip.lifecycle.Destroyable;
  */
 public interface ReconnectStrategy extends Destroyable {
 
-    /**
-     *
-     * @param connection
-     */
-    void requestReconnect(SignalConnection connection);
+//    public static void main(String[] args) {
+//
+//        SignalConnection signalConnection = new NettySignalConnection();
+//
+//        ReconnectStrategy strategy = null;
+//
+//        strategy.setSignalConnection(signalConnection);
+//
+//        signalConnection.connect();
+//        signalConnection.link(strategy);
+//
+//        signalConnection.setReconnectStrategy(new FallbackReconnectStrategy());
+//
+//    }
+
 
     /**
+     * You enable it by setting this to non-null
      *
-     * @param connection
-     * @param requestedDelay
+     * If your connection is "connected" it does nothing. If your connection is "alive" but not "connected" it will particpate.
+     * It observes your "signalConnection" events to determine when state changes.
+     *
+     *
+     * @param signalConnection
      */
-    void requestReconnect(SignalConnection connection, long requestedDelay);
+    void setSignalConnection(SignalConnection signalConnection);
+
+    /**
+     * Tells you which connection it's managing
+     *
+     * @return
+     */
+    SignalConnection getSignalConnection();
+
 
 }

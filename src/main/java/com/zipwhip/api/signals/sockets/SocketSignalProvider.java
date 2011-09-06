@@ -55,7 +55,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     public SocketSignalProvider(SignalConnection connection) {
-        
+
         this.connection = connection;
         this.link(this.connection);
 
@@ -71,7 +71,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             /**
              * The NettySignalConnection will call this method when there's an
              * event from the remote signal server.
-             * 
+             *
              * @param sender
              *        The sender might not be the same object every time, so
              *        we'll let it just be object, rather than generics.
@@ -81,31 +81,28 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             @Override
             public void notify(Object sender, Command item) {
 
+                // Check if this command has a version number associated with it
+                if (item.getVersion() != null && item.getVersion().getValue() >= 0) {
+                    newVersionEvent.notifyObservers(this, item.getVersion());
+                }
+
                 if (item instanceof ConnectCommand) {
                     handleConnectCommand((ConnectCommand) item);
-                }
-                else if (item instanceof DisconnectCommand) {
+                } else if (item instanceof DisconnectCommand) {
                     handleDisconnectCommand((DisconnectCommand) item);
-                }
-                else if (item instanceof SubscriptionCompleteCommand) {
+                } else if (item instanceof SubscriptionCompleteCommand) {
                     handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) item);
-                }
-                else if (item instanceof BacklogCommand) {
+                } else if (item instanceof BacklogCommand) {
                     handleBacklogCommand((BacklogCommand) item);
-                }
-                else if (item instanceof SignalCommand) {
+                } else if (item instanceof SignalCommand) {
                     handleSignalCommand((SignalCommand) item);
-                }
-                else if (item instanceof PresenceCommand) {
+                } else if (item instanceof PresenceCommand) {
                     handlePresenceCommand((PresenceCommand) item);
-                }
-                else if (item instanceof SignalVerificationCommand) {
+                } else if (item instanceof SignalVerificationCommand) {
                     handleSignalVerificationCommand((SignalVerificationCommand) item);
-                }
-                else if (item instanceof NoopCommand) {
-                    handleNoopCommand((NoopCommand) item);
-                }
-                else {
+                } else if (item instanceof NoopCommand) {
+                    logger.debug("Received NoopCommand");
+                } else {
                     logger.warn("Unrecognised command: " + item.toString());
                 }
             }
@@ -119,19 +116,25 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
              * @param sender
              *        The sender might not be the same object every time, so
              *        we'll let it just be object, rather than generics.
-             * @param item
+             * @param connected
              *        True, if connected, False if disconnected
              */
             @Override
-            public void notify(Object sender, Boolean item) {
+            public void notify(Object sender, Boolean connected) {
 
-                // False = disconnected can be generated one of 3 ways
+                // connected = FALSE can be generated one of 3 ways
                 // 1. Caller calls this.disconnect() -- don't reconnect -- do notify
-                // 2. Disconnect command received -- don't reconnect -- don't notify
+                // 2. Disconnect command received -- don't reconnect -- do notify
                 // 3. Connection disconnects -- reconnect -- don't notify
 
-                if (item || callerGeneratedDisconnect) {
-                    connectEvent.notifyObservers(sender, item);
+                if (connected || callerGeneratedDisconnect || disconnectCommandDisconnect) {
+
+                    connectEvent.notifyObservers(sender, connected);
+
+                } else {
+
+                    // TODO request a reconnect via strategy object
+
                 }
 
                 // Reset flags
@@ -168,6 +171,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Boolean> connect(final String clientId, final Map<String, Long> versions, final Presence presence) throws Exception {
+
+        // TODO move this to the strategy
 
         if (isConnected()) {
             logger.debug("Connect requested but already connected");
@@ -315,6 +320,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 connection.setPort(command.getPort());
             }
 
+            // TODO move this into a strategy object
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             scheduler.schedule(new Runnable() {
                 @Override
@@ -348,24 +354,12 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     private void handleSignalCommand(SignalCommand command) {
-
         logger.debug("Handling SignalCommand");
-
-        if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
-            newVersionEvent.notifyObservers(this, command.getVersion());
-        }
-
         signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
     }
 
     private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
-
         logger.debug("Handling SubscriptionCompleteCommand");
-
-        if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
-            newVersionEvent.notifyObservers(this, command.getVersion());
-        }
-
         subscriptionCompleteEvent.notifyObservers(this, command);
     }
 
@@ -377,11 +371,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {
         logger.debug("Processing SignalVerificationCommand");
         signalVerificationEvent.notifyObservers(this, null);
-    }
-
-    private void handleNoopCommand(NoopCommand command) {
-        logger.debug("Handling NoopCommand");
-        //NOOP - for now we are just logging this
     }
 
 }
