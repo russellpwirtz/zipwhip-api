@@ -14,7 +14,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     private Factory<Connection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
 
-    public ZipwhipClientFactory(HttpConnectionFactory connectionFactory) {
+    public ZipwhipClientFactory(ConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
     }
 
@@ -23,7 +23,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
 
-        HttpConnectionFactory connectionFactory = HttpConnectionFactory.newInstance().username(username).password(password);
+        ConnectionFactory connectionFactory = ConnectionFactory.newInstance().username(username).password(password);
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
 
@@ -34,7 +34,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
 
-        HttpConnectionFactory connectionFactory = HttpConnectionFactory.newInstance().sessionKey(sessionKey);
+        ConnectionFactory connectionFactory = ConnectionFactory.newInstance().sessionKey(sessionKey);
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
 
