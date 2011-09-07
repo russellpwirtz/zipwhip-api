@@ -6,38 +6,38 @@ package com.zipwhip.lib;
  * Date: 8/31/11
  * Time: 5:21 PM
  *
- * An interface to store key, value data
+ * An interface to settingsStore key, value data
  *
  */
 public interface KeyValueStore<K,V> {
 
     /**
-     * Put a key, value in the store.
+     * Put a key, value in the settingsStore.
      * Implementations should update the data if the key already exists.
      *
-     * @param key Your key
-     * @param value Your value
+     * @param key Your key.
+     * @param value Your value.
      */
     void put(K key, V value);
 
     /**
-     * Get a value based on a key or an empty String if the key doesn't exist.
+     * Get a value based on a key if it exists.
      *
      * @param key Your key
-     * @return The corresponding value or empty String.
+     * @return The corresponding value if it exists.
      */
     V get(K key);
 
     /**
-     * Clear the key from the store.
+     * Clear the key from the settingsStore.
      *
-     * @param key the key to clear
+     * @param key the key to remove
      */
-    void clear(K key);
+    void remove(K key);
 
     /**
-     * Clear all keys from the store.
+     * Clear all keys from the settingsStore.
      */
-    void clearAll();
+    void clear();
 
 }

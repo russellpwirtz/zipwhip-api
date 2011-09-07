@@ -1,12 +1,9 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.settings;
 
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -25,8 +22,7 @@ public class DefaultSettingsStoreTest {
 
     @After
     public void tearDown() throws Exception {
-        store.clearAll();
-        store.clearVersions();
+        store.clear();
     }
 
     @Test
@@ -74,8 +70,8 @@ public class DefaultSettingsStoreTest {
         Assert.assertNotNull(clientId);
         Assert.assertEquals("1234-1234-5678-5678", clientId);
 
-        store.clear(SettingsStore.Keys.SESSION_KEY);
-        store.clear(SettingsStore.Keys.CLIENT_ID);
+        store.remove(SettingsStore.Keys.SESSION_KEY);
+        store.remove(SettingsStore.Keys.CLIENT_ID);
 
         Assert.assertEquals("", store.get(SettingsStore.Keys.SESSION_KEY));
         Assert.assertEquals("", store.get(SettingsStore.Keys.CLIENT_ID));
@@ -94,50 +90,10 @@ public class DefaultSettingsStoreTest {
         Assert.assertNotNull(clientId);
         Assert.assertEquals("1234-1234-5678-5678", clientId);
 
-        store.clearAll();
+        store.clear();
 
         Assert.assertEquals("", store.get(SettingsStore.Keys.SESSION_KEY));
         Assert.assertEquals("", store.get(SettingsStore.Keys.CLIENT_ID));
-    }
-
-    @Test
-    public void testGetVersions() throws Exception {
-
-        Map<String, Long> memMap = new HashMap<String, Long>();
-        memMap.put("a", 1L);
-        memMap.put("b", 2L);
-
-        for (String key : memMap.keySet()) {
-            store.setVersion(key, memMap.get(key));
-        }
-
-        Map<String, Long> vm = store.getVersions();
-
-        Assert.assertNotNull(vm);
-        Assert.assertEquals(vm, memMap);
-    }
-
-    @Test
-    public void testSetVersion() throws Exception {
-
-        Assert.assertTrue(store.setVersion("c", 3L));
-        Assert.assertFalse(store.setVersion("c", 2L));
-
-        Map<String, Long> memMap = new HashMap<String, Long>();
-        memMap.put("c", 3L);
-
-        Assert.assertEquals(store.getVersions(), memMap);
-    }
-
-    @Test
-    public void testClearVersions() throws Exception {
-
-        store.setVersion("d", 4L);
-        store.setVersion("e", 5L);
-
-        store.clearVersions();
-
-        Assert.assertTrue(store.getVersions().isEmpty());
     }
 
 }

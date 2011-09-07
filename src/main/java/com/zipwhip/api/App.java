@@ -1,5 +1,10 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.dto.Contact;
+import com.zipwhip.api.dto.Conversation;
+import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SignalObserverAdapter;
+import com.zipwhip.api.signals.commands.Message;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
@@ -16,6 +21,7 @@ public class App {
 
     public static final String USERNAME = "4252466003";
     public static final String PASSWORD = "zipwhip1";
+    public static final String TO_NUMBER = "2069308934";
 
     public static void main(String[] args) {
 
@@ -36,12 +42,34 @@ public class App {
         Connection connection = ConnectionFactory.newInstance().username(USERNAME).password(PASSWORD).create();
         ZipwhipClient client = new DefaultZipwhipClient(connection);
 
+        // Build a Presence object
+        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
+
         // Connect to SignalServer passing in our presence
-        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).build();
         client.connect(presence);
 
-        client.sendMessage("2069308934", "Yo");
+        // Use SignalObserverAdapter so you can choose the signals you are interested in observing
+        client.addSignalObserver(new SignalObserverAdapter() {
 
+            @Override
+            public void notifyContact(Signal signal, Contact contact) {
+                logger.debug(contact.toString());
+            }
+
+            @Override
+            public void notifyConversation(Signal signal, Conversation conversation) {
+                logger.debug(conversation.toString());
+            }
+
+            @Override
+            public void notifyMessage(Signal signal, Message message) {
+            }
+        });
+
+        // Let's send a message!
+        client.sendMessage(TO_NUMBER, "Hello World");
+
+        // And wait for signals to come in...
         while (true) {
 
         }

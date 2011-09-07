@@ -6,7 +6,7 @@ package com.zipwhip.api.signals;
  * Date: 8/30/11
  * Time: 11:48 AM
  *
- * Simple way to store and update versions.
+ * Simple way to settingsStore and update versions.
  *
  */
 public class VersionMapEntry {

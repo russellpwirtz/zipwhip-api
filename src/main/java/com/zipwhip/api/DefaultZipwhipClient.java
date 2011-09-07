@@ -5,6 +5,7 @@ import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.ServerResponse;
+import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.events.Observer;
@@ -73,20 +74,20 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                 }
 
                 if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
-                    store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
                     return;
                 }
 
-                String managedClientId = store.get(SettingsStore.Keys.CLIENT_ID);
+                String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
 
                 if (StringUtil.exists(managedClientId)) {
 
                     // clientId changed, unsubscribe the old one, and sub the new one
                     if (!managedClientId.equals(clientId)) {
 
-                        store.clearVersions();
+                        settingsStore.clear();
 
-                        store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                        settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
 
                         // Do a disconnect then connect
                         Map<String, Object> params = new HashMap<String, Object>();
@@ -104,7 +105,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                     }
                 } else {
 
-                    store.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
 
                     // lets do a signals connect!
                     Map<String, Object> params = new HashMap<String, Object>();
@@ -123,7 +124,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         signalProvider.onVersionChanged(new Observer<VersionMapEntry>() {
             @Override
             public void notify(Object sender, VersionMapEntry item) {
-                store.setVersion(item.getKey(), item.getValue());
+                versionsStore.set(item.getKey(), item.getValue());
             }
         });
 
@@ -142,14 +143,14 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
             throw new Exception("The connection cannot operate at this time");
         }
 
-        String managedClientId = store.get(SettingsStore.Keys.CLIENT_ID);
+        String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
 
         if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
-            store.clearVersions();
+            settingsStore.clear();
         }
 
         // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(store.get(SettingsStore.Keys.CLIENT_ID), store.getVersions(), presence);
+        return signalProvider.connect(settingsStore.get(SettingsStore.Keys.CLIENT_ID), versionsStore.get(), presence);
     }
 
     @Override
