@@ -201,4 +201,35 @@ public class Conversation {
     public void setLastNonDeletedMessageDate(Date lastNonDeletedMessageDate) {
         this.lastNonDeletedMessageDate = lastNonDeletedMessageDate;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> Conversation details:");
+        toStringBuilder.append("\nId: ").append(id);
+        toStringBuilder.append("\nDeviceId: ").append(deviceId);
+        toStringBuilder.append("\nDeviceAddress: ").append(deviceAddress);
+        toStringBuilder.append("\nFingerprint: ").append(fingerprint);
+        toStringBuilder.append("\nAddress: ").append(address);
+        toStringBuilder.append("\nCc: ").append(cc);
+        toStringBuilder.append("\nBcc: ").append(bcc);
+        toStringBuilder.append("\nLast Updated: ").append(lastUpdated);
+        toStringBuilder.append("\nUnreadCount: ").append(unreadCount);
+        toStringBuilder.append("\nDeviceId: ").append(deviceId);
+        toStringBuilder.append("\nLastContactId: ").append(lastContactId);
+        toStringBuilder.append("\nIsNew: ").append(isNew);
+        toStringBuilder.append("\nDeleted: ").append(deleted);
+        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nLastContactDeviceId: ").append(lastContactDeviceId);
+        toStringBuilder.append("\nLastContactFirstName: ").append(lastContactFirstName);
+        toStringBuilder.append("\nLastContactLastName: ").append(lastContactLastName);
+        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
+        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
+        toStringBuilder.append("\nLastMessageDate: ").append(lastMessageDate);
+        toStringBuilder.append("\nLastNonDeletedMessageDate: ").append(lastNonDeletedMessageDate);
+        toStringBuilder.append("\nLastContactMobileNumber: ").append(lastContactMobileNumber);
+        toStringBuilder.append("\nLastMessageBody: ").append(lastMessageBody);
+
+        return toStringBuilder.toString();
+    }
+
 }

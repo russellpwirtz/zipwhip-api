@@ -46,4 +46,14 @@ public class DeviceToken {
         this.secret = secret;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> DeviceToken details:");
+        toStringBuilder.append("\nDevice: ").append(device.toString());
+        toStringBuilder.append("\nSessionKey: ").append(sessionKey);
+        toStringBuilder.append("\nApiKey: ").append(apiKey);
+
+        return toStringBuilder.toString();
+    }
+
 }

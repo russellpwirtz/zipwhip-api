@@ -230,6 +230,22 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nPhone: ").append(phone);
         toStringBuilder.append("\nDate Created: ").append(dateCreated);
         toStringBuilder.append("\nLast Updated: ").append(lastUpdated);
+        toStringBuilder.append("\nEmail: ").append(email);
+        toStringBuilder.append("\nDeviceId: ").append(deviceId);
+        toStringBuilder.append("\nMO COunt: ").append(moCount);
+        toStringBuilder.append("\nZO Count: ").append(zoCount);
+        toStringBuilder.append("\nLatLong: ").append(latlong);
+        toStringBuilder.append("\nNotes: ").append(notes);
+        toStringBuilder.append("\nCarrier: ").append(carrier);
+        toStringBuilder.append("\nZipcode: ").append(zipcode);
+        toStringBuilder.append("\nPhone Key: ").append(phoneKey);
+        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nThread: ").append(thread);
+        toStringBuilder.append("\nFwd: ").append(fwd);
+        toStringBuilder.append("\nChannel: ").append(channel);
+        toStringBuilder.append("\nLast Updated: ").append(city);
+        toStringBuilder.append("\nLast Updated: ").append(state);
+
         return toStringBuilder.toString();
     }
 

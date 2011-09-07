@@ -342,4 +342,48 @@ public class Message {
     public void setContactDeviceId(long contactDeviceId) {
         this.contactDeviceId = contactDeviceId;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> DeviceToken details:");
+        toStringBuilder.append("\nId: ").append(id);
+        toStringBuilder.append("\nContactId: ").append(contactId);
+        toStringBuilder.append("\nDeviceId: ").append(deviceId);
+        toStringBuilder.append("\nMobileNumber: ").append(mobileNumber);
+        toStringBuilder.append("\naddress: ").append(address);
+        toStringBuilder.append("\ndestinationAddress: ").append(destinationAddress);
+        toStringBuilder.append("\nsourceAddress: ").append(sourceAddress);
+        toStringBuilder.append("\ndirection: ").append(direction);
+        toStringBuilder.append("\nbody: ").append(body);
+        toStringBuilder.append("\nuuid: ").append(uuid);
+        toStringBuilder.append("\nfrom: ").append(from);
+        toStringBuilder.append("\nfromName: ").append(fromName);
+        toStringBuilder.append("\nadvertisement: ").append(advertisement);
+        toStringBuilder.append("\nread: ").append(read);
+        toStringBuilder.append("\nstatusCode: ").append(statusCode);
+        toStringBuilder.append("\nstatusDesc: ").append(statusDesc);
+        toStringBuilder.append("\nmessageType: ").append(messageType);
+        toStringBuilder.append("\ndateCreated: ").append(dateCreated);
+        toStringBuilder.append("\nlastUpdated: ").append(lastUpdated);
+        toStringBuilder.append("\nversion: ").append(version);
+        toStringBuilder.append("\ncc: ").append(cc);
+        toStringBuilder.append("\nbcc: ").append(bcc);
+        toStringBuilder.append("\nfwd: ").append(fwd);
+        toStringBuilder.append("\nthread: ").append(thread);
+        toStringBuilder.append("\nchannel: ").append(channel);
+        toStringBuilder.append("\nto: ").append(to);
+        toStringBuilder.append("\ncarrier: ").append(carrier);
+        toStringBuilder.append("\nsubject: ").append(subject);
+        toStringBuilder.append("\nfirstName: ").append(firstName);
+        toStringBuilder.append("\nlastName: ").append(lastName);
+        toStringBuilder.append("\nDestAddress: ").append(destAddress);
+        toStringBuilder.append("\nSrcAddress: ").append(srcAddress);
+        toStringBuilder.append("\nDeleted: ").append(deleted);
+        toStringBuilder.append("\nErrorDesc: ").append(errorDesc);
+        toStringBuilder.append("\nErrorState: ").append(errorState);
+        toStringBuilder.append("\nContactDeviceId: ").append(contactDeviceId);
+        toStringBuilder.append("\nFingerprint: ").append(fingerprint);
+        return toStringBuilder.toString();
+    }
+
 }

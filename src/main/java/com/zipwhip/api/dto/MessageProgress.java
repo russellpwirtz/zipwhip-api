@@ -37,4 +37,15 @@ public class MessageProgress {
     public void setDesc(String desc) {
         this.desc = desc;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> MessageProgress details:");
+        toStringBuilder.append("\nCode: ").append(code);
+        toStringBuilder.append("\nKey: ").append(key);
+        toStringBuilder.append("\nDescription: ").append(desc);
+
+        return toStringBuilder.toString();
+    }
+
 }

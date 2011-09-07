@@ -39,4 +39,13 @@ public class MessageToken {
         this.contactId = contactId;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> MessageToken details:");
+        toStringBuilder.append("\nMessage: ").append(message);
+        toStringBuilder.append("\nDeviceId: ").append(deviceId);
+        toStringBuilder.append("\nContactId: ").append(contactId);
+        return toStringBuilder.toString();
+    }
+
 }

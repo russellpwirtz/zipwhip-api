@@ -126,4 +126,25 @@ public class Device {
     public void setMemberCount(long memberCount) {
         this.memberCount = memberCount;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> Device details:");
+        toStringBuilder.append("\nId: ").append(id);
+        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nUuid: ").append(uuid);
+        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
+        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
+        toStringBuilder.append("\nChannel: ").append(channel);
+        toStringBuilder.append("\nTextline: ").append(textline);
+        toStringBuilder.append("\nUserId: ").append(userId);
+        toStringBuilder.append("\nDisplayName: ").append(displayName);
+        toStringBuilder.append("\nAddress: ").append(address);
+        toStringBuilder.append("\nDeviceNumber: ").append(deviceNumber);
+        toStringBuilder.append("\nMemberCount: ").append(memberCount);
+        toStringBuilder.append("\nThread: ").append(thread);
+
+        return toStringBuilder.toString();
+    }
+
 }
