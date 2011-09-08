@@ -1,10 +1,9 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalObserverAdapter;
-import com.zipwhip.api.signals.commands.Message;
+import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
@@ -62,11 +61,51 @@ public class App {
             }
 
             @Override
+            public void notifyDevice(Signal signal, Device device) {
+                logger.debug(device.toString());
+            }
+
+            @Override
             public void notifyMessage(Signal signal, Message message) {
+                logger.debug(message.toString());
+            }
+
+            @Override
+            public void notifyMessageProgress(Signal signal, MessageProgress messageProgress) {
+                logger.debug(messageProgress.toString());
+            }
+
+            @Override
+            public void notifyCarbonEvent(Signal signal, CarbonEvent carbonEvent) {
+                logger.debug(carbonEvent.toString());
             }
         });
 
-        // Let's send a message!
+        // Observe clientId change events
+        client.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
+            @Override
+            public void notify(Object sender, String item) {
+                logger.debug("APP::Received a new clientId " + item);
+            }
+        });
+
+        // Observe Signal Verification events
+        client.getSignalProvider().onSignalVerificationReceived(new Observer<Void>() {
+            @Override
+            public void notify(Object sender, Void item) {
+                logger.debug("APP::Received a signal verification");
+            }
+        });
+
+        // Observe connection change events
+        client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                logger.debug("APP::Received a connection change to " + (item ? "CONNECTED" : "DISCONNECTED"));
+            }
+        });
+
+         // Let's send a message!
         client.sendMessage(TO_NUMBER, "Hello World");
 
         // And wait for signals to come in...

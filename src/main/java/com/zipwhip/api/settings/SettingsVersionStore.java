@@ -96,7 +96,7 @@ public class SettingsVersionStore implements VersionStore {
                 JSONObject jsonVersions = new JSONObject(versionsString);
                 Iterator iterator = jsonVersions.keys();
 
-                if (iterator.hasNext()) {
+                while (iterator.hasNext()) {
 
                     String key = (String) iterator.next();
                     String ValueString = jsonVersions.optString(key, StringUtil.EMPTY_STRING);

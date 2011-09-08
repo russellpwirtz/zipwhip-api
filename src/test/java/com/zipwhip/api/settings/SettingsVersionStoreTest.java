@@ -43,6 +43,11 @@ public class SettingsVersionStoreTest {
 
         Assert.assertNotNull(vm);
         Assert.assertEquals(vm, memMap);
+
+        store = new SettingsVersionStore(new DefaultSettingsStore());
+
+        Map<String, Long> mm = store.get();
+        Assert.assertEquals(mm, memMap);
     }
 
     @Test

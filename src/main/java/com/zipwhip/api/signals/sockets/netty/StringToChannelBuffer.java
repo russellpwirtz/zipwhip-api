@@ -9,7 +9,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 import java.nio.charset.Charset;
 
-public class StringToChannelBuffer extends OneToOneEncoder implements ChannelHandler {
+public final class StringToChannelBuffer extends OneToOneEncoder implements ChannelHandler {
 
     private static Logger logger = Logger.getLogger(StringToChannelBuffer.class);
 

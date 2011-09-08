@@ -345,7 +345,7 @@ public class Message {
 
     @Override
     public String toString() {
-        StringBuilder toStringBuilder = new StringBuilder("==> DeviceToken details:");
+        StringBuilder toStringBuilder = new StringBuilder("==> Message details:");
         toStringBuilder.append("\nId: ").append(id);
         toStringBuilder.append("\nContactId: ").append(contactId);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);

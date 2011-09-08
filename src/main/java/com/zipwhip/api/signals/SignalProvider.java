@@ -29,20 +29,6 @@ public interface SignalProvider extends Destroyable {
      */
     String getClientId();
 
-//    /**
-//     * Get the current reconnection strategy for the provider.
-//     *
-//     * @return the current reconnection strategy for the provider.
-//     */
-//    ReconnectStrategy getReconnectStrategy();
-//
-//    /**
-//     * Set the reconnection strategy for the provider.
-//     *
-//     * @param strategy
-//     */
-//    void setReconnectStrategy(ReconnectStrategy strategy);
-
     /**
      * Tell it to connect. This call is idempotent, so if multiple calls to
      * a connection provider will have no effect.

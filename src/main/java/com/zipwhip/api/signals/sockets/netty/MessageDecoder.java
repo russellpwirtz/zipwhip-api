@@ -7,7 +7,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 
-public class MessageDecoder extends OneToOneDecoder {
+public final class MessageDecoder extends OneToOneDecoder {
 
     private Parser<String, Command> parser;
 

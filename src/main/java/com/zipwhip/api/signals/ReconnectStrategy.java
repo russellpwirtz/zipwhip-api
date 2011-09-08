@@ -8,7 +8,7 @@ import com.zipwhip.lifecycle.Destroyable;
  * Date: 8/31/11
  * Time: 10:43 AM
  */
-public interface ReconnectStrategy extends Destroyable {
+public interface ReconnectStrategy {
 
 //    public static void main(String[] args) {
 //
@@ -29,7 +29,7 @@ public interface ReconnectStrategy extends Destroyable {
     /**
      * You enable it by setting this to non-null
      *
-     * If your connection is "connected" it does nothing. If your connection is "alive" but not "connected" it will particpate.
+     * If your connection is "connected" it does nothing. If your connection is "alive" but not "connected" it will participate.
      * It observes your "signalConnection" events to determine when state changes.
      *
      *
@@ -43,6 +43,11 @@ public interface ReconnectStrategy extends Destroyable {
      * @return
      */
     SignalConnection getSignalConnection();
+
+    void start();
+
+    void stop();
+
 
 
 }

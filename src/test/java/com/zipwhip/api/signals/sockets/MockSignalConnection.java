@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
@@ -21,6 +22,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+    private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     private boolean isConnected = false;
 
@@ -48,6 +50,11 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
 
     @Override
     public synchronized Future<Void> disconnect() {
+        return disconnect(false);
+    }
+
+    @Override
+    public Future<Void> disconnect(final boolean requestReconnect) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -55,7 +62,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
 
                 executor.shutdownNow();
                 executor = null;
-                connectEvent.notifyObservers(this, false);
+                connectEvent.notifyObservers(this, requestReconnect);
 
                 return null;
             }
@@ -81,8 +88,23 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
-    public void onConnectionStateChanged(Observer<Boolean> observer) {
+    public void onConnect(Observer<Boolean> observer) {
         connectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onDisconnect(Observer<Boolean> observer) {
+        disconnectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void removeOnConnectObserver(Observer<Boolean> observer) {
+        connectEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void removeOnDisconnectObserver(Observer<Boolean> observer) {
+        disconnectEvent.removeObserver(observer);
     }
 
     @Override

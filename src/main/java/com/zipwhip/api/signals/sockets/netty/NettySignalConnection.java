@@ -46,18 +46,21 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+    private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     private Channel channel;
-    private ChannelFactory channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    private ChannelFactory channelFactory;// = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
     public NettySignalConnection() {
         this.link(receiveEvent);
         this.link(connectEvent);
+        this.link(disconnectEvent);
     }
 
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
+        channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
         channel = channelFactory.newChannel(getPipeline());
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
 
@@ -86,6 +89,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     @Override
     public synchronized Future<Void> disconnect() {
+        return disconnect(false);
+    }
+
+    @Override
+    public Future<Void> disconnect(final boolean requestReconnect) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -110,7 +118,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                     pongTimeoutFuture.cancel(true);
                 }
 
-                connectEvent.notifyObservers(this, false);
+                disconnectEvent.notifyObservers(this, requestReconnect);
 
                 return null;
             }
@@ -138,8 +146,23 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public void onConnectionStateChanged(Observer<Boolean> observer) {
+    public void onConnect(Observer<Boolean> observer) {
         connectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onDisconnect(Observer<Boolean> observer) {
+        disconnectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void removeOnConnectObserver(Observer<Boolean> observer) {
+        connectEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void removeOnDisconnectObserver(Observer<Boolean> observer) {
+        disconnectEvent.removeObserver(observer);
     }
 
     @Override
@@ -151,6 +174,16 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     public void setPort(int port) {
         this.port = port;
     }
+
+//    @Override
+//    public ReconnectStrategy getReconnectStrategy() {
+//        return reconnectStrategy;
+//    }
+//
+//    @Override
+//    public void setReconnectStrategy(ReconnectStrategy strategy) {
+//        this.reconnectStrategy = strategy;
+//    }
 
     @Override
     public ChannelPipeline getPipeline() throws Exception {
@@ -249,7 +282,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         logger.warn("PONG timeout, disconnecting...");
 
-                        disconnect();
+                        disconnect(true);
                     }
                 }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
 

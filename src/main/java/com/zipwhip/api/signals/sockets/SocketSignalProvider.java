@@ -1,9 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalConnection;
-import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
@@ -47,9 +44,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private String clientId;
     private String originalClientId; //so we can detect change
 
-    private boolean callerGeneratedDisconnect;
-    private boolean disconnectCommandDisconnect;
-
     public SocketSignalProvider() {
         this(new NettySignalConnection());
     }
@@ -67,79 +61,85 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this.link(presenceReceivedEvent);
         this.link(subscriptionCompleteEvent);
 
+        // TODO I think we want to move this into a setter on the SignalConnection
+        // Create A ReconnectStrategy
+        ReconnectStrategy strategy = new DefaultReconnectStrategy();
+        strategy.setSignalConnection(connection);
+        strategy.start();
+
         connection.onMessageReceived(new Observer<Command>() {
             /**
              * The NettySignalConnection will call this method when there's an
-             * event from the remote signal server.
+             * event from the remote SignalServer.
              *
-             * @param sender
-             *        The sender might not be the same object every time, so
-             *        we'll let it just be object, rather than generics.
-             * @param item
-             *        Rich object representing the notification.
+             * @param sender The sender might not be the same object every time.
+             * @param command Rich object representing the command received from the SignalServer.
              */
             @Override
-            public void notify(Object sender, Command item) {
+            public void notify(Object sender, Command command) {
 
                 // Check if this command has a version number associated with it
-                if (item.getVersion() != null && item.getVersion().getValue() >= 0) {
-                    newVersionEvent.notifyObservers(this, item.getVersion());
+                if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
+                    newVersionEvent.notifyObservers(this, command.getVersion());
                 }
 
-                if (item instanceof ConnectCommand) {
-                    handleConnectCommand((ConnectCommand) item);
-                } else if (item instanceof DisconnectCommand) {
-                    handleDisconnectCommand((DisconnectCommand) item);
-                } else if (item instanceof SubscriptionCompleteCommand) {
-                    handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) item);
-                } else if (item instanceof BacklogCommand) {
-                    handleBacklogCommand((BacklogCommand) item);
-                } else if (item instanceof SignalCommand) {
-                    handleSignalCommand((SignalCommand) item);
-                } else if (item instanceof PresenceCommand) {
-                    handlePresenceCommand((PresenceCommand) item);
-                } else if (item instanceof SignalVerificationCommand) {
-                    handleSignalVerificationCommand((SignalVerificationCommand) item);
-                } else if (item instanceof NoopCommand) {
+                if (command instanceof ConnectCommand) {
+
+                    handleConnectCommand((ConnectCommand) command);
+
+                } else if (command instanceof DisconnectCommand) {
+
+                    handleDisconnectCommand((DisconnectCommand) command);
+
+                } else if (command instanceof SubscriptionCompleteCommand) {
+
+                    handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) command);
+
+                } else if (command instanceof BacklogCommand) {
+
+                    handleBacklogCommand((BacklogCommand) command);
+
+                } else if (command instanceof SignalCommand) {
+
+                    handleSignalCommand((SignalCommand) command);
+
+                } else if (command instanceof PresenceCommand) {
+
+                    handlePresenceCommand((PresenceCommand) command);
+
+                } else if (command instanceof SignalVerificationCommand) {
+
+                    handleSignalVerificationCommand((SignalVerificationCommand) command);
+
+                } else if (command instanceof NoopCommand) {
+
                     logger.debug("Received NoopCommand");
+
                 } else {
-                    logger.warn("Unrecognised command: " + item.toString());
+
+                    logger.warn("Unrecognised command: " + command.getClass().getSimpleName());
                 }
             }
         });
 
-        connection.onConnectionStateChanged(new Observer<Boolean>() {
+        connection.onConnect(new Observer<Boolean>() {
             /**
-             * The NettySignalConnection will call this method when the connection
-             * state has changed.
+             * The NettySignalConnection will call this method when a TCP socket connection is attempted.
              *
-             * @param sender
-             *        The sender might not be the same object every time, so
-             *        we'll let it just be object, rather than generics.
-             * @param connected
-             *        True, if connected, False if disconnected
+             * @param sender The sender might not be the same object every time.
+             * @param connected True, if connected, False if disconnected
              */
             @Override
             public void notify(Object sender, Boolean connected) {
 
-                // connected = FALSE can be generated one of 3 ways
-                // 1. Caller calls this.disconnect() -- don't reconnect -- do notify
-                // 2. Disconnect command received -- don't reconnect -- do notify
-                // 3. Connection disconnects -- reconnect -- don't notify
+                if (connected) {
 
-                if (connected || callerGeneratedDisconnect || disconnectCommandDisconnect) {
+                    try {
+                        //connect(originalClientId);
+                    } catch (Exception e) {
 
-                    connectEvent.notifyObservers(sender, connected);
-
-                } else {
-
-                    // TODO request a reconnect via strategy object
-
+                    }
                 }
-
-                // Reset flags
-                callerGeneratedDisconnect = false;
-                disconnectCommandDisconnect = false;
             }
         });
     }
@@ -231,8 +231,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Void> disconnect() throws Exception {
-        callerGeneratedDisconnect = true;
-        return connection.disconnect();
+        return connection.disconnect(false);
     }
 
     @Override
@@ -304,7 +303,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         logger.debug("Handling DisconnectCommand");
 
         try {
-            disconnectCommandDisconnect = true;
             disconnect();
         } catch (Exception e) {
             logger.error("Error disconnecting", e);
@@ -320,7 +318,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 connection.setPort(command.getPort());
             }
 
-            // TODO move this into a strategy object
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             scheduler.schedule(new Runnable() {
                 @Override
@@ -328,7 +325,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                     try {
                         connect();
                     } catch (Exception e) {
-                        logger.error("Error disconnecting", e);
+                        logger.error("Error connecting", e);
                     }
                 }
             }, command.getReconnectDelay(), TimeUnit.SECONDS);

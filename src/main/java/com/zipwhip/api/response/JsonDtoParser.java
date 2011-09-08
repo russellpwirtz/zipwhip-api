@@ -254,4 +254,17 @@ public class JsonDtoParser {
         return messageProgress;
     }
 
+    public CarbonEvent parseCarbonMessageContent(JSONObject content) throws JSONException {
+
+        if(content == null) {
+            return null;
+        }
+
+        CarbonEvent carbonEvent = new CarbonEvent();
+
+        carbonEvent.carbonDescriptor = content.optString("carbonDescriptor");
+
+        return carbonEvent;
+    }
+
 }

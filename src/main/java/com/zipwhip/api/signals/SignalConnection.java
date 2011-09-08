@@ -35,6 +35,15 @@ public interface SignalConnection extends Destroyable {
     Future<Void> disconnect() throws Exception;
 
     /**
+     * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY
+     *
+     * @param requestReconnect True is a reconnect is requested.
+     * @return The future will tell you when the connection is terminated,
+     * @throws Exception if there is is an error disconnecting
+     */
+    Future<Void> disconnect(boolean requestReconnect) throws Exception;
+
+    /**
      * Send something to the SignalServer
      * 
      * @param command the Command to send
@@ -56,11 +65,34 @@ public interface SignalConnection extends Destroyable {
     void onMessageReceived(Observer<Command> observer);
 
     /**
-     * Allows you to observe the connection changes
+     * Allows you to observe the connection trying to connect.
+     * The observer will return True if the connection was successful, False otherwise.
      * 
      * @param observer An observer to receive callbacks on when this event fires
      */
-    void onConnectionStateChanged(Observer<Boolean> observer);
+    void onConnect(Observer<Boolean> observer);
+
+    /**
+     * Allows you to observe the connection disconnecting.
+     * The observer will return True if a reconnect is requested, False otherwise.
+     *
+     * @param observer An observer to receive callbacks on when this event fires
+     */
+    void onDisconnect(Observer<Boolean> observer);
+
+    /**
+     * Allows you to stop observing the connection trying to connect.
+     *
+     * @param observer An observer to stop receiving callbacks on.
+     */
+    void removeOnConnectObserver(Observer<Boolean> observer);
+
+    /**
+     * Allows you to stop observing the disconnection trying to connect.
+     *
+     * @param observer An observer to stop receiving callbacks on.
+     */
+    void removeOnDisconnectObserver(Observer<Boolean> observer);
 
     /**
      * Set the host to be used on the NEXT connection.
@@ -77,5 +109,19 @@ public interface SignalConnection extends Destroyable {
      * @param port the port to be used on the NEXT connection
      */
     void setPort(int port);
+
+//    /**
+//     * Get the current reconnection strategy for the connection.
+//     *
+//     * @return the current reconnection strategy for the connection.
+//     */
+//    ReconnectStrategy getReconnectStrategy();
+//
+//    /**
+//     * Set the reconnection strategy for the connection.
+//     *
+//     * @param strategy the strategy to use when reconnecting
+//     */
+//    void setReconnectStrategy(ReconnectStrategy strategy);
 
 }

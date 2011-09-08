@@ -18,6 +18,7 @@ public class Signal implements Serializable {
     String uuid;
     String event;
     String reason;
+    String uri;
 
     public String getType() {
         return type;
@@ -68,7 +69,12 @@ public class Signal implements Serializable {
     }
 
     public String getUri() {
-        return "/signal/" + type + "/event";
+
+        return uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
     }
 
 }

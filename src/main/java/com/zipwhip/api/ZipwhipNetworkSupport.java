@@ -4,8 +4,10 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.api.signals.DefaultSettingsStore;
-import com.zipwhip.api.signals.SettingsStore;
+import com.zipwhip.api.settings.DefaultSettingsStore;
+import com.zipwhip.api.settings.SettingsStore;
+import com.zipwhip.api.settings.SettingsVersionStore;
+import com.zipwhip.api.settings.VersionStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.executors.ParallelBulkExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -61,7 +63,9 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     protected SignalProvider signalProvider;
     protected ResponseParser responseParser;
 
-    protected SettingsStore store = new DefaultSettingsStore();
+    protected SettingsStore settingsStore = new DefaultSettingsStore();
+    protected VersionStore versionsStore = new SettingsVersionStore(settingsStore);
+
     protected ParallelBulkExecutor executor = new ParallelBulkExecutor(ZipwhipNetworkSupport.class);
 
     public ZipwhipNetworkSupport() {
@@ -98,11 +102,12 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     }
 
     public SettingsStore getSettingsStore() {
-        return store;
+        return settingsStore;
     }
 
     public void setSettingsStore(SettingsStore store) {
-        this.store = store;
+        this.settingsStore = store;
+        this.versionsStore = new SettingsVersionStore(store);
     }
 
     public Connection getConnection() {
@@ -147,9 +152,6 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
                 // parse the response
                 ServerResponse serverResponse = responseParser.parse(response);
 
-                // see if there are any signals we should announce
-                announceSignals(serverResponse);
-
                 // throw the error if the server returned false.
                 checkAndThrowError(serverResponse);
 
@@ -161,28 +163,6 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         executor.execute(task);
 
         return task;
-    }
-
-    protected void announceSignals(ServerResponse serverResponse) {
-
-        if (serverResponse == null) {
-            return;
-        }
-
-        if (serverResponse.sessions == null) {
-            return;
-        }
-
-        if (getSignalProvider() == null) {
-            return;
-        }
-
-        //        if (getSignalProvider().getSignalReceivedCallback() == null){
-        //            return;
-        //        }
-
-        //        getSignalProvider().getSignalReceivedCallback().onSignalReceived(this, serverResponse.sessions);
-        // TODO: What was the intention of this method?
     }
 
     protected void checkAndThrowError(ServerResponse serverResponse) throws Exception {

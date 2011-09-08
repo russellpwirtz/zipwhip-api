@@ -4,8 +4,8 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SettingsStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
@@ -50,7 +50,7 @@ public interface ZipwhipClient extends Destroyable {
      * Returns a Message object
      *
      * @param uuid - message uuid
-     * @return
+     * @return A Message DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     Message getMessage(String uuid) throws Exception;
@@ -59,7 +59,7 @@ public interface ZipwhipClient extends Destroyable {
      * Returns a MessageStatus object
      *
      * @param uuid - message uuid
-     * @return
+     * @return A MessageStatus DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     MessageStatus getMessageStatus(String uuid) throws Exception;
@@ -67,8 +67,8 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Returns the contact for the provided contact id.
      *
-     * @param id
-     * @return contact
+     * @param id The id of the contact.
+     * @return A Connect DTO matching the id.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     Contact getContact(long id) throws Exception;
@@ -167,16 +167,16 @@ public interface ZipwhipClient extends Destroyable {
     void setSignalProvider(SignalProvider provider);
 
     /**
-     * Get the setting store
+     * Get the setting settingsStore
      *
-     * @return the setting store
+     * @return the setting settingsStore
      */
     SettingsStore getSettingsStore();
 
     /**
-     * Set the setting store
+     * Set the setting settingsStore
      *
-     * @param store the setting store
+     * @param store the setting settingsStore
      */
     void setSettingsStore(SettingsStore store);
 
