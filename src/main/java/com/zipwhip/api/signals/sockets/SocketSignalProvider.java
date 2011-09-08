@@ -27,7 +27,7 @@ import java.util.concurrent.*;
  */
 public class SocketSignalProvider extends DestroyableBase implements SignalProvider {
 
-    private static final Logger logger = Logger.getLogger(SocketSignalProvider.class);
+    private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
 
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
@@ -60,12 +60,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this.link(newVersionEvent);
         this.link(presenceReceivedEvent);
         this.link(subscriptionCompleteEvent);
-
-        // TODO I think we want to move this into a setter on the SignalConnection
-        // Create A ReconnectStrategy
-        ReconnectStrategy strategy = new DefaultReconnectStrategy();
-        strategy.setSignalConnection(connection);
-        strategy.start();
 
         connection.onMessageReceived(new Observer<Command>() {
             /**
@@ -113,11 +107,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
                 } else if (command instanceof NoopCommand) {
 
-                    logger.debug("Received NoopCommand");
+                    LOGGER.debug("Received NoopCommand");
 
                 } else {
 
-                    logger.warn("Unrecognised command: " + command.getClass().getSimpleName());
+                    LOGGER.warn("Unrecognised command: " + command.getClass().getSimpleName());
                 }
             }
         });
@@ -131,17 +125,26 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
              */
             @Override
             public void notify(Object sender, Boolean connected) {
-
+                /*
+                 * If we have a successful TCP connection then
+                 * check if we need to send the connect command.
+                 */
                 if (connected) {
-
-                    try {
-                        //connect(originalClientId);
-                    } catch (Exception e) {
-
-                    }
+                    sendConnect();
                 }
             }
         });
+    }
+
+    /*
+     * This method allows us to decouple connection.connect() from provider.connect() for
+     * cases when we have been notified by the connection that it has a successful connection.
+     */
+    private void sendConnect() {
+        // TODO possible race condition here
+        if (connectLatch != null && connectLatch.getCount() == 0) {
+            connection.send(new ConnectCommand(clientId, null, null));
+        }
     }
 
     @Override
@@ -172,10 +175,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     @Override
     public Future<Boolean> connect(final String clientId, final Map<String, Long> versions, final Presence presence) throws Exception {
 
-        // TODO move this to the strategy
-
         if (isConnected()) {
-            logger.debug("Connect requested but already connected");
+            LOGGER.debug("Connect requested but already connected");
             return new FakeFuture<Boolean>(true);
         }
 
@@ -196,11 +197,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 try {
                     connectFuture.get(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    LOGGER.error(e);
                 } catch (ExecutionException e) {
-                    e.printStackTrace();
+                    LOGGER.error(e);
                 } catch (TimeoutException e) {
-                    e.printStackTrace();
+                    LOGGER.error(e);
                 }
 
                 if (connection.isConnected()) {
@@ -276,7 +277,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private void handleConnectCommand(ConnectCommand command) {
 
-        logger.debug("Handling ConnectCommand");
+        LOGGER.debug("Handling ConnectCommand");
 
         if (command.isSuccessful()) {
             // copy it over for stale checking
@@ -300,12 +301,12 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private void handleDisconnectCommand(DisconnectCommand command) {
 
-        logger.debug("Handling DisconnectCommand");
+        LOGGER.debug("Handling DisconnectCommand");
 
         try {
             disconnect();
         } catch (Exception e) {
-            logger.error("Error disconnecting", e);
+            LOGGER.error("Error disconnecting", e);
         }
 
         if (!command.isStop()) {
@@ -325,7 +326,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                     try {
                         connect();
                     } catch (Exception e) {
-                        logger.error("Error connecting", e);
+                        LOGGER.error("Error connecting", e);
                     }
                 }
             }, command.getReconnectDelay(), TimeUnit.SECONDS);
@@ -334,7 +335,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private void handleBacklogCommand(BacklogCommand command) {
 
-        logger.debug("Handling BacklogCommand");
+        LOGGER.debug("Handling BacklogCommand");
 
         List<Signal> signals = new ArrayList<Signal>();
 
@@ -351,22 +352,22 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     private void handleSignalCommand(SignalCommand command) {
-        logger.debug("Handling SignalCommand");
+        LOGGER.debug("Handling SignalCommand");
         signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
     }
 
     private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
-        logger.debug("Handling SubscriptionCompleteCommand");
+        LOGGER.debug("Handling SubscriptionCompleteCommand");
         subscriptionCompleteEvent.notifyObservers(this, command);
     }
 
     private void handlePresenceCommand(PresenceCommand command) {
-        logger.debug("Handling PresenceCommand");
+        LOGGER.debug("Handling PresenceCommand");
         presenceReceivedEvent.notifyObservers(this, command.getPresence());
     }
 
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {
-        logger.debug("Processing SignalVerificationCommand");
+        LOGGER.debug("Processing SignalVerificationCommand");
         signalVerificationEvent.notifyObservers(this, null);
     }
 

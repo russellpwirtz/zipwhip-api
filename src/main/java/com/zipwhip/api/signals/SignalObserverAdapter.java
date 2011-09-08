@@ -21,43 +21,24 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
 
     private static Logger logger = Logger.getLogger(SignalObserverAdapter.class);
 
-    public enum SignalUri {
+    public enum SignalType {
 
-        SIGNAL_MESSAGE_RECEIVE,
-        SIGNAL_MESSAGE_PROGRESS,
-        SIGNAL_MESSAGE_READ,
-        SIGNAL_MESSAGE_DELETE,
-        SIGNAL_MESSAGE_SEND,
-
-        SIGNAL_MESSAGEPROGRESS_MESSAGEPROGRESS,
-
-        SIGNAL_CONVERSATION_CHANGE,
-
-        SIGNAL_CONTACT_NEW,
-        SIGNAL_CONTACT_SAVE,
-        SIGNAL_CONTACT_DELETE,
-        SIGNAL_CONTACT_CHANGE,
-
-        SIGNAL_CARBON_PROXY,
-        SIGNAL_CARBON_READ,
-        SIGNAL_CARBON_DELETE,
-
+        CONTACT,
+        CONVERSATION,
+        DEVICE,
+        MESSAGE,
+        MESSAGEPROGRESS,
+        CARBON,
         NOVALUE;
 
-        public static SignalUri toSignalUri(String uriString) {
+        public static SignalType toSignalType(String typeString) {
 
-            if (StringUtil.isNullOrEmpty(uriString)) {
+            if (StringUtil.isNullOrEmpty(typeString)) {
                 return NOVALUE;
             }
 
-            // Cleanup the URI string first, get rid of first slash
-            String enumString = uriString.substring(1, uriString.length());
-
-            // Convert slashes to underscores
-            enumString = enumString.replaceAll("/", "_");
-
-            // All upper case
-            enumString = enumString.toUpperCase();
+            // Cleanup the type string
+            String enumString = typeString.toUpperCase();
 
             try {
 
@@ -81,41 +62,38 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
 
         for (Signal signal : signals) {
 
-            logger.debug("Received signal on URI: " + signal.getUri());
+            logger.debug("Received signal of TYPE: " + signal.getType());
 
-            switch (SignalUri.toSignalUri(signal.getUri())) {
+            switch (SignalType.toSignalType(signal.getType())) {
 
-                case SIGNAL_MESSAGE_RECEIVE:
-                case SIGNAL_MESSAGE_PROGRESS:
-                case SIGNAL_MESSAGE_SEND:
-                case SIGNAL_MESSAGE_READ:
-                case SIGNAL_MESSAGE_DELETE:
+                case MESSAGE:
                      notifyMessage(signal, (Message) signal.getContent());
                      break;
 
-                case SIGNAL_MESSAGEPROGRESS_MESSAGEPROGRESS:
+                case MESSAGEPROGRESS:
                     notifyMessageProgress(signal, (MessageProgress) signal.getContent());
                      break;
 
-                case SIGNAL_CONTACT_CHANGE:
-                case SIGNAL_CONTACT_DELETE:
-                case SIGNAL_CONTACT_NEW:
-                case SIGNAL_CONTACT_SAVE:
+                case CONTACT:
                     notifyContact(signal, (Contact) signal.getContent());
                      break;
 
-                case SIGNAL_CONVERSATION_CHANGE:
+                case CONVERSATION:
                     notifyConversation(signal, (Conversation) signal.getContent());
                     break;
 
-                case SIGNAL_CARBON_PROXY:
-                case SIGNAL_CARBON_READ:
-                case SIGNAL_CARBON_DELETE:
+                case CARBON:
                     notifyCarbonEvent(signal, (CarbonEvent) signal.getContent());
+                    break;
+
+                case DEVICE:
+                    notifyDevice(signal, (Device) signal.getContent());
                     break;
 
                 default:
                     logger.warn("No match found for URI: " + signal.getUri());
+                    notifyUnrecognised(signal);
+                    break;
             }
         }
     }
@@ -141,6 +119,10 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
     }
 
     public void notifyCarbonEvent(Signal signal, CarbonEvent carbonEvent) {
+        logger.debug("notifyCarbonEvent - Not implemented");
+    }
+
+    public void notifyUnrecognised(Signal signal) {
         logger.debug("notifyCarbonEvent - Not implemented");
     }
 

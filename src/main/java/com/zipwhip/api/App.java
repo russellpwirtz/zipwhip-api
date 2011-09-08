@@ -9,6 +9,8 @@ import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
+import java.util.concurrent.Future;
+
 /**
  * An example application to demonstrate connecting to Zipwhip and sending and
  * receiving messages.
@@ -18,7 +20,7 @@ public class App {
 
     private static Logger logger = Logger.getLogger(App.class);
 
-    public static final String USERNAME = "4252466003";
+    public static final String USERNAME = "2063758020";
     public static final String PASSWORD = "zipwhip1";
     public static final String TO_NUMBER = "2069308934";
 
@@ -40,12 +42,6 @@ public class App {
 
         Connection connection = ConnectionFactory.newInstance().username(USERNAME).password(PASSWORD).create();
         ZipwhipClient client = new DefaultZipwhipClient(connection);
-
-        // Build a Presence object
-        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
-
-        // Connect to SignalServer passing in our presence
-        client.connect(presence);
 
         // Use SignalObserverAdapter so you can choose the signals you are interested in observing
         client.addSignalObserver(new SignalObserverAdapter() {
@@ -105,12 +101,19 @@ public class App {
             }
         });
 
-         // Let's send a message!
-        client.sendMessage(TO_NUMBER, "Hello World");
+        // Build a Presence object
+        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
 
-        // And wait for signals to come in...
-        while (true) {
+        // Connect to SignalServer passing in our presence
+        Future<Boolean> connectTask = client.connect(presence);
 
+        if(connectTask.get()) {
+
+             // We're connected, let's send a message!
+            client.sendMessage(TO_NUMBER, "Hello World");
+
+            // And wait for signals to come in...
+            while (true) {}
         }
     }
 

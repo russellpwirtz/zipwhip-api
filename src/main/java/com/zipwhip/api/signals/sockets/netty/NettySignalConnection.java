@@ -1,5 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.DefaultReconnectStrategy;
+import com.zipwhip.api.signals.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
@@ -49,12 +51,18 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     private Channel channel;
-    private ChannelFactory channelFactory;// = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    private ChannelFactory channelFactory;
+
+    private ReconnectStrategy reconnectStrategy;
 
     public NettySignalConnection() {
+
         this.link(receiveEvent);
         this.link(connectEvent);
         this.link(disconnectEvent);
+
+        this.reconnectStrategy = new DefaultReconnectStrategy(this);
+        this.reconnectStrategy.start();
     }
 
     @Override
@@ -62,6 +70,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
         channel = channelFactory.newChannel(getPipeline());
+
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
 
         FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
@@ -175,15 +184,23 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         this.port = port;
     }
 
-//    @Override
-//    public ReconnectStrategy getReconnectStrategy() {
-//        return reconnectStrategy;
-//    }
-//
-//    @Override
-//    public void setReconnectStrategy(ReconnectStrategy strategy) {
-//        this.reconnectStrategy = strategy;
-//    }
+    @Override
+    public ReconnectStrategy getReconnectStrategy() {
+        return reconnectStrategy;
+    }
+
+
+    @Override
+    public void setReconnectStrategy(ReconnectStrategy reconnectStrategy) {
+
+        if (this.reconnectStrategy != null) {
+            this.reconnectStrategy.stop();
+        }
+
+        this.reconnectStrategy = reconnectStrategy;
+        this.reconnectStrategy.setSignalConnection(this);
+        this.reconnectStrategy.start();
+    }
 
     @Override
     public ChannelPipeline getPipeline() throws Exception {

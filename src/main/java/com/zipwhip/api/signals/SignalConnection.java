@@ -110,18 +110,18 @@ public interface SignalConnection extends Destroyable {
      */
     void setPort(int port);
 
-//    /**
-//     * Get the current reconnection strategy for the connection.
-//     *
-//     * @return the current reconnection strategy for the connection.
-//     */
-//    ReconnectStrategy getReconnectStrategy();
-//
-//    /**
-//     * Set the reconnection strategy for the connection.
-//     *
-//     * @param strategy the strategy to use when reconnecting
-//     */
-//    void setReconnectStrategy(ReconnectStrategy strategy);
+    /**
+     * Get the current reconnection strategy for the connection.
+     *
+     * @return the current reconnection strategy for the connection.
+     */
+    ReconnectStrategy getReconnectStrategy();
+
+    /**
+     * Set the reconnection strategy for the connection.
+     *
+     * @param strategy the strategy to use when reconnecting
+     */
+    void setReconnectStrategy(ReconnectStrategy strategy);
 
 }
