@@ -21,6 +21,7 @@ public class SettingsVersionStoreTest {
     @Before
     public void setUp() throws Exception {
         store = new SettingsVersionStore(new DefaultSettingsStore());
+        store.clear();
     }
 
     @After

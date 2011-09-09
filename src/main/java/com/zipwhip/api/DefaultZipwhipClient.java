@@ -7,7 +7,6 @@ import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
-import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
 import com.zipwhip.signals.presence.Presence;
@@ -31,30 +30,12 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
 
     /**
-     * Create a new DefaultZipwhipClient with pre-configured Connection and SignalProvider.
-     */
-    public DefaultZipwhipClient() {
-        // TODO: get these objects via a factory
-        this(new HttpConnection(), new SocketSignalProvider());
-    }
-
-    /**
-     * Create a new DefaultZipwhipClient with pre-configured SignalProvider.
-     *
-     * @param connection A low level connection to Zipwhip
-     */
-    public DefaultZipwhipClient(Connection connection) {
-        // TODO: SocketSignalProvider object via a factory
-        this(connection, new SocketSignalProvider());
-    }
-
-    /**
      * Create a new DefaultZipwhipClient.
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
      */
-    public DefaultZipwhipClient(final Connection connection, final SignalProvider signalProvider) {
+    public DefaultZipwhipClient(Connection connection, SignalProvider signalProvider) {
 
         super(connection, signalProvider);
 

@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.events.Observer;
+import com.zipwhip.lifecycle.DestroyableBase;
 
 /**
  * Created by IntelliJ IDEA.
@@ -10,16 +11,12 @@ import com.zipwhip.events.Observer;
  *
  * Base class for {@code SignalConnection} reconnect strategies.
  */
-public abstract class ReconnectStrategy {
+public abstract class ReconnectStrategy extends DestroyableBase {
 
     protected SignalConnection signalConnection;
     protected Observer<Boolean> disconnectObserver;
 
     private boolean isStarted;
-
-    public ReconnectStrategy(SignalConnection signalConnection) {
-        this.signalConnection = signalConnection;
-    }
 
     /**
      * If your connection is "connected" it does nothing. If your connection is "alive" but not "connected" it will
@@ -27,8 +24,15 @@ public abstract class ReconnectStrategy {
      *
      * @param signalConnection The connection to manage.
      */
-    public void setSignalConnection(SignalConnection signalConnection) {
+    public final void setSignalConnection(SignalConnection signalConnection) {
+
+        if (isStarted()){
+            stop();
+        }
+
         this.signalConnection = signalConnection;
+
+        start();
     }
 
     /**
@@ -36,7 +40,7 @@ public abstract class ReconnectStrategy {
      *
      * @return The managed connection.
      */
-    public SignalConnection getSignalConnection() {
+    public final SignalConnection getSignalConnection() {
         return signalConnection;
     }
 
@@ -48,9 +52,10 @@ public abstract class ReconnectStrategy {
      * </p>
      */
     public void stop() {
-        if (signalConnection != null && disconnectObserver != null) {
 
+        if (signalConnection != null && disconnectObserver != null) {
             signalConnection.removeOnDisconnectObserver(disconnectObserver);
+            signalConnection = null;
             isStarted = false;
         }
     }
@@ -66,23 +71,25 @@ public abstract class ReconnectStrategy {
             disconnectObserver = new Observer<Boolean>() {
 
                 @Override
-                public void notify(Object sender, Boolean reconnect) {
+                public void notify(Object sender, Boolean networkGenerated) {
 
-                    if (reconnect) {
+                    // If the disconnect was generated due to a network problem we want to try a reconnect.
+                    if (networkGenerated) {
                         doStrategy();
+                    } else {
+                        stop();
                     }
                 }
             };
 
             signalConnection.onDisconnect(disconnectObserver);
-
             isStarted = true;
         }
     }
 
     /**
      * Has {@code start} been called and {@code stop} not been called subsequently.
-     * @return True if the strategy is started, otherwise False.
+     * @return {@code true} if the strategy is started.
      */
     public final boolean isStarted() {
         return isStarted;
@@ -93,5 +100,10 @@ public abstract class ReconnectStrategy {
      * fires from the {@code SignalConnection}. This method should not be called directly by clients.
      */
     protected abstract void doStrategy();
+
+    @Override
+    protected void onDestroy() {
+
+    }
 
 }

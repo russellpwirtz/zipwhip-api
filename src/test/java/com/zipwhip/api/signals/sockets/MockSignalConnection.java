@@ -136,6 +136,24 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
+    public int getPingTimeout() {
+        return 0;
+    }
+
+    @Override
+    public void setPingTimeout(int pingTimeout) {
+    }
+
+    @Override
+    public int getPongTimeout() {
+        return 0;
+    }
+
+    @Override
+    public void setPongTimeout(int pongTimeout) {
+    }
+
+    @Override
     public ReconnectStrategy getReconnectStrategy() {
         return null;
     }

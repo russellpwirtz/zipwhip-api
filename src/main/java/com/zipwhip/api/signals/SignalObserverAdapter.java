@@ -29,7 +29,8 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
         MESSAGE,
         MESSAGEPROGRESS,
         CARBON,
-        NOVALUE;
+        NOVALUE,
+        UNKNOWN;
 
         public static SignalType toSignalType(String typeString) {
 
@@ -46,7 +47,7 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
 
             } catch (Exception ex) {
 
-                return NOVALUE;
+                return UNKNOWN;
             }
         }
     }
@@ -91,7 +92,7 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
                     break;
 
                 default:
-                    logger.warn("No match found for URI: " + signal.getUri());
+                    logger.warn("No match found for TYPE: " + signal.getType());
                     notifyUnrecognised(signal);
                     break;
             }

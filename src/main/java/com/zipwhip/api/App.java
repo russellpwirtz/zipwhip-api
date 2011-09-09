@@ -38,10 +38,8 @@ public class App {
     
     private static void startApp() throws Exception {
 
-        //ZipwhipClient client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
-
-        Connection connection = ConnectionFactory.newInstance().username(USERNAME).password(PASSWORD).create();
-        ZipwhipClient client = new DefaultZipwhipClient(connection);
+        // Fire-up a new authenticated client
+        ZipwhipClient client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
 
         // Use SignalObserverAdapter so you can choose the signals you are interested in observing
         client.addSignalObserver(new SignalObserverAdapter() {
@@ -98,6 +96,14 @@ public class App {
             @Override
             public void notify(Object sender, Boolean item) {
                 logger.debug("APP::Received a connection change to " + (item ? "CONNECTED" : "DISCONNECTED"));
+            }
+        });
+
+        // Observe the presence of the phone
+        client.getSignalProvider().onPhonePresenceReceived(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                logger.debug("APP::PHONE Presence reported as " + (item ? "CONNECTED" : "DISCONNECTED"));
             }
         });
 

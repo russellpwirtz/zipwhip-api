@@ -78,10 +78,16 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
     @Override
     public boolean isConnected() {
-        // TODO define what it means to be connected... is this socket connection?
         return StringUtil.exists(sessionKey);
     }
 
+    /**
+     *
+     * @param method
+     *        each method has a name. example: user/get
+     * @param params Map of query params to append to the method
+     * @return
+     */
     @Override
     public Future<String> send(String method, Map<String, Object> params) {
 
@@ -94,13 +100,13 @@ public class HttpConnection extends DestroyableBase implements Connection {
         if (method.equals("login")) {
             method = "user/login";
             apiVersion = "/";
-        } else {
-            //apiVersion = "/api/v1/";
         }
+        // TODO END TEMP
 
         return send(method, rb.build());
     }
 
+    // TODO we need a retry model here
     private Future<String> send(final String method, final String params) {
 
         // put them together to form the full url

@@ -13,10 +13,6 @@ import java.util.concurrent.Future;
  */
 public class MockReconnectStrategy extends ReconnectStrategy {
 
-    public MockReconnectStrategy(SignalConnection signalConnection) {
-        super(signalConnection);
-    }
-
     @Override
     protected void doStrategy() {
 

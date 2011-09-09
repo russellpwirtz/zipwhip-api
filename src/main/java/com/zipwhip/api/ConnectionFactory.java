@@ -50,26 +50,29 @@ public class ConnectionFactory implements Factory<Connection> {
         connection.setHost(host);
         connection.setAuthenticator(new SignTool(apiKey, secret));
 
+        // The authenticator should be ready go to.
         if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
-            // good, the authenticator should be ready go to.
+
             if (StringUtil.isNullOrEmpty(sessionKey)) {
                 // we need a sessionKey
                 requestSessionKey(connection);
             }
-        } else if (StringUtil.exists(username) && StringUtil.exists(password)) {
-            // we have a username/password
+        }
+
+        // We have a username/password
+        else if (StringUtil.exists(username) && StringUtil.exists(password)) {
 
             Map<String, Object> params = new HashMap<String, Object>();
-
             params.put("mobileNumber", username);
             params.put("password", password);
 
             Future<String> future = connection.send("login", params);
             ServerResponse serverResponse = responseParser.parse(future.get());
-//            DeviceToken token = responseParser.parseDeviceToken(serverResponse);
 
-//            connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
-//            connection.setSessionKey(token.sessionKey);
+            // TODO what is the intention here?
+            //DeviceToken token = responseParser.parseDeviceToken(serverResponse);
+            //connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
+            //connection.setSessionKey(token.sessionKey);
 
             if (serverResponse instanceof StringServerResponse) {
                 connection.setSessionKey(((StringServerResponse) serverResponse).response);

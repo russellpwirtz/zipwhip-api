@@ -10,14 +10,16 @@ import com.zipwhip.util.Factory;
  */
 public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
+    private SocketSignalProviderFactory() {
+    }
+
+    public static SocketSignalProviderFactory newInstance() {
+        return new SocketSignalProviderFactory();
+    }
+
     @Override
     public SignalProvider create() throws Exception {
-        
-        SocketSignalProvider provider = new SocketSignalProvider();
-        
-        // todo: apply some settings
-
-        return provider;
+        return new SocketSignalProvider();
     }
 
 }

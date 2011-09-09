@@ -8,6 +8,7 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
@@ -34,7 +35,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
     private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
     private ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
-    private ObservableHelper<List<Presence>> presenceReceivedEvent = new ObservableHelper<List<Presence>>();
+    private ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
 
     private CountDownLatch connectLatch;
@@ -141,7 +142,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
      * cases when we have been notified by the connection that it has a successful connection.
      */
     private void sendConnect() {
-        // TODO possible race condition here
+        // TODO we need a handle on Versions and maybe Presence
         if (connectLatch != null && connectLatch.getCount() == 0) {
             connection.send(new ConnectCommand(clientId, null, null));
         }
@@ -256,7 +257,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void onPresenceReceived(Observer<List<Presence>> observer) {
+    public void onPhonePresenceReceived(Observer<Boolean> observer) {
         presenceReceivedEvent.addObserver(observer);
     }
 
@@ -351,6 +352,18 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         signalEvent.notifyObservers(this, signals);
     }
 
+    private void handlePresenceCommand(PresenceCommand command) {
+
+        LOGGER.debug("Handling PresenceCommand");
+
+        for (Presence presence : command.getPresence()) {
+            if (presence.getCategory().equals(PresenceCategory.Phone)) {
+                // TODO if we have multiple phones see which is last active
+                presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+            }
+        }
+    }
+
     private void handleSignalCommand(SignalCommand command) {
         LOGGER.debug("Handling SignalCommand");
         signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
@@ -359,11 +372,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
         LOGGER.debug("Handling SubscriptionCompleteCommand");
         subscriptionCompleteEvent.notifyObservers(this, command);
-    }
-
-    private void handlePresenceCommand(PresenceCommand command) {
-        LOGGER.debug("Handling PresenceCommand");
-        presenceReceivedEvent.notifyObservers(this, command.getPresence());
     }
 
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {

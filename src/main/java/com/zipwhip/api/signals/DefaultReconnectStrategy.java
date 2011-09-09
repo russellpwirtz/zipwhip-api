@@ -22,10 +22,6 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
     private Future<Boolean> reconnectTask;
     private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    public DefaultReconnectStrategy(SignalConnection signalConnection) {
-        super(signalConnection);
-    }
-
     @Override
     public void stop() {
 

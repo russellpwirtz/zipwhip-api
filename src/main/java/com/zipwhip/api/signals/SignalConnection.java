@@ -35,13 +35,15 @@ public interface SignalConnection extends Destroyable {
     Future<Void> disconnect() throws Exception;
 
     /**
-     * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY
+     * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY. Pass true if the disconnect
+     * is being ordered as a result of a network problem such as a stale connection or a channel
+     * disconnect.
      *
-     * @param requestReconnect True is a reconnect is requested.
+     * @param network True if the disconnect results from a problem on the network.
      * @return The future will tell you when the connection is terminated,
      * @throws Exception if there is is an error disconnecting
      */
-    Future<Void> disconnect(boolean requestReconnect) throws Exception;
+    Future<Void> disconnect(boolean network) throws Exception;
 
     /**
      * Send something to the SignalServer
@@ -109,6 +111,38 @@ public interface SignalConnection extends Destroyable {
      * @param port the port to be used on the NEXT connection
      */
     void setPort(int port);
+
+    /**
+     * Get the time to wait after the connection has been inactive
+     * before sending a PING to the SignalServer. Time unit is milliseconds
+     *
+     * @return The time in milliseconds to wait before sending an inactive PING.
+     */
+    int getPingTimeout();
+
+    /**
+     * Set the time to wait after the connection has been inactive
+     * before sending a PING to the SignalServer. Time unit is milliseconds
+     *
+     * @param pingTimeout The time in milliseconds to wait before sending an inactive PING.
+     */
+    void setPingTimeout(int pingTimeout);
+
+    /**
+     * Get the time to wait for a PONG response after a PING has been sent.
+     * Time unit is milliseconds
+     *
+     * @return The time in milliseconds to wait for a PONG after a PING has been sent.
+     */
+    int getPongTimeout();
+
+    /**
+     * Set the time to wait for a PONG response after a PING has been sent.
+     * Time unit is milliseconds
+     *
+     * @param pongTimeout The time in milliseconds to wait for a PONG after a PING has been sent.
+     */
+    void setPongTimeout(int pongTimeout);
 
     /**
      * Get the current reconnection strategy for the connection.

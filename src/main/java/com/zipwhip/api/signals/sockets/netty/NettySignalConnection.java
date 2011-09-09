@@ -29,16 +29,19 @@ import static org.jboss.netty.buffer.ChannelBuffers.copiedBuffer;
  */
 public class NettySignalConnection extends DestroyableBase implements SignalConnection, ChannelPipelineFactory {
 
+    private static final Logger LOGGER = Logger.getLogger(NettySignalConnection.class);
+
     public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private static final int MAX_FRAME_SIZE = 65535;
-    private static final int PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
-    private static final int PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
-
-    private static final Logger logger = Logger.getLogger(NettySignalConnection.class);
+    private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
+    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private String host = "signals.zipwhip.com";
-    private int port = 80;
+    private int port = 3000;
+
+    private int pingTimeout = DEFAULT_PING_TIMEOUT;
+    private int pongTimeout = DEFAULT_PONG_TIMEOUT;
 
     private ExecutorService executor;
 
@@ -50,19 +53,34 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
+    private ReconnectStrategy reconnectStrategy;
+
     private Channel channel;
     private ChannelFactory channelFactory;
 
-    private ReconnectStrategy reconnectStrategy;
+    private boolean networkDisconnect;
 
+    /**
+     * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy}.
+     */
     public NettySignalConnection() {
+        this(new DefaultReconnectStrategy());
+    }
+
+    /**
+     * Create a new {@code NettySignalConnection}.
+     *
+     * @param reconnectStrategy The reconnect strategy to use in the case of socket disconnects.
+     */
+    public NettySignalConnection(ReconnectStrategy reconnectStrategy) {
 
         this.link(receiveEvent);
         this.link(connectEvent);
         this.link(disconnectEvent);
+        this.link(reconnectStrategy);
 
-        this.reconnectStrategy = new DefaultReconnectStrategy(this);
-        this.reconnectStrategy.start();
+        this.reconnectStrategy = reconnectStrategy;
+        this.reconnectStrategy.setSignalConnection(this);
     }
 
     @Override
@@ -81,6 +99,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                 boolean socketConnected = !(channelFuture.isCancelled() || !channelFuture.isSuccess()) && channelFuture.getChannel().isConnected();
+
+                networkDisconnect = socketConnected;
 
                 connectEvent.notifyObservers(this, socketConnected);
 
@@ -102,11 +122,13 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public Future<Void> disconnect(final boolean requestReconnect) {
+    public Future<Void> disconnect(final boolean network) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
+
+                networkDisconnect = network;
 
                 if (channel != null) {
                     channel.disconnect().await();
@@ -126,8 +148,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 if (pongTimeoutFuture != null) {
                     pongTimeoutFuture.cancel(true);
                 }
-
-                disconnectEvent.notifyObservers(this, requestReconnect);
 
                 return null;
             }
@@ -185,21 +205,41 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
+    public int getPingTimeout() {
+        return pingTimeout;
+    }
+
+    @Override
+    public void setPingTimeout(int pingTimeout) {
+        this.pingTimeout = pingTimeout;
+    }
+
+    @Override
+    public int getPongTimeout() {
+        return pongTimeout;
+    }
+
+    @Override
+    public void setPongTimeout(int pongTimeout) {
+        this.pongTimeout = pongTimeout;
+    }
+
+    @Override
     public ReconnectStrategy getReconnectStrategy() {
         return reconnectStrategy;
     }
 
-
     @Override
     public void setReconnectStrategy(ReconnectStrategy reconnectStrategy) {
 
+        // Stop our old strategy
         if (this.reconnectStrategy != null) {
             this.reconnectStrategy.stop();
+            this.reconnectStrategy.destroy();
         }
 
         this.reconnectStrategy = reconnectStrategy;
         this.reconnectStrategy.setSignalConnection(this);
-        this.reconnectStrategy.start();
     }
 
     @Override
@@ -228,7 +268,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         if (!(msg instanceof Command)) {
 
-                            logger.warn("Received a message that was not a command!");
+                            LOGGER.warn("Received a message that was not a command!");
 
                             return;
 
@@ -251,9 +291,15 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                     }
 
                     @Override
+                    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+                        LOGGER.debug("channelClosed");
+                        disconnectEvent.notifyObservers(this, networkDisconnect);
+                    }
+
+                    @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+                        LOGGER.error(e);
                         // TODO queue and report to the server
-                        logger.error(e);
                     }
                 }
         );
@@ -277,19 +323,19 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
             if (pingTimeoutFuture != null) {
 
-                logger.debug("Resetting scheduled PING");
+                LOGGER.debug("Resetting scheduled PING");
 
                 pingTimeoutFuture.cancel(false);
             }
         }
 
-        logger.debug("Scheduling a PING");
+        LOGGER.debug("Scheduling a PING");
 
         pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
             @Override
             public void run() {
 
-                logger.debug("Sending a PING");
+                LOGGER.debug("Sending a PING");
 
                 send(PingPongCommand.getInstance());
 
@@ -297,23 +343,23 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                     @Override
                     public void run() {
 
-                        logger.warn("PONG timeout, disconnecting...");
+                        LOGGER.warn("PONG timeout, disconnecting...");
 
                         disconnect(true);
                     }
-                }, PONG_TIMEOUT, TimeUnit.MILLISECONDS);
+                }, pongTimeout, TimeUnit.MILLISECONDS);
 
             }
-        }, PING_TIMEOUT, TimeUnit.MILLISECONDS);
+        }, pingTimeout, TimeUnit.MILLISECONDS);
     }
 
     private void receivePong() {
 
-        logger.debug("Received a PONG");
+        LOGGER.debug("Received a PONG");
 
         if (pongTimeoutFuture != null && !pongTimeoutFuture.isCancelled()) {
 
-            logger.debug("Resetting timeout PONG");
+            LOGGER.debug("Resetting timeout PONG");
 
             pongTimeoutFuture.cancel(false);
         }

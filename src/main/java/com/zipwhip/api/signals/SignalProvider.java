@@ -121,11 +121,12 @@ public interface SignalProvider extends Destroyable {
     void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
 
     /**
-     * Observe when we receive a presence update.
+     * Observe when we receive a presence update and report if the phone is connected.
+     * A True result indicates the phone is connected.
      *
-     * @param observer an Observer of type List<Presence> to listen for the event.
+     * @param observer an Observer of type Boolean to listen for the event.
      */
-    void onPresenceReceived(Observer<List<Presence>> observer);
+    void onPhonePresenceReceived(Observer<Boolean> observer);
 
     /**
      * Observe a signal verification sent by another connected client.

@@ -1,6 +1,7 @@
 package com.zipwhip.api;
 
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 
@@ -14,20 +15,20 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     private Factory<Connection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
 
-    public ZipwhipClientFactory(ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private ZipwhipClientFactory() {
     }
 
-    public ZipwhipClientFactory() {
+    private ZipwhipClientFactory(ConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
+        this.connectionFactory = connectionFactory;
+        this.signalProviderFactory = signalProviderFactory;
     }
 
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
 
         ConnectionFactory connectionFactory = ConnectionFactory.newInstance().username(username).password(password);
+        SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
-        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
-
-//        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
+        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
 
         return zipwhipClientFactory.create();
     }
@@ -35,63 +36,22 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
 
         ConnectionFactory connectionFactory = ConnectionFactory.newInstance().sessionKey(sessionKey);
+        SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
-        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory);
-
-//        zipwhipClientFactory.setSignalProviderFactory(new SocketSignalProviderFactory());
+        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
 
         return zipwhipClientFactory.create();
     }
 
     /**
-     * Create a ZipwhipClient that is ready to go. You just have to call "Login"
-     * on it.
+     * Create a ZipwhipClient that is ready to go. You just have to call "Login" on it.
      * 
      * @return
      * @throws Exception
      */
     @Override
     public ZipwhipClient create() throws Exception {
-
-        DefaultZipwhipClient client = new DefaultZipwhipClient();
-
-        client.setConnection(connectionFactory.create());
-
-        setup(client);
-
-        return client;
+        return new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
     }
 
-//    public Factory<Connection> getConnectionFactory() {
-//        return connectionFactory;
-//    }
-//
-//    public void setConnectionFactory(Factory<Connection> connectionFactory) {
-//        this.connectionFactory = connectionFactory;
-//    }
-//
-//    public Factory<SignalProvider> getSignalProviderFactory() {
-//        return signalProviderFactory;
-//    }
-//
-//    public void setSignalProviderFactory(Factory<SignalProvider> signalProviderFactory) {
-//        this.signalProviderFactory = signalProviderFactory;
-//    }
-
-    protected void setup(ZipwhipClient client) throws Exception {
-
-        if (signalProviderFactory != null) {
-            client.setSignalProvider(signalProviderFactory.create());
-        }
-
-        if (client.getConnection() != null && client.getSignalProvider() != null) {
-
-            String sessionKey = client.getConnection().getSessionKey();
-
-            if (StringUtil.exists(sessionKey)) {
-                //client.getSignalProvider().(sessionKey);
-            }
-        }
-    }
-    
 }

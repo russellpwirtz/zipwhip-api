@@ -24,7 +24,8 @@ public class DefaultReconnectStrategyTest {
     @Before
     public void setUp() throws Exception {
         connection = new MockSignalConnection();
-        strategy = new MockReconnectStrategy(connection);
+        strategy = new MockReconnectStrategy();
+        strategy.setSignalConnection(connection);
     }
 
     @Test
@@ -110,7 +111,7 @@ public class DefaultReconnectStrategyTest {
 
     @Test
     public void testIsConnected() throws Exception {
-        Assert.assertFalse(strategy.isStarted());
+        Assert.assertTrue(strategy.isStarted());
         strategy.start();
         Assert.assertTrue(strategy.isStarted());
         strategy.stop();
