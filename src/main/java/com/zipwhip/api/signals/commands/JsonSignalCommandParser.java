@@ -22,10 +22,10 @@ import java.util.Map;
  * Parse out a SignalCommand from a String.
  */
 public class JsonSignalCommandParser implements Parser<String, Command> {
-
-    Map<String, Parser<JSONObject, Command>> parsers;
     
-    private static final Logger logger = Logger.getLogger(JsonSignalCommandParser.class);
+    private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
+
+    private Map<String, Parser<JSONObject, Command>> parsers;
 
     public JsonSignalCommandParser() {
 
@@ -63,7 +63,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
             throw new RuntimeException("No parser for " + action + " was found.");
         }
 
-        logger.debug("Parsing" + string);
+        LOGGER.debug("Parsing" + string);
 
         return parser.parse(json);
     }
@@ -96,14 +96,14 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         public Command parse(JSONObject object) throws Exception {
 
             if (!object.has("channels")) {
-                logger.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
+                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
                 return null;
             }
             
             JSONArray channelArray = object.optJSONArray("channels");
 
             if (channelArray == null) {
-                logger.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
+                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
                 return null;
             }
             
@@ -127,13 +127,13 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         public Command parse(JSONObject object) throws Exception {
 
             if (!object.has("messages")) {
-                logger.warn("BACKLOG command received with no messages.");
+                LOGGER.warn("BACKLOG command received with no messages.");
                 return null;
             }
 
             JSONArray messages = object.optJSONArray("messages");
             if (messages == null) {
-                logger.warn("BACKLOG command received with no messages.");
+                LOGGER.warn("BACKLOG command received with no messages.");
                 return null;
             }
 
@@ -157,7 +157,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         public Command parse(JSONObject object) throws Exception {
 
             if (!object.has("signal")) {
-                logger.warn("SIGNAL command received with no signal object.");
+                LOGGER.warn("SIGNAL command received with no signal object.");
                 return null;
             }
 
@@ -173,7 +173,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         public Command parse(JSONObject object) throws Exception {
 
             if (!object.has("presence")) {
-                logger.warn("PRESENCE command received with no presence object.");
+                LOGGER.warn("PRESENCE command received with no presence object.");
                 return null;
             }
 

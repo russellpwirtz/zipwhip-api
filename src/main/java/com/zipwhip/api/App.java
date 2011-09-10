@@ -18,7 +18,7 @@ import java.util.concurrent.Future;
  */
 public class App {
 
-    private static Logger logger = Logger.getLogger(App.class);
+    private static Logger LOGGER = Logger.getLogger(App.class);
 
     public static final String USERNAME = "2063758020";
     public static final String PASSWORD = "zipwhip1";
@@ -32,46 +32,49 @@ public class App {
         try {
             startApp();
         } catch (Exception e) {
-            logger.error("Error connecting", e);
+            LOGGER.error("Error connecting", e);
         }
     }
     
     private static void startApp() throws Exception {
 
         // Fire-up a new authenticated client
-        ZipwhipClient client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
+        ZipwhipClient client;
+
+        client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
+        //client = ZipwhipClientFactory.createViaSessionKey("775a21d3-ed22-439d-a5c4-b08decaa9556:132961202");
 
         // Use SignalObserverAdapter so you can choose the signals you are interested in observing
         client.addSignalObserver(new SignalObserverAdapter() {
 
             @Override
             public void notifyContact(Signal signal, Contact contact) {
-                logger.debug(contact.toString());
+                LOGGER.debug(contact.toString());
             }
 
             @Override
             public void notifyConversation(Signal signal, Conversation conversation) {
-                logger.debug(conversation.toString());
+                LOGGER.debug(conversation.toString());
             }
 
             @Override
             public void notifyDevice(Signal signal, Device device) {
-                logger.debug(device.toString());
+                LOGGER.debug(device.toString());
             }
 
             @Override
             public void notifyMessage(Signal signal, Message message) {
-                logger.debug(message.toString());
+                LOGGER.debug(message.toString());
             }
 
             @Override
             public void notifyMessageProgress(Signal signal, MessageProgress messageProgress) {
-                logger.debug(messageProgress.toString());
+                LOGGER.debug(messageProgress.toString());
             }
 
             @Override
             public void notifyCarbonEvent(Signal signal, CarbonEvent carbonEvent) {
-                logger.debug(carbonEvent.toString());
+                LOGGER.debug(carbonEvent.toString());
             }
         });
 
@@ -79,7 +82,7 @@ public class App {
         client.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
             @Override
             public void notify(Object sender, String item) {
-                logger.debug("APP::Received a new clientId " + item);
+                LOGGER.debug("APP::Received a new clientId " + item);
             }
         });
 
@@ -87,7 +90,7 @@ public class App {
         client.getSignalProvider().onSignalVerificationReceived(new Observer<Void>() {
             @Override
             public void notify(Object sender, Void item) {
-                logger.debug("APP::Received a signal verification");
+                LOGGER.debug("APP::Received a signal verification");
             }
         });
 
@@ -95,7 +98,7 @@ public class App {
         client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
-                logger.debug("APP::Received a connection change to " + (item ? "CONNECTED" : "DISCONNECTED"));
+                LOGGER.debug("APP::Received a connection change to " + (item ? "CONNECTED" : "DISCONNECTED"));
             }
         });
 
@@ -103,7 +106,7 @@ public class App {
         client.getSignalProvider().onPhonePresenceReceived(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
-                logger.debug("APP::PHONE Presence reported as " + (item ? "CONNECTED" : "DISCONNECTED"));
+                LOGGER.debug("APP::PHONE Presence reported as " + (item ? "CONNECTED" : "DISCONNECTED"));
             }
         });
 

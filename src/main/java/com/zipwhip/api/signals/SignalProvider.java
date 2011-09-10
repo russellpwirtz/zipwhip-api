@@ -30,6 +30,34 @@ public interface SignalProvider extends Destroyable {
     String getClientId();
 
     /**
+     * Get the current Presence object or null
+     *
+     * @return The current Presence object or null
+     */
+    Presence getPresence();
+
+    /**
+     * Set the Presence to use on the next connection.
+     *
+     * @param presence The Presence to use on the next connection.
+     */
+    void setPresence(Presence presence);
+
+    /**
+     * Get the current versions or null
+     *
+     * @return The current versions or null
+     */
+    Map<String, Long> getVersions();
+
+    /**
+     * Set the signal versions to use on the next connection.
+     *
+     * @param versions The signal versions to use on the next connection.
+     */
+    void setVersions(Map<String, Long> versions);
+
+    /**
      * Tell it to connect. This call is idempotent, so if multiple calls to
      * a connection provider will have no effect.
      *

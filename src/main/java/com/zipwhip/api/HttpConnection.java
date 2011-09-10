@@ -25,9 +25,9 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
     public static final String DEFAULT_HOST = "http://network.zipwhip.com";
 
-    private static final Logger logger = Logger.getLogger(HttpConnection.class);
+    private static final Logger LOGGER = Logger.getLogger(HttpConnection.class);
 
-    private String apiVersion = "/api/v1/";
+    private String apiVersion = "/";
     private String host = DEFAULT_HOST;
 
     private String sessionKey;
@@ -64,6 +64,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
     }
 
     public void setSessionKey(String sessionKey) {
+        LOGGER.debug("Setting sessionKey to " + sessionKey);
         this.sessionKey = sessionKey;
     }
 
@@ -95,13 +96,6 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
         // convert the map into a key/value HTTP params string
         rb.params(params);
-
-        // TODO TEMP
-        if (method.equals("login")) {
-            method = "user/login";
-            apiVersion = "/";
-        }
-        // TODO END TEMP
 
         return send(method, rb.build());
     }
@@ -153,7 +147,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
 
         url = host + apiVersion + method + result;
 
-        logger.debug("Signed url: " + url);
+        LOGGER.debug("Signed url: " + url);
         return result;
     }
 
@@ -164,7 +158,7 @@ public class HttpConnection extends DestroyableBase implements Connection {
         }
 
         String result = this.authenticator.sign(url);
-        logger.debug("Signing: " + url);
+        LOGGER.debug("Signing: " + url);
 
         return result;
     }

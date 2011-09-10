@@ -39,8 +39,6 @@ public class Message {
     String subject;
     String firstName;
     String lastName;
-    String destAddress;
-    String srcAddress;
     boolean deleted;
     String errorDesc;
     boolean errorState;
@@ -295,22 +293,6 @@ public class Message {
         this.lastName = lastName;
     }
 
-    public String getDestAddress() {
-        return destAddress;
-    }
-
-    public void setDestAddress(String destAddress) {
-        this.destAddress = destAddress;
-    }
-
-    public String getSrcAddress() {
-        return srcAddress;
-    }
-
-    public void setSrcAddress(String srcAddress) {
-        this.srcAddress = srcAddress;
-    }
-
     public boolean isDeleted() {
         return deleted;
     }
@@ -350,22 +332,22 @@ public class Message {
         toStringBuilder.append("\nContactId: ").append(contactId);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);
         toStringBuilder.append("\nMobileNumber: ").append(mobileNumber);
-        toStringBuilder.append("\naddress: ").append(address);
-        toStringBuilder.append("\ndestinationAddress: ").append(destinationAddress);
-        toStringBuilder.append("\nsourceAddress: ").append(sourceAddress);
+        toStringBuilder.append("\nAddress: ").append(address);
+        toStringBuilder.append("\nDestinationAddress: ").append(destinationAddress);
+        toStringBuilder.append("\nSourceAddress: ").append(sourceAddress);
         toStringBuilder.append("\ndirection: ").append(direction);
-        toStringBuilder.append("\nbody: ").append(body);
-        toStringBuilder.append("\nuuid: ").append(uuid);
-        toStringBuilder.append("\nfrom: ").append(from);
-        toStringBuilder.append("\nfromName: ").append(fromName);
-        toStringBuilder.append("\nadvertisement: ").append(advertisement);
-        toStringBuilder.append("\nread: ").append(read);
-        toStringBuilder.append("\nstatusCode: ").append(statusCode);
-        toStringBuilder.append("\nstatusDesc: ").append(statusDesc);
-        toStringBuilder.append("\nmessageType: ").append(messageType);
-        toStringBuilder.append("\ndateCreated: ").append(dateCreated);
-        toStringBuilder.append("\nlastUpdated: ").append(lastUpdated);
-        toStringBuilder.append("\nversion: ").append(version);
+        toStringBuilder.append("\nBody: ").append(body);
+        toStringBuilder.append("\nUuid: ").append(uuid);
+        toStringBuilder.append("\nFrom: ").append(from);
+        toStringBuilder.append("\nFromName: ").append(fromName);
+        toStringBuilder.append("\nAdvertisement: ").append(advertisement);
+        toStringBuilder.append("\nRead: ").append(read);
+        toStringBuilder.append("\nStatusCode: ").append(statusCode);
+        toStringBuilder.append("\nStatusDesc: ").append(statusDesc);
+        toStringBuilder.append("\nMessageType: ").append(messageType);
+        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
+        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
+        toStringBuilder.append("\nVersion: ").append(version);
         toStringBuilder.append("\ncc: ").append(cc);
         toStringBuilder.append("\nbcc: ").append(bcc);
         toStringBuilder.append("\nfwd: ").append(fwd);
@@ -376,8 +358,6 @@ public class Message {
         toStringBuilder.append("\nsubject: ").append(subject);
         toStringBuilder.append("\nfirstName: ").append(firstName);
         toStringBuilder.append("\nlastName: ").append(lastName);
-        toStringBuilder.append("\nDestAddress: ").append(destAddress);
-        toStringBuilder.append("\nSrcAddress: ").append(srcAddress);
         toStringBuilder.append("\nDeleted: ").append(deleted);
         toStringBuilder.append("\nErrorDesc: ").append(errorDesc);
         toStringBuilder.append("\nErrorState: ").append(errorState);

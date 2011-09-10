@@ -38,7 +38,7 @@ public class ConnectionFactory implements Factory<Connection> {
     /**
      * Creates a generic unauthenticated HttpConnection.
      *
-     * @return
+     * @return Connection an authenticated Connection
      * @throws Exception
      */
     @Override
@@ -66,10 +66,10 @@ public class ConnectionFactory implements Factory<Connection> {
             params.put("mobileNumber", username);
             params.put("password", password);
 
-            Future<String> future = connection.send("login", params);
+            Future<String> future = connection.send("user/login", params);
             ServerResponse serverResponse = responseParser.parse(future.get());
 
-            // TODO what is the intention here?
+            // TODO what is going on here?
             //DeviceToken token = responseParser.parseDeviceToken(serverResponse);
             //connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
             //connection.setSessionKey(token.sessionKey);

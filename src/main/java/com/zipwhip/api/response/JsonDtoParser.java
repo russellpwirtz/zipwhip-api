@@ -1,7 +1,7 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
-import com.zipwhip.lib.DateUtil;
+import com.zipwhip.lib.JsonDateUtil;
 import com.zipwhip.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,8 +31,8 @@ public class JsonDtoParser {
     }
 
     private <T extends BasicDto> T parseBasicDto(T dto, JSONObject content) {
-        dto.setLastUpdated(DateUtil.safeParseJsonDate(content.optString("lastUpdated")));
-        dto.setDateCreated(DateUtil.safeParseJsonDate(content.optString("dateCreated")));
+        dto.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
+        dto.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
         dto.setVersion(content.optInt("version"));
 
         return dto;
@@ -103,10 +103,10 @@ public class JsonDtoParser {
         message.setBcc(response.optString("bcc"));
         message.setErrorState(response.optBoolean("errorState"));
         message.setBody(StringUtil.stripStringNull(response.optString("body")));
-        message.setDateCreated(DateUtil.safeParseJsonDate(response.optString("dateCreated")));
-        message.setLastUpdated(DateUtil.safeParseJsonDate(response.optString("lastUpdated")));
+        message.setDateCreated(JsonDateUtil.getDate(response.optString("dateCreated")));
+        message.setLastUpdated(JsonDateUtil.getDate(response.optString("lastUpdated")));
         message.setSourceAddress(response.optString("sourceAddress"));
-        message.setDestAddress(response.optString("destAddress"));
+        message.setDestinationAddress(response.optString("destAddress"));
         message.setStatusCode(response.optInt("statusCode"));
         message.setStatusDesc(response.optString("statusDesc"));
         message.setThread(response.optString("thread"));
@@ -119,6 +119,8 @@ public class JsonDtoParser {
         message.setFirstName(response.optString("firstName"));
         message.setLastName(response.optString("lastName"));
         message.setVersion(response.optLong("version"));
+        message.setMessageType(response.optString("type"));
+        message.setAdvertisement(response.optString("advertisement"));
 
         return message;
     }
@@ -181,9 +183,10 @@ public class JsonDtoParser {
         conversation.setLastContactFirstName(StringUtil.stripStringNull(content.optString("lastContactFirstName")));
         conversation.setLastContactLastName(StringUtil.stripStringNull(content.optString("lastContactLastName")));
         conversation.setLastContactMobileNumber(StringUtil.stripStringNull(content.optString("lastContactMobileNumber")));
-
-        conversation.setLastMessageDate(DateUtil.safeParseJsonDate(content.optString("lastMessageDate")));
-        conversation.setLastNonDeletedMessageDate(DateUtil.safeParseJsonDate(content.optString("lastNonDeletedMessageDate")));
+        conversation.setLastMessageDate(JsonDateUtil.getDate(content.optString("lastMessageDate")));
+        conversation.setLastNonDeletedMessageDate(JsonDateUtil.getDate(content.optString("lastNonDeletedMessageDate")));
+        conversation.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
+        conversation.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
 
         return conversation;
     }
@@ -208,8 +211,8 @@ public class JsonDtoParser {
         device.setAddress(response.optString("address"));
         device.setThread(response.optString("thread"));
         device.setVersion(response.optInt("version"));
-        device.setLastUpdated(DateUtil.safeParseJsonDate(response.optString("lastUpdated")));
-        device.setDateCreated(DateUtil.safeParseJsonDate(response.optString("dateCreated")));
+        device.setLastUpdated(JsonDateUtil.getDate(response.optString("lastUpdated")));
+        device.setDateCreated(JsonDateUtil.getDate(response.optString("dateCreated")));
         device.setUserId(response.optLong("userId"));
         device.setChannel(response.optString("channel"));
         device.setTextline(response.optString("textline"));

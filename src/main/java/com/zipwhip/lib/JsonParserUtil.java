@@ -75,7 +75,7 @@ public class JsonParserUtil {
 //        if (stringDate == null || stringDate.length() != 20) {
 //            //throw new Exception("Invalid date format for date " + stringDate + ". Date should be in the format [yyyy-MM-ddTHH:mm:ssZ]. Example: [2010-02-04T18:13:04Z]");
 //            //TODO: Printing to the command line instead of throwing an exception due to the way groovy handles exeptions...
-//            logger.debug("Invalid date format for date " + stringDate + ". Date should be in the format [yyyy-MM-ddTHH:mm:ssZ]. Example: [2010-02-04T18:13:04Z]");
+//            LOGGER.debug("Invalid date format for date " + stringDate + ". Date should be in the format [yyyy-MM-ddTHH:mm:ssZ]. Example: [2010-02-04T18:13:04Z]");
 //            return null;
 //        }
 

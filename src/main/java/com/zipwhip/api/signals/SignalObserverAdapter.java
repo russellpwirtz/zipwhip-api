@@ -124,7 +124,7 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
     }
 
     public void notifyUnrecognised(Signal signal) {
-        logger.debug("notifyCarbonEvent - Not implemented");
+        logger.debug("notifyUnrecognised - Not implemented");
     }
 
 }

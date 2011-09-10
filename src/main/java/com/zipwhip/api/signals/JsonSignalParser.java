@@ -9,7 +9,7 @@ import org.json.JSONObject;
  */
 public class JsonSignalParser implements SignalParser<JSONObject> {
 
-    private static final Logger logger = Logger.getLogger(JsonSignalParser.class);
+    private static final Logger LOGGER = Logger.getLogger(JsonSignalParser.class);
 
     public static final String CONTACT_KEY = "contact";
     public static final String CONVERSATION_KEY = "conversation";
@@ -44,11 +44,8 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
 
         // Get signal.content
         JSONObject content = node.optJSONObject("content");
-        if (content == null) {
-            return null;
-        }
 
-        logger.debug("SIGNAL>>>" + node.toString());
+        LOGGER.debug("SIGNAL>>>" + node.toString());
 
         Signal signal = new JsonSignal(node.toString());
 
@@ -72,7 +69,8 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         } else if (mType.equalsIgnoreCase(CARBON_KEY)) {
             signal.content = parser.parseCarbonMessageContent(content);
         } else {
-            logger.debug("Unknown signal type: " + mType);
+            LOGGER.debug("Unparsed signal type: " + mType);
+            signal.content = node.optString("content");
         }
 
         return signal;

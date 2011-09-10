@@ -13,6 +13,6 @@ import com.zipwhip.lib.KeyValueStore;
  */
 public interface SettingsStore extends KeyValueStore<SettingsStore.Keys, String> {
 
-    public enum Keys { SESSION_KEY, CLIENT_ID, USERNAME, PASSWORD, VERSIONS }
+    public enum Keys { SESSION_KEY, CLIENT_ID, USERNAME, VERSIONS }
 
 }

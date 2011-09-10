@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.settings.VersionStore;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
@@ -9,13 +10,11 @@ import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -44,6 +43,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private String clientId;
     private String originalClientId; //so we can detect change
+
+    private Presence presence;
+    private Map<String, Long> versions = new HashMap<String, Long>();
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
@@ -135,6 +137,14 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 }
             }
         });
+
+        // Observe our own version changed events so we can stay in sync internally
+        onVersionChanged(new Observer<VersionMapEntry>() {
+            @Override
+            public void notify(Object sender, VersionMapEntry version) {
+                versions.put(version.getKey(), version.getValue());
+            }
+        });
     }
 
     /*
@@ -142,9 +152,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
      * cases when we have been notified by the connection that it has a successful connection.
      */
     private void sendConnect() {
-        // TODO we need a handle on Versions and maybe Presence
         if (connectLatch != null && connectLatch.getCount() == 0) {
-            connection.send(new ConnectCommand(clientId, null, null));
+            connection.send(new ConnectCommand(clientId, versions, presence));
         }
     }
 
@@ -159,6 +168,26 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
+    public Presence getPresence() {
+        return presence;
+    }
+
+    @Override
+    public void setPresence(Presence presence) {
+        this.presence = presence;
+    }
+
+    @Override
+    public Map<String, Long> getVersions() {
+        return versions;
+    }
+
+    @Override
+    public void setVersions(Map<String, Long> versions) {
+        this.versions = versions;
+    }
+
+    @Override
     public Future<Boolean> connect() throws Exception {
         return connect(originalClientId, null, null);
     }
@@ -170,11 +199,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
-        return connect(clientId, versions, null);
+        return connect(clientId, versions, presence);
     }
 
     @Override
-    public Future<Boolean> connect(final String clientId, final Map<String, Long> versions, final Presence presence) throws Exception {
+    public Future<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
 
         if (isConnected()) {
             LOGGER.debug("Connect requested but already connected");
@@ -184,6 +213,15 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         // keep track of the original one, so we can detect change
         if (StringUtil.exists(clientId)) {
             originalClientId = clientId;
+        }
+
+        // Hold onto these objects for internal reconnect attempts
+        if (presence != null) {
+            this.presence = presence;
+        }
+
+        if (!CollectionUtil.isNullOrEmpty(versions)) {
+            this.versions = versions;
         }
 
         // this will help us do the connect synchronously
@@ -207,7 +245,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
                 if (connection.isConnected()) {
 
-                    connection.send(new ConnectCommand(clientId, versions, presence));
+                    connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions, SocketSignalProvider.this.presence));
 
                     // block while the signal server is thinking/hanging.
                     try {

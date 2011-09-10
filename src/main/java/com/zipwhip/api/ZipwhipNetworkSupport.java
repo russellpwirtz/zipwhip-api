@@ -52,12 +52,12 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String SESSION_UPDATE = "session/update";
     public static final String SIGNALS_DISCONNECT = "signals/disconnect";
     public static final String SIGNALS_CONNECT = "signals/connect";
-    public static final String SIGNAL_SEND = "signal/send"; // TODO: verify this
+    public static final String SIGNAL_SEND = "signal/send";
     public static final String USER_SAVE = "user/save";
     public static final String GROUP_ADD_MEMBER = "group/addMember";
     public static final String SESSION_GET = "session/get";
 
-    protected static final Logger logger = Logger.getLogger(ZipwhipNetworkSupport.class);
+    protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
 
     protected Connection connection;
     protected SignalProvider signalProvider;
