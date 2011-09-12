@@ -29,6 +29,7 @@ public class JsonDateUtil {
      * @return Date - java.util.Date object
      */
     public static Date getDate(Object date) {
+
         //Check for null
         if (date == null) {
             return null;

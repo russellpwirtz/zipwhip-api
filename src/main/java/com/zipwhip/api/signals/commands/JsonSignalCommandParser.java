@@ -22,10 +22,10 @@ import java.util.Map;
  * Parse out a SignalCommand from a String.
  */
 public class JsonSignalCommandParser implements Parser<String, Command> {
-    
-    private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
 
     private Map<String, Parser<JSONObject, Command>> parsers;
+    
+    private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
 
     public JsonSignalCommandParser() {
 
@@ -48,7 +48,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         if (StringToChannelBuffer.CRLF.equals(string)) {
             return PingPongCommand.getInstance();
         }
-        
+
         JSONObject json = new JSONObject(string);
 
         String action = json.optString("action");
