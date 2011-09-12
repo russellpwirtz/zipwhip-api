@@ -42,7 +42,19 @@ public class App {
         ZipwhipClient client;
 
         client = ZipwhipClientFactory.createViaUsername(USERNAME, PASSWORD);
-        //client = ZipwhipClientFactory.createViaSessionKey("775a21d3-ed22-439d-a5c4-b08decaa9556:132961202");
+
+        /**
+         * Alternatively you can create a client from a sessionKey
+         *
+         * client = ZipwhipClientFactory.createViaSessionKey("775a21d3-ed22-439d-a5c4-b08decaa9556:132961202");
+         */
+
+        /**
+         * If you want a settings store implementation other than the basic,
+         * one user Java implementation you can set your custom store like this:
+         *
+         * client.setSettingsStore(new MemorySettingStore());
+         */
 
         // Use SignalObserverAdapter so you can choose the signals you are interested in observing
         client.addSignalObserver(new SignalObserverAdapter() {

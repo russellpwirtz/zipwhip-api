@@ -4,7 +4,7 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.api.settings.DefaultSettingsStore;
+import com.zipwhip.api.settings.PreferencesSettingsStore;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.settings.SettingsVersionStore;
 import com.zipwhip.api.settings.VersionStore;
@@ -63,7 +63,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     protected SignalProvider signalProvider;
     protected ResponseParser responseParser;
 
-    protected SettingsStore settingsStore = new DefaultSettingsStore();
+    protected SettingsStore settingsStore = new PreferencesSettingsStore();
     protected VersionStore versionsStore = new SettingsVersionStore(settingsStore);
 
     protected ParallelBulkExecutor executor = new ParallelBulkExecutor(ZipwhipNetworkSupport.class);
@@ -206,6 +206,10 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         executor.execute(task);
 
         return task;
+    }
+
+    protected boolean success(ServerResponse serverResponse) {
+        return (serverResponse != null) && serverResponse.success;
     }
 
 }

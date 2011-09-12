@@ -56,6 +56,22 @@ public interface ZipwhipClient extends Destroyable {
     Message getMessage(String uuid) throws Exception;
 
     /**
+     * Delete messages by their corresponding UUIDs.
+     *
+     * @param uuids A list of message uuids to delete.
+     * @return True for a successful delete otherwise false.
+     */
+    boolean messageRead(List<String> uuids) throws Exception;
+
+    /**
+     * Read messages by their corresponding UUIDs.
+     *
+     * @param uuids A list of message uuids to mark as read.
+     * @return True for a successful read otherwise false.
+     */
+    boolean messageDelete(List<String> uuids) throws Exception;
+
+    /**
      * Returns a MessageStatus object
      *
      * @param uuid - message uuid

@@ -11,12 +11,12 @@ import java.util.prefs.Preferences;
  * Date: 8/31/11
  * Time: 5:29 PM
  */
-public class DefaultSettingsStore implements SettingsStore {
+public class PreferencesSettingsStore implements SettingsStore {
 
-    private static Logger logger = Logger.getLogger(DefaultSettingsStore.class);
+    private static Logger logger = Logger.getLogger(PreferencesSettingsStore.class);
 
     // Java's underlying, platform independent disk storage.
-    private Preferences preferences = Preferences.userRoot().node(DefaultSettingsStore.class.getCanonicalName());
+    private Preferences preferences = Preferences.userRoot().node(PreferencesSettingsStore.class.getCanonicalName());
 
     @Override
     public void put(Keys key, String value) {

@@ -20,7 +20,7 @@ public class SettingsVersionStoreTest {
 
     @Before
     public void setUp() throws Exception {
-        store = new SettingsVersionStore(new DefaultSettingsStore());
+        store = new SettingsVersionStore(new PreferencesSettingsStore());
         store.clear();
     }
 
@@ -45,7 +45,7 @@ public class SettingsVersionStoreTest {
         Assert.assertNotNull(vm);
         Assert.assertEquals(vm, memMap);
 
-        store = new SettingsVersionStore(new DefaultSettingsStore());
+        store = new SettingsVersionStore(new PreferencesSettingsStore());
 
         Map<String, Long> mm = store.get();
         Assert.assertEquals(mm, memMap);

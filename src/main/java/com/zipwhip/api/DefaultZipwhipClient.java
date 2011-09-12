@@ -11,6 +11,7 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.lib.Address;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
@@ -194,6 +195,38 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         params.put("uuid", uuid);
 
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
+    }
+
+    @Override
+    public boolean messageRead(List<String> uuids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(uuids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        for(String uuid : uuids){
+            params.put("messages", uuid);
+        }
+
+        return success(executeSync(MESSAGE_READ, params));
+    }
+
+    @Override
+    public boolean messageDelete(List<String> uuids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(uuids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        for(String uuid : uuids){
+            params.put("messages", uuid);
+        }
+
+        return success(executeSync(MESSAGE_DELETE, params));
     }
 
     @Override

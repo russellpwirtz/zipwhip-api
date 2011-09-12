@@ -48,19 +48,17 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
 
     @Override
     public Connection getConnection() {
-        return null; // To change body of implemented methods use File |
-                     // Settings | File Templates.
+        return null;
     }
 
     @Override
     public DeviceToken getDeviceBySessionKey(String sessionKey) throws Exception {
-        return null; // To change body of implemented methods use File |
-                     // Settings | File Templates.
+        return null;
     }
 
     public DeviceToken enrollDevice(String deviceAddress, Subscription subscription) throws Exception {
-        List<Subscription> subscriptions = new ArrayList<Subscription>();
 
+        List<Subscription> subscriptions = new ArrayList<Subscription>();
         subscriptions.add(subscription);
 
         return enrollDevice(deviceAddress, subscriptions);
@@ -72,8 +70,8 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
 
     @Override
     public String lookupPhoneKey(String carrier, String carrierKey) throws Exception {
-        Map<String, Object> params = new HashMap<String, Object>();
 
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("carrier", carrier);
         params.put("carrierKey", carrierKey);
 
