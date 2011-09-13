@@ -5,6 +5,7 @@ import com.zipwhip.api.HttpConnection;
 import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.DeviceToken;
 import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.subscriptions.Subscription;
 
 import java.util.ArrayList;
@@ -21,6 +22,16 @@ import java.util.Map;
 public class DefaultVendorClient extends ZipwhipNetworkSupport implements VendorClient {
 
     /**
+     * Create a new DefaultVendorClient
+     *
+     * @param connection The connection to Zipwhip
+     * @param signalProvider The SignalProvider to SignalServer
+     */
+    public DefaultVendorClient(Connection connection, SignalProvider signalProvider) {
+        super(connection, signalProvider);
+    }
+
+    /**
      * This is only for Vendors
      * 
      * @param address
@@ -34,21 +45,18 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
      * @throws Exception
      */
     public List<MessageToken> sendVendorMessage(String address, String body) throws Exception {
-        Map<String, Object> params = new HashMap<String, Object>();
 
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("address", address);
         params.put("body", body);
-        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey); // TODO
-                                                                                            // figure
-                                                                                            // this
-                                                                                            // out
+        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey);
 
         return responseParser.parseMessageTokens(executeSync(VENDOR_MESSAGE_SEND, params));
     }
 
     @Override
     public Connection getConnection() {
-        return null;
+        return connection;
     }
 
     @Override
@@ -94,15 +102,14 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
      * @throws Exception
      */
     public DeviceToken enrollDevice(String deviceAddress, List<Subscription> subscriptions) throws Exception {
+
         Map<String, Object> params = new HashMap<String, Object>();
 
         // the device we want to modify
         params.put("address", deviceAddress);
+
         // our API key (so they can verify our signature)
-        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey); // TODO:
-                                                                                            // figure
-                                                                                            // this
-                                                                                            // out.
+        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey);
 
         // the list of subscriptions we want to add to the device
         if (subscriptions != null) {

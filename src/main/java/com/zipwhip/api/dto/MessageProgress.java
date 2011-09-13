@@ -13,6 +13,7 @@ public class MessageProgress {
     int code;
     String key;
     String desc;
+    String stateName;
 
     public int getCode() {
         return code;
@@ -38,12 +39,21 @@ public class MessageProgress {
         this.desc = desc;
     }
 
+    public String getStateName() {
+        return stateName;
+    }
+
+    public void setStateName(String stateName) {
+        this.stateName = stateName;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> MessageProgress details:");
         toStringBuilder.append("\nCode: ").append(code);
         toStringBuilder.append("\nKey: ").append(key);
         toStringBuilder.append("\nDescription: ").append(desc);
+        toStringBuilder.append("\nState: ").append(stateName);
 
         return toStringBuilder.toString();
     }

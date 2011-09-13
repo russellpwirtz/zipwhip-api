@@ -1,6 +1,7 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
+import com.zipwhip.api.signals.PresenceUtil;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
@@ -78,7 +79,6 @@ public class JsonResponseParser implements ResponseParser {
             return new StringServerResponse(response, success, string, sessions);
         }
 
-
         /// THIS MUST BE A BOOLEAN
         boolean bool = thing.getBoolean(responseKey);
         return new BooleanServerResponse(response, success, bool, sessions);
@@ -139,7 +139,9 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception {
+
         DeviceToken result = null;
+
         if (serverResponse instanceof ObjectServerResponse) {
             ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
             result = new DeviceToken();
@@ -166,8 +168,7 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
-        // TODO PARSE THIS SHIT
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return PresenceUtil.getInstance().parse(new JSONArray(serverResponse.raw));
     }
 
 }

@@ -99,18 +99,20 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
                 return null;
             }
-            
+
+            List<Object> channels = new ArrayList<Object>();
+
             JSONArray channelArray = object.optJSONArray("channels");
 
             if (channelArray == null) {
-                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
-                return null;
-            }
-            
-            List<Object> channels = new ArrayList<Object>();
 
-            for (int i = 0; i < channelArray.length(); i++) {
-                channels.add(channelArray.get(i));
+                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
+
+            } else {
+
+                for (int i = 0; i < channelArray.length(); i++) {
+                    channels.add(channelArray.get(i));
+                }
             }
 
             String subscriptionId = object.optString("subscriptionId");

@@ -57,18 +57,31 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         signal.uri = node.optString("uri");
 
         if (mType.equalsIgnoreCase(CONTACT_KEY)) {
+
             signal.content = parser.parseContact(content);
+
         } else if (mType.equalsIgnoreCase(CONVERSATION_KEY)) {
+
             signal.content = parser.parseConversation(content);
+
         } else if (mType.equalsIgnoreCase(DEVICE_KEY)) {
+
             signal.content = parser.parseDevice(content);
+
         } else if (mType.equalsIgnoreCase(MESSAGE_KEY)) {
+
             signal.content = parser.parseMessage(content);
+
         } else if (mType.equalsIgnoreCase(MESSAGE_PROGRESS_KEY)) {
+
             signal.content = parser.parseMessageProgress(content);
+
         } else if (mType.equalsIgnoreCase(CARBON_KEY)) {
+
             signal.content = parser.parseCarbonMessageContent(content);
+
         } else {
+
             LOGGER.debug("Unparsed signal type: " + mType);
             signal.content = node.optString("content");
         }

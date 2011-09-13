@@ -207,7 +207,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         final Map<String, Object> params = new HashMap<String, Object>();
 
         for(String uuid : uuids){
-            params.put("messages", uuid);
+            params.put("uuid", uuid);
         }
 
         return success(executeSync(MESSAGE_READ, params));
@@ -223,7 +223,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         final Map<String, Object> params = new HashMap<String, Object>();
 
         for(String uuid : uuids){
-            params.put("messages", uuid);
+            params.put("uuids", uuid);
         }
 
         return success(executeSync(MESSAGE_DELETE, params));

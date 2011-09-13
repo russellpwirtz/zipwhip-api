@@ -252,6 +252,12 @@ public class JsonDtoParser {
             }
         }
 
+        JSONObject state = content.optJSONObject("state");
+
+        if (state != null && state.has("name")) {
+            messageProgress.setStateName(state.optString("name"));
+        }
+
         messageProgress.setKey(content.optString("key"));
 
         return messageProgress;
