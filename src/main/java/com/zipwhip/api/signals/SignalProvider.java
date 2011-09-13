@@ -170,4 +170,11 @@ public interface SignalProvider extends Destroyable {
      */
     void onVersionChanged(Observer<VersionMapEntry> observer);
 
+    /**
+     * Observe an inactive ping event.
+     *
+     * @param observer an Observer of type Void to listen for the event.
+     */
+    void onPing(Observer<Void> observer);
+
 }

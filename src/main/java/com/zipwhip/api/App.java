@@ -122,6 +122,14 @@ public class App {
             }
         });
 
+        // Observe a PING being sent to the SignalServer indicating that the line has been inactive for a period of time
+        client.getSignalProvider().onPing(new Observer<Void>() {
+            @Override
+            public void notify(Object sender, Void item) {
+                LOGGER.debug("APP::PING SENT");
+            }
+        });
+
         // Build a Presence object
         Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
 

@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.settings.VersionStore;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
@@ -29,6 +28,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
 
+    private ObservableHelper<Void> pingEvent = new ObservableHelper<Void>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
@@ -56,6 +56,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this.connection = connection;
         this.link(this.connection);
 
+        this.link(pingEvent);
         this.link(connectEvent);
         this.link(newClientIdEvent);
         this.link(signalEvent);
@@ -135,6 +136,22 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 if (connected) {
                     sendConnect();
                 }
+            }
+        });
+
+        // Forward disconnect events up to clients
+        connection.onDisconnect(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                connectEvent.notifyObservers(sender, false);
+            }
+        });
+
+        // Forward ping events up to clients
+        connection.onPing(new Observer<Void>() {
+            @Override
+            public void notify(Object sender, Void item) {
+                pingEvent.notifyObservers(sender, item);
             }
         });
 
@@ -255,12 +272,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                     }
                 }
 
-                final boolean result = isConnected();
-
-                // queue it up, or else the "connect()" call will still block while the slow-ass observers fire.
-                connectEvent.notifyObservers(this, result);
-
-                return result;
+                return isConnected();
             }
         });
 
@@ -310,6 +322,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
+    public void onPing(Observer<Void> observer) {
+        pingEvent.addObserver(observer);
+    }
+
+    @Override
     protected void onDestroy() {
         executor.shutdownNow();
     }
@@ -336,6 +353,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 connectLatch.countDown();
             }
         }
+
+        connectEvent.notifyObservers(this, command.isSuccessful());
     }
 
     private void handleDisconnectCommand(DisconnectCommand command) {

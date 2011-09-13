@@ -128,6 +128,11 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
+    public void onPing(Observer<Void> observer) {
+
+    }
+
+    @Override
     public void setHost(String host) {
     }
 

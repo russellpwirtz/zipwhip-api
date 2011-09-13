@@ -97,6 +97,13 @@ public interface SignalConnection extends Destroyable {
     void removeOnDisconnectObserver(Observer<Boolean> observer);
 
     /**
+     * Observe an inactive ping event.
+     *
+     * @param observer an Observer of type Void to listen for the event.
+     */
+    void onPing(Observer<Void> observer);
+
+    /**
      * Set the host to be used on the NEXT connection.
      * If not set the default SignalServer host will be used.
      *

@@ -34,6 +34,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private static final int MAX_FRAME_SIZE = 65535;
+
     private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
     private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
@@ -49,6 +50,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ScheduledFuture<?> pongTimeoutFuture;
     private ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
+    private ObservableHelper<Void> pingEvent = new ObservableHelper<Void>();
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
@@ -74,6 +76,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
      */
     public NettySignalConnection(ReconnectStrategy reconnectStrategy) {
 
+        this.link(pingEvent);
         this.link(receiveEvent);
         this.link(connectEvent);
         this.link(disconnectEvent);
@@ -192,6 +195,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public void removeOnDisconnectObserver(Observer<Boolean> observer) {
         disconnectEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void onPing(Observer<Void> observer) {
+        pingEvent.addObserver(observer);
     }
 
     @Override
@@ -338,6 +346,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 LOGGER.debug("Sending a PING");
 
                 send(PingPongCommand.getInstance());
+
+                pingEvent.notifyObservers(this, null);
 
                 pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
                     @Override
