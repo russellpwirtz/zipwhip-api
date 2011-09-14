@@ -87,8 +87,9 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
             int port = object.optInt("port", 0);
             int reconnectDelay = object.optInt("reconnectDelay", 0);
             boolean stop = object.optBoolean("stop", false);
+            boolean ban = object.optBoolean("ban", false);
             
-            return new DisconnectCommand(host, port, reconnectDelay, stop);
+            return new DisconnectCommand(host, port, reconnectDelay, stop, ban);
         }
     };
 
@@ -201,6 +202,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
             PingPongCommand pingPongCommand = PingPongCommand.getNewLongformInstance();
             pingPongCommand.setTimestamp(object.optLong("timestamp", 0));
             pingPongCommand.setRequest(object.optBoolean("request", false));
+            pingPongCommand.setToken(object.optString("token", StringUtil.EMPTY_STRING));
 
             return pingPongCommand;
         }

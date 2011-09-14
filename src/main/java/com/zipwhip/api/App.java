@@ -5,6 +5,7 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalObserverAdapter;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceBuilder;
 import com.zipwhip.signals.presence.PresenceCategory;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
@@ -131,7 +132,7 @@ public class App {
         });
 
         // Build a Presence object
-        Presence presence = new Presence.Builder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
+        Presence presence = new PresenceBuilder().ip("10.168.1.23").category(PresenceCategory.Phone).isConnected(true).build();
 
         // Connect to SignalServer passing in our presence
         Future<Boolean> connectTask = client.connect(presence);

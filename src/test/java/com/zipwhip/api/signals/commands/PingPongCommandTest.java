@@ -36,6 +36,9 @@ public class PingPongCommandTest {
 
         cmd.setTimestamp(1234567890);
         Assert.assertEquals(cmd.serialize(), "{\"timestamp\":1234567890,\"action\":\"PONG\"}");
+
+        cmd.setToken("hi");
+        Assert.assertEquals(cmd.serialize(), "{\"timestamp\":1234567890,\"token\":\"hi\",\"action\":\"PONG\"}");
     }
 
 }

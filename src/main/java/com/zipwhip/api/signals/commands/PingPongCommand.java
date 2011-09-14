@@ -20,6 +20,7 @@ public class PingPongCommand extends SerializingCommand {
 
     private boolean isShortForm;
     private boolean request;
+    private String token;
     private long timestamp;
 
     /**
@@ -70,6 +71,14 @@ public class PingPongCommand extends SerializingCommand {
         this.timestamp = timestamp;
     }
 
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
     @Override
     public String serialize() {
 
@@ -85,6 +94,10 @@ public class PingPongCommand extends SerializingCommand {
 
             if (timestamp > 0) {
                 json.put("timestamp", timestamp);
+            }
+
+            if (StringUtil.exists(token)) {
+                json.put("token", token);
             }
 
         } catch (JSONException e) {

@@ -367,7 +367,15 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             LOGGER.error("Error disconnecting", e);
         }
 
-        if (!command.isStop()) {
+        if (command.isBan()) {
+
+            LOGGER.warn("BANNED by SignalServer!");
+
+            // TODO ban the user somehow?
+        }
+
+        // If the command has not said 'ban' or 'stop'
+        if (!command.isStop() || !command.isBan()) {
 
             if (!StringUtil.EMPTY_STRING.equals(command.getHost())) {
                 connection.setHost(command.getHost());

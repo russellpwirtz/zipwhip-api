@@ -371,6 +371,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
             PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
             reversePong.setTimestamp(command.getTimestamp());
+            reversePong.setToken(command.getToken());
 
             LOGGER.debug("Sending a REVERSE PONG");
             send(reversePong);

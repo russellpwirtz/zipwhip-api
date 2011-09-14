@@ -92,7 +92,7 @@ public class SocketSignalProviderTest {
             @Override
             public void notify(Object sender, Boolean item) {
                 System.out.println("testOnConnectionChanged - provider.onConnectionChanged CONNECT " + item);
-                Assert.assertTrue(item);
+                Assert.assertFalse(item);
             }
         });
 
