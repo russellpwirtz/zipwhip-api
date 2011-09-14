@@ -20,7 +20,7 @@ public class ConnectCommand extends SerializingCommand {
 
     public static final String ACTION = "connect";
 
-    private static Logger logger = Logger.getLogger(ConnectCommand.class);
+    private static Logger LOGGER = Logger.getLogger(ConnectCommand.class);
 
     private String clientId;
     private Map<String, Long> versions;
@@ -70,7 +70,7 @@ public class ConnectCommand extends SerializingCommand {
             }
 
         } catch (JSONException e) {
-            logger.error("Error serializing ConnectCommand", e);
+            LOGGER.error("Error serializing ConnectCommand", e);
         }
 
         return json.toString();

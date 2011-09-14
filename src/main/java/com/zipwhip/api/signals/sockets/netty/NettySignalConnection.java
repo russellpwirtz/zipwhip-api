@@ -283,7 +283,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         } else if (msg instanceof PingPongCommand) {
 
                             // We received a PONG, cancel the PONG timeout.
-                            receivePong();
+                            receivePong((PingPongCommand) msg);
 
                             return;
 
@@ -345,7 +345,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                 LOGGER.debug("Sending a PING");
 
-                send(PingPongCommand.getInstance());
+                send(PingPongCommand.getShortformInstance());
 
                 pingEvent.notifyObservers(this, null);
 
@@ -363,9 +363,22 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         }, pingTimeout, TimeUnit.MILLISECONDS);
     }
 
-    private void receivePong() {
+    private void receivePong(PingPongCommand command) {
 
-        LOGGER.debug("Received a PONG");
+        if (command.isRequest()) {
+
+            LOGGER.debug("Received a REVERSE PING");
+
+            PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
+            reversePong.setTimestamp(command.getTimestamp());
+
+            LOGGER.debug("Sending a REVERSE PONG");
+            send(reversePong);
+
+        } else {
+
+            LOGGER.debug("Received a PONG");
+        }
 
         if (pongTimeoutFuture != null && !pongTimeoutFuture.isCancelled()) {
 

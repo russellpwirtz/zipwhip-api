@@ -18,7 +18,7 @@ public class PresenceCommand extends SerializingCommand {
 
     public static final String ACTION = "presence";
 
-        private static Logger logger = Logger.getLogger(PresenceCommand.class);
+    private static Logger logger = Logger.getLogger(PresenceCommand.class);
 
     private List<Presence> presence;
 

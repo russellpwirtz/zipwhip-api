@@ -1,8 +1,6 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.signals.presence.Presence;
 import junit.framework.Assert;
-import org.json.JSONObject;
 import org.junit.Test;
 
 import java.util.HashMap;

@@ -38,15 +38,16 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         parsers.put(SignalCommand.ACTION, SIGNAL_PARSER);
         parsers.put(PresenceCommand.ACTION, PRESENCE_PARSER);
         parsers.put(SignalVerificationCommand.ACTION, SIGNAL_VERIFICATION_PARSER);
+        parsers.put(PingPongCommand.ACTION, PING_PONG_PARSER);
         parsers.put(NoopCommand.ACTION, NOOP_PARSER);
     }
 
     @Override
     public Command parse(String string) throws Exception {
 
-        // First check if it is a PONG
+        // First check if it is a short form PONG command
         if (StringToChannelBuffer.CRLF.equals(string)) {
-            return PingPongCommand.getInstance();
+            return PingPongCommand.getShortformInstance();
         }
 
         JSONObject json = new JSONObject(string);
@@ -190,6 +191,18 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         @Override
         public Command parse(JSONObject object) throws Exception {
             return new SignalVerificationCommand();
+        }
+    };
+
+    private static final Parser<JSONObject, Command> PING_PONG_PARSER = new Parser<JSONObject, Command>() {
+        @Override
+        public Command parse(JSONObject object) throws Exception {
+
+            PingPongCommand pingPongCommand = PingPongCommand.getNewLongformInstance();
+            pingPongCommand.setTimestamp(object.optLong("timestamp", 0));
+            pingPongCommand.setRequest(object.optBoolean("request", false));
+
+            return pingPongCommand;
         }
     };
 
