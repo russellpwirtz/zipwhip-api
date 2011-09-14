@@ -136,6 +136,16 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     }
 
     @Override
+    public Future<Void> disconnect() throws Exception {
+
+        if (!connection.isConnected()) {
+            throw new Exception("The connection is not connected!");
+        }
+
+        return signalProvider.disconnect();
+    }
+
+    @Override
     public List<MessageToken> sendMessage(Address address, String body) throws Exception {
         return sendMessage(Arrays.asList(address.toString()), body, null, null);
     }

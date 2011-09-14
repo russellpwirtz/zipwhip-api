@@ -135,6 +135,14 @@ public interface ZipwhipClient extends Destroyable {
     Future<Boolean> connect() throws Exception;
 
     /**
+     * Tell the SignalProvider to disconnect from the server.
+     *
+     * @return an event that tells you its complete
+     * @throws Exception if an I/O happens while disconnecting
+     */
+    Future<Void> disconnect() throws Exception;
+
+    /**
      * Listen for signals. This is a convenience method
      *
      * @param observer An observer object to receive callbacks on
