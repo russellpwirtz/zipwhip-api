@@ -18,7 +18,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     }
 
     @Override
-    public SignalProvider create() throws Exception {
+    public SignalProvider create() {
         return new SocketSignalProvider();
     }
 

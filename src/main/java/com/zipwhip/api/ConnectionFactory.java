@@ -7,6 +7,7 @@ import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.lib.SignTool;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
+import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +22,8 @@ import java.util.concurrent.Future;
  * Creates HttpConnection.
  */
 public class ConnectionFactory implements Factory<Connection> {
+
+    private static final Logger LOGGER = Logger.getLogger(ConnectionFactory.class);
 
     private ResponseParser responseParser = new JsonResponseParser();
 
@@ -39,47 +42,54 @@ public class ConnectionFactory implements Factory<Connection> {
      * Creates a generic unauthenticated HttpConnection.
      *
      * @return Connection an authenticated Connection
-     * @throws Exception
      */
     @Override
-    public Connection create() throws Exception {
+    public Connection create() {
 
-        HttpConnection connection = new HttpConnection();
+        try {
+            HttpConnection connection = new HttpConnection();
 
-        connection.setSessionKey(sessionKey);
-        connection.setHost(host);
-        connection.setAuthenticator(new SignTool(apiKey, secret));
+            connection.setSessionKey(sessionKey);
+            connection.setHost(host);
+            connection.setAuthenticator(new SignTool(apiKey, secret));
 
-        // The authenticator should be ready go to.
-        if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
+            // The authenticator should be ready go to.
+            if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
 
-            if (StringUtil.isNullOrEmpty(sessionKey)) {
-                // we need a sessionKey
-                requestSessionKey(connection);
+                if (StringUtil.isNullOrEmpty(sessionKey)) {
+                    // we need a sessionKey
+                    requestSessionKey(connection);
+                }
             }
-        }
 
-        // We have a username/password
-        else if (StringUtil.exists(username) && StringUtil.exists(password)) {
+            // We have a username/password
+            else if (StringUtil.exists(username) && StringUtil.exists(password)) {
 
-            Map<String, Object> params = new HashMap<String, Object>();
-            params.put("mobileNumber", username);
-            params.put("password", password);
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("mobileNumber", username);
+                params.put("password", password);
 
-            Future<String> future = connection.send("user/login", params);
-            ServerResponse serverResponse = responseParser.parse(future.get());
+                Future<String> future = connection.send("user/login", params);
+                ServerResponse serverResponse = responseParser.parse(future.get());
 
-            // TODO what is going on here?
-            //DeviceToken token = responseParser.parseDeviceToken(serverResponse);
-            //connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
-            //connection.setSessionKey(token.sessionKey);
+                // TODO what is going on here?
+                //DeviceToken token = responseParser.parseDeviceToken(serverResponse);
+                //connection.setAuthenticator(new SignTool(token.apiKey, token.secret));
+                //connection.setSessionKey(token.sessionKey);
 
-            if (serverResponse instanceof StringServerResponse) {
-                connection.setSessionKey(((StringServerResponse) serverResponse).response);
+                if (serverResponse instanceof StringServerResponse) {
+                    connection.setSessionKey(((StringServerResponse) serverResponse).response);
+                }
             }
-        }
 
-        return connection;
+            return connection;
+
+        } catch (Exception e) {
+
+            LOGGER.error("Error creating Connection", e);
+
+            return null;
+        }
     }
 
     protected void requestSessionKey(final Connection connection) throws Exception {

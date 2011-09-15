@@ -44,13 +44,12 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     }
 
     /**
-     * Create a ZipwhipClient that is ready to go. You just have to call "Login" on it.
+     * Create an authenticated ZipwhipClient.
      * 
-     * @return
-     * @throws Exception
+     * @return An authenticated ZipwhipClient.
      */
     @Override
-    public ZipwhipClient create() throws Exception {
+    public ZipwhipClient create() {
         return new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
     }
 
