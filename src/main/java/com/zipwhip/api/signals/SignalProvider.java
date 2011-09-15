@@ -2,9 +2,9 @@ package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
+import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 
-import javax.security.auth.Destroyable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;

@@ -328,6 +328,13 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     protected void onDestroy() {
+
+        try {
+            disconnect().get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            LOGGER.warn("Error disconnecting onDestroy()");
+        }
+
         executor.shutdownNow();
     }
 

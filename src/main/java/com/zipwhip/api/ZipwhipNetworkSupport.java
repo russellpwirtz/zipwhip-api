@@ -90,6 +90,8 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         setSignalProvider(signalProvider);
         setResponseParser(JsonResponseParser.getInstance());
 
+        link(signalProvider);
+        link(connection);
         link(executor);
     }
 

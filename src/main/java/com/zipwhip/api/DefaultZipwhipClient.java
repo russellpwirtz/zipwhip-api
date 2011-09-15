@@ -77,9 +77,9 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                         params.put("sessions", connection.getSessionKey());
 
                         try {
-                            executeSync("signals/disconnect", params);
+                            executeSync(SIGNALS_DISCONNECT, params);
 
-                            executeSync("signals/connect", params);
+                            executeSync(SIGNALS_CONNECT, params);
 
                         } catch (Exception e) {
                             logger.error("Error calling signals/connect", e);
@@ -95,8 +95,11 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                     params.put("sessions", connection.getSessionKey());
 
                     try {
-                        executeSync("signals/connect", params);
+
+                        executeSync(SIGNALS_CONNECT, params);
+
                     } catch (Exception e) {
+
                         logger.error("Error calling signals/connect", e);
                     }
                 }
