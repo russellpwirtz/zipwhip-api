@@ -101,9 +101,4 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      */
     protected abstract void doStrategy();
 
-    @Override
-    protected void onDestroy() {
-
-    }
-
 }

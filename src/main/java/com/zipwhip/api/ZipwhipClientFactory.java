@@ -1,5 +1,6 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.signals.ExponentialBackoffReconnectStrategy;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.util.Factory;
@@ -26,6 +27,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
 
         ConnectionFactory connectionFactory = ConnectionFactory.newInstance().username(username).password(password);
+//        SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance(new ExponentialBackoffReconnectStrategy());
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

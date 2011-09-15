@@ -28,4 +28,8 @@ public class MockReconnectStrategy extends ReconnectStrategy {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        stop();
+    }
 }

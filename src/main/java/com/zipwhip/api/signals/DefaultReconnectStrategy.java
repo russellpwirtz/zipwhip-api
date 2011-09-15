@@ -59,4 +59,8 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         }, RECONNECT_DELAY, TimeUnit.MILLISECONDS);
     }
 
+    @Override
+    protected void onDestroy() {
+        stop();
+    }
 }

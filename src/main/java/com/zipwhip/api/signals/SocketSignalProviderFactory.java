@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
+import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.util.Factory;
 
 /**
@@ -10,15 +11,31 @@ import com.zipwhip.util.Factory;
  */
 public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
+    private ReconnectStrategy reconnectStrategy;
+
     private SocketSignalProviderFactory() {
+
+    }
+
+    private SocketSignalProviderFactory(ReconnectStrategy reconnectStrategy) {
+        this.reconnectStrategy = reconnectStrategy;
     }
 
     public static SocketSignalProviderFactory newInstance() {
         return new SocketSignalProviderFactory();
     }
 
+    public static SocketSignalProviderFactory newInstance(ReconnectStrategy reconnectStrategy) {
+        return new SocketSignalProviderFactory(reconnectStrategy);
+    }
+
     @Override
     public SignalProvider create() {
+
+        if (reconnectStrategy != null) {
+            return new SocketSignalProvider(new NettySignalConnection(reconnectStrategy));
+        }
+
         return new SocketSignalProvider();
     }
 
