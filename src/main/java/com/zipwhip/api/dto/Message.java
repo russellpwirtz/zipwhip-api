@@ -9,9 +9,44 @@ import java.util.Date;
  */
 public class Message {
 
+    /*
+        These are fields in the JSON
+        that are not parsed by signal
+        clients.
+
+        bodySize
+        visible
+        metaDataId
+        dtoParentId
+        scheduledDate
+        openMarketMessageId
+        class
+        isParent
+        loc
+        messageConsoleLog
+        isInFinalState
+        encoded
+        expectDeliveryReceipt
+        transferedToCarrierReceipt
+        parentId
+        phoneKey
+        smartForwarded
+        isSelf
+        deliveryReceipt
+        dishedToOpenMarket
+        creatorId
+        smartForwardingCandidate
+        DCSId
+        latlong
+        new
+        UDH
+        carbonedMessageId
+     */
+
     long id;
     long contactId;
     long deviceId;
+    TransmissionState transmissionState;
     String mobileNumber;
     String address;
     String destinationAddress;
@@ -75,6 +110,14 @@ public class Message {
 
     public void setDeviceId(long deviceId) {
         this.deviceId = deviceId;
+    }
+
+    public TransmissionState getTransmissionState() {
+        return transmissionState;
+    }
+
+    public void setTransmissionState(TransmissionState transmissionState) {
+        this.transmissionState = transmissionState;
     }
 
     public String getMobileNumber() {

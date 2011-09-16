@@ -27,7 +27,6 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
         CONVERSATION,
         DEVICE,
         MESSAGE,
-        MESSAGEPROGRESS,
         CARBON,
         NOVALUE,
         UNKNOWN;
@@ -71,10 +70,6 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
                      notifyMessage(signal, (Message) signal.getContent());
                      break;
 
-                case MESSAGEPROGRESS:
-                    notifyMessageProgress(signal, (MessageProgress) signal.getContent());
-                     break;
-
                 case CONTACT:
                     notifyContact(signal, (Contact) signal.getContent());
                      break;
@@ -113,10 +108,6 @@ public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
 
     public void notifyMessage(Signal signal, Message message) {
         logger.debug("notifyMessage - Not implemented");
-    }
-
-    public void notifyMessageProgress(Signal signal, MessageProgress messageProgress) {
-        logger.debug("notifyMessageProgress - Not implemented");
     }
 
     public void notifyCarbonEvent(Signal signal, CarbonEvent carbonEvent) {

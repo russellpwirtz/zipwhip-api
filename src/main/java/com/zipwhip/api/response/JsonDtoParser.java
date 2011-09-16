@@ -91,6 +91,16 @@ public class JsonDtoParser {
 
         Message message = new Message();
 
+        JSONObject transmissionStateJson = response.optJSONObject("transmissionState");
+        if (transmissionStateJson != null) {
+
+            TransmissionState transmissionState = new TransmissionState();
+            transmissionState.setEnumType(transmissionStateJson.optString("enumType"));
+            transmissionState.setName(transmissionStateJson.optString("name"));
+
+            message.setTransmissionState(transmissionState);
+        }
+
         message.setUuid(response.optString("uuid"));
         message.setDeviceId(response.optLong("deviceId"));
         message.setContactId(response.optLong("contactId"));
@@ -219,48 +229,6 @@ public class JsonDtoParser {
         device.setDisplayName(response.optString("displayName"));
 
         return device;
-    }
-
-    /**
-     * Parse a MessageProgress from a JSONObject if the object contains it.
-     *
-     * @param content JSONObject to be parsed.
-     * @return A MessageProgress object parsed from the JSON content.
-     * @throws JSONException If an error is encountered while parsing
-     */
-    public MessageProgress parseMessageProgress(JSONObject content) throws JSONException {
-
-        if (content == null) {
-            return null;
-        }
-
-        MessageProgress messageProgress = new MessageProgress();
-
-        int valueInt = content.optInt("value", Integer.MIN_VALUE);
-
-        if (valueInt != Integer.MIN_VALUE) {
-
-            messageProgress.setCode(valueInt);
-
-        } else {
-
-            JSONObject value = content.optJSONObject("value");
-
-            if (value != null) {
-                messageProgress.setDesc(value.optString("desc"));
-                messageProgress.setCode(value.optInt("code"));
-            }
-        }
-
-        JSONObject state = content.optJSONObject("state");
-
-        if (state != null && state.has("name")) {
-            messageProgress.setStateName(state.optString("name"));
-        }
-
-        messageProgress.setKey(content.optString("key"));
-
-        return messageProgress;
     }
 
     public CarbonEvent parseCarbonMessageContent(JSONObject content) throws JSONException {

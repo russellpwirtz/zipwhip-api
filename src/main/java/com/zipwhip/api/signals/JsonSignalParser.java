@@ -14,7 +14,6 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
     public static final String CONTACT_KEY = "contact";
     public static final String CONVERSATION_KEY = "conversation";
     public static final String DEVICE_KEY = "device";
-    public static final String MESSAGE_PROGRESS_KEY = "messageProgress";
     public static final String MESSAGE_KEY = "message";
     public static final String CARBON_KEY = "carbon";
 
@@ -72,10 +71,6 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
 
             signal.content = parser.parseMessage(content);
 
-        } else if (mType.equalsIgnoreCase(MESSAGE_PROGRESS_KEY)) {
-
-            signal.content = parser.parseMessageProgress(content);
-
         } else if (mType.equalsIgnoreCase(CARBON_KEY)) {
 
             signal.content = parser.parseCarbonMessageContent(content);
@@ -83,6 +78,7 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         } else {
 
             LOGGER.debug("Unparsed signal type: " + mType);
+
             signal.content = node.optString("content");
         }
 

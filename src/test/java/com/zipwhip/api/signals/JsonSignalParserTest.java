@@ -63,13 +63,4 @@ public class JsonSignalParserTest {
 
     }
 
-    @Test
-    public void testParseMessageProgressSignal() throws Exception {
-        Signal s = parser.parseSignal(new JSONObject(MESSAGE_PROGRESS));
-        Assert.assertNotNull(s);
-        Assert.assertNotNull(s.content);
-        Assert.assertTrue(s.content instanceof MessageProgress);
-
-    }
-
 }

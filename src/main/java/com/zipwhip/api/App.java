@@ -81,11 +81,6 @@ public class App {
             }
 
             @Override
-            public void notifyMessageProgress(Signal signal, MessageProgress messageProgress) {
-                LOGGER.debug(messageProgress.toString());
-            }
-
-            @Override
             public void notifyCarbonEvent(Signal signal, CarbonEvent carbonEvent) {
                 LOGGER.debug(carbonEvent.toString());
             }
