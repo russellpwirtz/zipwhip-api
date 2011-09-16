@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.events.Observer;
 import org.apache.log4j.Logger;
 
 import java.util.Date;
@@ -30,13 +31,14 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
      */
     public static final double DEFAULT_MULTIPLIER = 2.0;
 
+    private boolean connectObserverSet;
+
     private long maxBackoffSeconds;
     private double multiplier;
     private long consecutiveReconnectAttempts;
 
     private ScheduledExecutorService exec;
     private Future<Boolean> reconnectTask;
-    private ScheduledFuture<?> scheduledTask;
     private Runnable reconnectRunnable;
 
     public ExponentialBackoffReconnectStrategy() {
@@ -44,9 +46,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     }
 
     public ExponentialBackoffReconnectStrategy(long maxBackoffSeconds) {
-
         super();
-
         this.multiplier = DEFAULT_MULTIPLIER;
         this.maxBackoffSeconds = maxBackoffSeconds;
     }
@@ -73,11 +73,6 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     public void stop() {
 
         // If we have scheduled a reconnect cancel it
-        if (scheduledTask != null && !scheduledTask.isDone()) {
-            scheduledTask.cancel(false);
-        }
-
-        // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
             reconnectTask.cancel(false);
         }
@@ -86,30 +81,30 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     }
 
     @Override
-    protected void doStrategy() {
+    protected synchronized void doStrategy() {
 
-//        signalConnection.onConnect(new Observer<Boolean>() {
-//            @Override
-//            public void notify(Object sender, Boolean connected) {
-//
-//                if (connected) {
-//                    // We connected, reset
-//                    consecutiveReconnectAttempts = 0;
-//                }
-//            }
-//        });
+        // Start listening for connect events to reset our counter
+        if (!connectObserverSet) {
+
+            signalConnection.onConnect(new Observer<Boolean>() {
+                @Override
+                public void notify(Object sender, Boolean connected) {
+
+                    if (connected) {
+
+                        LOGGER.debug("We reconnected, resetting count.");
+
+                        // We connected, reset
+                        consecutiveReconnectAttempts = 0;
+                    }
+                }
+            });
+
+            connectObserverSet = true;
+        }
 
         if (exec == null) {
             exec = Executors.newSingleThreadScheduledExecutor();
-        }
-
-        if (reconnectRunnable == null) {
-            return;
-        }
-
-        if (scheduledTask != null && !scheduledTask.isDone()) {
-            // We have a reconnect scheduled, drop this one
-            return;
         }
 
         if (reconnectRunnable == null) {
@@ -119,25 +114,21 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
                 public void run() {
                     try {
 
-                        LOGGER.debug("Connect attempt at =============================================>> " + new Date(System.currentTimeMillis()));
+                        LOGGER.debug("Connect attempt at ==>> " + new Date(System.currentTimeMillis()));
+
+                        consecutiveReconnectAttempts++;
 
                         reconnectTask = signalConnection.connect();
                         Boolean success = reconnectTask.get();
 
                         if (success) {
-
                             LOGGER.debug("Reconnected successfully");
-
-                            // We connected, reset
-                            consecutiveReconnectAttempts = 0;
-
                         } else {
-
-                            LOGGER.warn("Error reconnecting, disconnecting...");
-
                             signalConnection.disconnect(true);
                         }
+
                     } catch (Exception e) {
+
                         LOGGER.error("Error reconnecting", e);
                     }
                 }
@@ -146,10 +137,9 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
         try {
 
-            LOGGER.debug("Scheduling attempt at =============================================>> " + new Date(System.currentTimeMillis()));
+            LOGGER.debug("Scheduling attempt at ==>> " + new Date(System.currentTimeMillis()));
 
-            scheduledTask = exec.schedule(reconnectRunnable, calculateBackoff(), TimeUnit.SECONDS);
-            consecutiveReconnectAttempts++;
+            exec.schedule(reconnectRunnable, calculateBackoff(), TimeUnit.SECONDS);
 
         } catch (Exception e) {
 
@@ -166,7 +156,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
         long backoff = Math.round(Math.pow(multiplier, consecutiveReconnectAttempts));
 
-        LOGGER.debug("Backoff calculated as =============================================>> " + backoff);
+        LOGGER.debug("Backoff calculated as ==>> " + backoff + (backoff == 1 ? " second" : " seconds"));
 
         return (backoff > maxBackoffSeconds ? maxBackoffSeconds : backoff);
     }

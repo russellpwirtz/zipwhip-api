@@ -35,10 +35,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     private static final int MAX_FRAME_SIZE = 65535;
 
-//    private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
-//    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
-    private static final int DEFAULT_PING_TIMEOUT = 1000 * 10; // when to ping, inactive seconds
-    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 10; // when to disconnect if a ping was not ponged by this time
+    private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
+    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private String host = "signals.zipwhip.com";
     private int port = 3000;
