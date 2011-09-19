@@ -12,6 +12,14 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>snapshots</id>
+            <url>http://hudson.zipwhip.com:8081/artifactory/libs-snapshot-local</url>
+        </repository>
+    </distributionManagement>
+
+
     <dependencies>
 
         <dependency>
