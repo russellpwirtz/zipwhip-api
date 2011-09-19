@@ -14,19 +14,10 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     private ReconnectStrategy reconnectStrategy;
 
     private SocketSignalProviderFactory() {
-
-    }
-
-    private SocketSignalProviderFactory(ReconnectStrategy reconnectStrategy) {
-        this.reconnectStrategy = reconnectStrategy;
     }
 
     public static SocketSignalProviderFactory newInstance() {
         return new SocketSignalProviderFactory();
-    }
-
-    public static SocketSignalProviderFactory newInstance(ReconnectStrategy reconnectStrategy) {
-        return new SocketSignalProviderFactory(reconnectStrategy);
     }
 
     @Override
@@ -37,6 +28,11 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         }
 
         return new SocketSignalProvider();
+    }
+
+    public SocketSignalProviderFactory reconnectStrategy(ReconnectStrategy reconnectStrategy) {
+        this.reconnectStrategy = reconnectStrategy;
+        return this;
     }
 
 }
