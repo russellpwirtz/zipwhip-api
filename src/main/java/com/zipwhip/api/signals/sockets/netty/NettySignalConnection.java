@@ -320,9 +320,17 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             disconnect();
         }
 
-        pingTimeoutFuture.cancel(true);
-        pongTimeoutFuture.cancel(true);
-        scheduledExecutor.shutdownNow();
+        if(pingTimeoutFuture != null) {
+            pingTimeoutFuture.cancel(true);
+        }
+
+        if(pongTimeoutFuture != null) {
+            pongTimeoutFuture.cancel(true);
+        }
+
+        if(scheduledExecutor != null) {
+            scheduledExecutor.shutdownNow();
+        }
     }
 
     private void schedulePing() {
