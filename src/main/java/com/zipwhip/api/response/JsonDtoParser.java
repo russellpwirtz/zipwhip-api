@@ -33,7 +33,7 @@ public class JsonDtoParser {
     private <T extends BasicDto> T parseBasicDto(T dto, JSONObject content) {
         dto.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
         dto.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
-        dto.setVersion(content.optInt("version"));
+        dto.setVersion(content.optLong("version"));
 
         return dto;
     }

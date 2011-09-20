@@ -1,9 +1,13 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
+
 /**
  * @author Me
  */
-public class MessageStatus {
+public class MessageStatus implements Serializable {
+
+    private static final long serialVersionUID = 5874121954926865L;
 
     private boolean delivered;
     private long id;
