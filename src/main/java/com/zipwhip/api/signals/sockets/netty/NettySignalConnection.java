@@ -134,7 +134,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 networkDisconnect = network;
 
                 if (channel != null) {
-                    channel.disconnect().await();
+                    ChannelFuture disconnectFuture = channel.disconnect().await();
+                    LOGGER.debug("Disconnecting success was " + disconnectFuture.isSuccess());
                 }
 
                 if (channelFactory != null) {
