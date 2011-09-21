@@ -1,5 +1,7 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
+
 /**
  * Created by IntelliJ IDEA.
  * Date: Jul 19, 2009
@@ -7,7 +9,9 @@ package com.zipwhip.api.dto;
  * <p/>
  * Represents a user.
  */
-public class DeviceToken {
+public class DeviceToken implements Serializable {
+
+    private static final long serialVersionUID = 5874121954372365L;
 
     Device device;
     String sessionKey;

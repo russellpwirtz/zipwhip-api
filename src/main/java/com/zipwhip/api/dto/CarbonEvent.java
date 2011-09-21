@@ -8,7 +8,7 @@ import java.io.Serializable;
  * Date: 6/30/11
  * Time: 3:52 PM
  */
-public class CarbonEvent implements Serializable {
+public class CarbonEvent extends BasicDto {
 
     private static final long serialVersionUID = 5874121954952365L;
 

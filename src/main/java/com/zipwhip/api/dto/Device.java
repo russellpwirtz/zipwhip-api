@@ -1,5 +1,6 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -7,13 +8,12 @@ import java.util.Date;
  * Date: Jul 17, 2009
  * Time: 7:57:04 PM
  */
-public class Device {
+public class Device extends BasicDto{
+
+    private static final long serialVersionUID = 5876721954952365L;
 
     long id;
     String uuid;
-    int version;
-    Date dateCreated;
-    Date lastUpdated;
     String channel;
     String textline;
     long userId;
@@ -45,30 +45,6 @@ public class Device {
 
     public void setUuid(String uuid) {
         this.uuid = uuid;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public Date getDateCreated() {
-        return dateCreated;
-    }
-
-    public void setDateCreated(Date dateCreated) {
-        this.dateCreated = dateCreated;
-    }
-
-    public Date getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public void setLastUpdated(Date lastUpdated) {
-        this.lastUpdated = lastUpdated;
     }
 
     public String getChannel() {
@@ -131,10 +107,10 @@ public class Device {
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> Device details:");
         toStringBuilder.append("\nId: ").append(id);
-        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nVersion: ").append(this.getVersion());
         toStringBuilder.append("\nUuid: ").append(uuid);
-        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
-        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
+        toStringBuilder.append("\nDateCreated: ").append(this.getDateCreated());
+        toStringBuilder.append("\nLastUpdated: ").append(this.getLastUpdated());
         toStringBuilder.append("\nChannel: ").append(channel);
         toStringBuilder.append("\nTextline: ").append(textline);
         toStringBuilder.append("\nUserId: ").append(userId);

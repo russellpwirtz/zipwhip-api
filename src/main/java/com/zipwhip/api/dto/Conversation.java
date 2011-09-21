@@ -10,7 +10,9 @@ import java.util.Date;
  * <p/>
  * Represents a Conversation with someone on Zipwhip.
  */
-public class Conversation {
+public class Conversation extends BasicDto {
+
+    private static final long serialVersionUID = 5874121954954565L;
 
     long id;
     long deviceId;
@@ -23,12 +25,9 @@ public class Conversation {
     long lastContactId;
     boolean isNew;
     boolean deleted;
-    int version;
     long lastContactDeviceId;
     String lastContactFirstName;
     String lastContactLastName;
-    Date lastUpdated;
-    Date dateCreated;
     Date lastMessageDate;
     Date lastNonDeletedMessageDate;
     String lastContactMobileNumber;
@@ -138,14 +137,6 @@ public class Conversation {
         this.deleted = deleted;
     }
 
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
     public long getLastContactDeviceId() {
         return lastContactDeviceId;
     }
@@ -168,22 +159,6 @@ public class Conversation {
 
     public void setLastContactLastName(String lastContactLastName) {
         this.lastContactLastName = lastContactLastName;
-    }
-
-    public Date getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public void setLastUpdated(Date lastUpdated) {
-        this.lastUpdated = lastUpdated;
-    }
-
-    public Date getDateCreated() {
-        return dateCreated;
-    }
-
-    public void setDateCreated(Date dateCreated) {
-        this.dateCreated = dateCreated;
     }
 
     public Date getLastMessageDate() {
@@ -212,18 +187,17 @@ public class Conversation {
         toStringBuilder.append("\nAddress: ").append(address);
         toStringBuilder.append("\nCc: ").append(cc);
         toStringBuilder.append("\nBcc: ").append(bcc);
-        toStringBuilder.append("\nLast Updated: ").append(lastUpdated);
         toStringBuilder.append("\nUnreadCount: ").append(unreadCount);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);
         toStringBuilder.append("\nLastContactId: ").append(lastContactId);
         toStringBuilder.append("\nIsNew: ").append(isNew);
         toStringBuilder.append("\nDeleted: ").append(deleted);
-        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nVersion: ").append(this.getVersion());
         toStringBuilder.append("\nLastContactDeviceId: ").append(lastContactDeviceId);
         toStringBuilder.append("\nLastContactFirstName: ").append(lastContactFirstName);
         toStringBuilder.append("\nLastContactLastName: ").append(lastContactLastName);
-        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
-        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
+        toStringBuilder.append("\nLastUpdated: ").append(this.getLastUpdated());
+        toStringBuilder.append("\nDateCreated: ").append(this.getDateCreated());
         toStringBuilder.append("\nLastMessageDate: ").append(lastMessageDate);
         toStringBuilder.append("\nLastNonDeletedMessageDate: ").append(lastNonDeletedMessageDate);
         toStringBuilder.append("\nLastContactMobileNumber: ").append(lastContactMobileNumber);

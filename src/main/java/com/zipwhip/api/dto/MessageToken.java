@@ -1,12 +1,16 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
+
 /**
  * Created by IntelliJ IDEA.
  * * Date: Jul 17, 2009
  * Time: 8:23:35 PM
  * To change this template use File | Settings | File Templates.
  */
-public class MessageToken {
+public class MessageToken implements Serializable {
+
+    private static final long serialVersionUID = 5878234954952365L;
 
     /**
      * This is the message uuid

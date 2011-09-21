@@ -1,5 +1,6 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -7,11 +8,11 @@ import java.util.Date;
  * <p/>
  * A base class for most of our DTO's (data transfer objects).
  */
-public class BasicDto {
+public class BasicDto implements Serializable {
 
     private Date dateCreated;
     private Date lastUpdated;
-    private int version;
+    private long version;
 
     public Date getDateCreated() {
         return dateCreated;
@@ -29,11 +30,11 @@ public class BasicDto {
         this.lastUpdated = lastUpdated;
     }
 
-    public int getVersion() {
+    public long getVersion() {
         return version;
     }
 
-    public void setVersion(int version) {
+    public void setVersion(long version) {
         this.version = version;
     }
 

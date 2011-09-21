@@ -11,14 +11,14 @@ import java.util.Date;
  */
 public class Contact extends BasicDto {
 
+    private static final long serialVersionUID = 5874121954952313L;
+
     long id;
     String address;
     String mobileNumber;
     String firstName;
     String lastName;
     String phone;
-    Date dateCreated;
-    Date lastUpdated;
     String email;
     long deviceId;
     long moCount;
@@ -28,7 +28,6 @@ public class Contact extends BasicDto {
     String carrier;
     String zipcode;
     String phoneKey;
-    int version;
     String thread;
     String fwd;
     String channel;
@@ -131,14 +130,6 @@ public class Contact extends BasicDto {
         this.phoneKey = phoneKey;
     }
 
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
     public String getThread() {
         return thread;
     }
@@ -163,14 +154,6 @@ public class Contact extends BasicDto {
         this.address = address;
     }
 
-    public Date getDateCreated() {
-        return dateCreated;
-    }
-
-    public void setDateCreated(Date dateCreated) {
-        this.dateCreated = dateCreated;
-    }
-
     public String getFirstName() {
         return firstName;
     }
@@ -193,14 +176,6 @@ public class Contact extends BasicDto {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
-    }
-
-    public Date getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public void setLastUpdated(Date lastUpdated) {
-        this.lastUpdated = lastUpdated;
     }
 
     public String getMobileNumber() {
@@ -228,8 +203,8 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nFirst Name: ").append(firstName);
         toStringBuilder.append("\nLast Name: ").append(lastName);
         toStringBuilder.append("\nPhone: ").append(phone);
-        toStringBuilder.append("\nDate Created: ").append(dateCreated);
-        toStringBuilder.append("\nLast Updated: ").append(lastUpdated);
+        toStringBuilder.append("\nDate Created: ").append(this.getDateCreated());
+        toStringBuilder.append("\nLast Updated: ").append(this.getLastUpdated());
         toStringBuilder.append("\nEmail: ").append(email);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);
         toStringBuilder.append("\nMO COunt: ").append(moCount);
@@ -239,7 +214,7 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nCarrier: ").append(carrier);
         toStringBuilder.append("\nZipcode: ").append(zipcode);
         toStringBuilder.append("\nPhone Key: ").append(phoneKey);
-        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nVersion: ").append(this.getVersion());
         toStringBuilder.append("\nThread: ").append(thread);
         toStringBuilder.append("\nFwd: ").append(fwd);
         toStringBuilder.append("\nChannel: ").append(channel);

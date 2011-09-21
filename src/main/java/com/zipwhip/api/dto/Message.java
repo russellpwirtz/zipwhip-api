@@ -1,5 +1,6 @@
 package com.zipwhip.api.dto;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -7,7 +8,9 @@ import java.util.Date;
  * * Date: Jul 17, 2009
  * Time: 7:40:55 PM
  */
-public class Message {
+public class Message extends BasicDto{
+
+    private static final long serialVersionUID = 5874121953591365L;
 
     /*
         These are fields in the JSON
@@ -61,9 +64,6 @@ public class Message {
     int statusCode;
     String statusDesc;
     String messageType;
-    Date dateCreated;
-    Date lastUpdated;
-    long version;
     String cc;
     String bcc;
     String fwd;
@@ -232,30 +232,6 @@ public class Message {
         this.messageType = messageType;
     }
 
-    public Date getDateCreated() {
-        return dateCreated;
-    }
-
-    public void setDateCreated(Date dateCreated) {
-        this.dateCreated = dateCreated;
-    }
-
-    public Date getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public void setLastUpdated(Date lastUpdated) {
-        this.lastUpdated = lastUpdated;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public void setVersion(long version) {
-        this.version = version;
-    }
-
     public String getCc() {
         return cc;
     }
@@ -388,9 +364,9 @@ public class Message {
         toStringBuilder.append("\nStatusCode: ").append(statusCode);
         toStringBuilder.append("\nStatusDesc: ").append(statusDesc);
         toStringBuilder.append("\nMessageType: ").append(messageType);
-        toStringBuilder.append("\nDateCreated: ").append(dateCreated);
-        toStringBuilder.append("\nLastUpdated: ").append(lastUpdated);
-        toStringBuilder.append("\nVersion: ").append(version);
+        toStringBuilder.append("\nDateCreated: ").append(this.getDateCreated());
+        toStringBuilder.append("\nLastUpdated: ").append(this.getLastUpdated());
+        toStringBuilder.append("\nVersion: ").append(this.getVersion());
         toStringBuilder.append("\ncc: ").append(cc);
         toStringBuilder.append("\nbcc: ").append(bcc);
         toStringBuilder.append("\nfwd: ").append(fwd);
