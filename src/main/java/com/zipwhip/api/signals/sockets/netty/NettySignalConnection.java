@@ -312,13 +312,19 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                     @Override
                     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+
                         LOGGER.debug("channelClosed");
+
+                        cancelPong();
+
                         disconnectEvent.notifyObservers(this, networkDisconnect);
                     }
 
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-                        LOGGER.error(e);
+
+                        LOGGER.error(e.toString());
+
                         // TODO queue and report to the server
                     }
                 }
@@ -401,14 +407,18 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             LOGGER.debug("Received a PONG");
         }
 
+        cancelPong();
+
+        schedulePing();
+    }
+
+    private void cancelPong() {
         if (pongTimeoutFuture != null && !pongTimeoutFuture.isCancelled()) {
 
             LOGGER.debug("Resetting timeout PONG");
 
             pongTimeoutFuture.cancel(false);
         }
-
-        schedulePing();
     }
 
 }
