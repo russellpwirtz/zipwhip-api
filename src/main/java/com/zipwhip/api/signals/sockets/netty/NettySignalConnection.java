@@ -105,6 +105,10 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                 networkDisconnect = socketConnected;
 
+                if (socketConnected) {
+                    reconnectStrategy.start();
+                }
+
                 connectEvent.notifyObservers(this, socketConnected);
 
                 return socketConnected;
@@ -132,6 +136,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             public Void call() throws Exception {
 
                 networkDisconnect = network;
+
+                // If this was not an automatic disconnect stop the retry logic
+                if (!networkDisconnect) {
+                    reconnectStrategy.stop();
+                }
 
                 if (channel != null) {
                     ChannelFuture disconnectFuture = channel.disconnect().await();

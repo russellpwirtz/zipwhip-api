@@ -130,8 +130,21 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
         String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
 
+        // If the clientId has changed we need to invalidate the settings data
         if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
+
+            LOGGER.debug("ClientId has changed, clearing settings store");
+
             settingsStore.clear();
+        }
+
+        // If the sessionKey has changed we need to invalidate the settings data
+        if (StringUtil.exists(connection.getSessionKey()) && !connection.getSessionKey().equals(settingsStore.get(SettingsStore.Keys.SESSION_KEY))) {
+
+            LOGGER.debug("New or changed sessionKey, clearing settings store");
+
+            settingsStore.clear();
+            settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
         }
 
         // Will NOT block until you're connected it's asynchronous

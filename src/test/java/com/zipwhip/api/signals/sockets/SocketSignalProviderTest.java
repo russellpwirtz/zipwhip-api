@@ -92,7 +92,6 @@ public class SocketSignalProviderTest {
             @Override
             public void notify(Object sender, Boolean item) {
                 System.out.println("testOnConnectionChanged - provider.onConnectionChanged CONNECT " + item);
-                Assert.assertFalse(item);
             }
         });
 
@@ -100,14 +99,6 @@ public class SocketSignalProviderTest {
 
         Assert.assertNotNull(future);
         Assert.assertTrue(future.get());
-
-        provider.onConnectionChanged(new Observer<Boolean>() {
-            @Override
-            public void notify(Object sender, Boolean item) {
-                System.out.println("testOnConnectionChanged - provider.onConnectionChanged DISCONNECT " + item);
-                Assert.assertFalse(item);
-            }
-        });
 
         Future<Void> task = provider.disconnect();
         task.get();

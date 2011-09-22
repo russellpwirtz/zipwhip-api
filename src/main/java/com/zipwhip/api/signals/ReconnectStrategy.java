@@ -2,6 +2,7 @@ package com.zipwhip.api.signals;
 
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+import org.apache.log4j.Logger;
 
 /**
  * Created by IntelliJ IDEA.
@@ -12,6 +13,8 @@ import com.zipwhip.lifecycle.DestroyableBase;
  * Base class for {@code SignalConnection} reconnect strategies.
  */
 public abstract class ReconnectStrategy extends DestroyableBase {
+
+    private static final Logger LOGGER = Logger.getLogger(ReconnectStrategy.class);
 
     protected SignalConnection signalConnection;
     protected Observer<Boolean> disconnectObserver;
@@ -53,6 +56,8 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      */
     public void stop() {
 
+        LOGGER.debug("Stop reconnect strategy requested...");
+
         if (signalConnection != null && disconnectObserver != null) {
             signalConnection.removeOnDisconnectObserver(disconnectObserver);
             signalConnection = null;
@@ -65,8 +70,11 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      * This method is final as it handles the basic mechanics of binding to the {@code SignalConnection}.
      * To implement your strategy see {@code doStrategy}.
      */
-    public final void start() {
+    public synchronized final void start() {
+
         if (!isStarted && signalConnection != null) {
+
+            LOGGER.debug("Starting reconnect strategy...");
 
             disconnectObserver = new Observer<Boolean>() {
 
@@ -76,8 +84,6 @@ public abstract class ReconnectStrategy extends DestroyableBase {
                     // If the disconnect was generated due to a network problem we want to try a reconnect.
                     if (networkGenerated) {
                         doStrategy();
-                    } else {
-                        stop();
                     }
                 }
             };

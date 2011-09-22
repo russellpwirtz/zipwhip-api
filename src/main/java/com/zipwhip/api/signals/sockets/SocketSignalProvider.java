@@ -42,7 +42,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private String clientId;
-    private String originalClientId; //so we can detect change
+    private String originalClientId; //So we can detect change
+
+    private boolean connectionStateSwitch; // The previous connection state
 
     private Presence presence;
     private Map<String, Long> versions = new HashMap<String, Long>();
@@ -139,11 +141,27 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
+        // Forward connect events up to clients
+        connection.onConnect(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean connected) {
+                // If the state has changed then notify
+                if (connectionStateSwitch ^ connected) {
+                    connectionStateSwitch = connected;
+                    connectEvent.notifyObservers(sender, connected);
+                }
+            }
+        });
+
         // Forward disconnect events up to clients
         connection.onDisconnect(new Observer<Boolean>() {
             @Override
-            public void notify(Object sender, Boolean item) {
-                connectEvent.notifyObservers(sender, false);
+            public void notify(Object sender, Boolean disconnected) {
+                // If the state has changed then notify
+                if (connectionStateSwitch) {
+                    connectionStateSwitch = false;
+                    connectEvent.notifyObservers(sender, false);
+                }
             }
         });
 
@@ -353,8 +371,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 connectLatch.countDown();
             }
         }
-
-        connectEvent.notifyObservers(this, command.isSuccessful());
     }
 
     private void handleDisconnectCommand(DisconnectCommand command) {
