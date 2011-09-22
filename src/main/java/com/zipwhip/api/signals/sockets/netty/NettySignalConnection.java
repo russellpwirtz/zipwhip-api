@@ -166,7 +166,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             }
         });
 
-        executor.execute(task);
+        if(executor != null) {
+            executor.execute(task);
+        }
 
         return task;
     }
