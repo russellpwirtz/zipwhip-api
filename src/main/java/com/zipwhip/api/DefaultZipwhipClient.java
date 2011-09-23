@@ -4,6 +4,7 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
@@ -125,7 +126,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
         // we need to determine if we're authenticated enough
         if (!connection.isConnected() || !connection.isAuthenticated()) {
-            throw new Exception("The connection cannot operate at this time");
+            throw new NotAuthenticatedException("The connection cannot operate at this time");
         }
 
         String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
