@@ -111,7 +111,6 @@ public class DefaultReconnectStrategyTest {
 
     @Test
     public void testIsConnected() throws Exception {
-        Assert.assertTrue(strategy.isStarted());
         strategy.start();
         Assert.assertTrue(strategy.isStarted());
         strategy.stop();

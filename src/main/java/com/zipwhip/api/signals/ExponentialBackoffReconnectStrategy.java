@@ -37,7 +37,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     private double multiplier;
     private long consecutiveReconnectAttempts;
 
-    private ScheduledExecutorService exec;
+    private ScheduledExecutorService scheduler;
     private Future<Boolean> reconnectTask;
     private Runnable reconnectRunnable;
 
@@ -72,6 +72,14 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     @Override
     public void stop() {
 
+        // Cleanup any scheduled reconnects
+        if (scheduler != null) {
+
+            LOGGER.debug("Shutting down scheduled execution");
+
+            scheduler.shutdownNow();
+        }
+
         // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
             reconnectTask.cancel(true);
@@ -103,8 +111,8 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
             connectObserverSet = true;
         }
 
-        if (exec == null) {
-            exec = Executors.newSingleThreadScheduledExecutor();
+        if (scheduler == null) {
+            scheduler = Executors.newSingleThreadScheduledExecutor();
         }
 
         if (reconnectRunnable == null) {
@@ -139,7 +147,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
             LOGGER.debug("Scheduling attempt at ==>> " + new Date(System.currentTimeMillis()));
 
-            exec.schedule(reconnectRunnable, calculateBackoff(), TimeUnit.SECONDS);
+            scheduler.schedule(reconnectRunnable, calculateBackoff(), TimeUnit.SECONDS);
 
         } catch (Exception e) {
 

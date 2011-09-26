@@ -34,8 +34,6 @@ public abstract class ReconnectStrategy extends DestroyableBase {
         }
 
         this.signalConnection = signalConnection;
-
-        start();
     }
 
     /**
@@ -60,7 +58,6 @@ public abstract class ReconnectStrategy extends DestroyableBase {
 
         if (signalConnection != null && disconnectObserver != null) {
             signalConnection.removeOnDisconnectObserver(disconnectObserver);
-            signalConnection = null;
             isStarted = false;
         }
     }
@@ -84,7 +81,7 @@ public abstract class ReconnectStrategy extends DestroyableBase {
                 public void notify(Object sender, Boolean networkGenerated) {
 
                     // If the disconnect was generated due to a network problem we want to try a reconnect.
-                    if (networkGenerated) {
+                    if (networkGenerated && isStarted) {
                         doStrategy();
                     }
                 }

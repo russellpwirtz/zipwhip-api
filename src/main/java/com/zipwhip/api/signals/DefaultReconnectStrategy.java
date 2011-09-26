@@ -25,9 +25,20 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
     @Override
     public void stop() {
 
+        // Cleanup any scheduled reconnects
+        if (scheduler != null) {
+
+            LOGGER.debug("Shutting down scheduled execution");
+
+            scheduler.shutdownNow();
+        }
+
         // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
-            reconnectTask.cancel(false);
+
+            boolean cancelled = reconnectTask.cancel(false);
+
+            LOGGER.debug("Cancelling reconnect task success: " + cancelled);
         }
 
         // Stop listening to SignalConnection events

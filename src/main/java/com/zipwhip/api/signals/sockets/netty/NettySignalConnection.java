@@ -105,12 +105,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                 networkDisconnect = socketConnected;
 
-                if (socketConnected) {
-                    reconnectStrategy.start();
-                }
-
-                connectEvent.notifyObservers(this, socketConnected);
-
                 return socketConnected;
             }
         });
@@ -308,6 +302,18 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         Command command = (Command) msg;
 
                         receiveEvent.notifyObservers(this, command);
+                    }
+
+                    @Override
+                    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+
+                        LOGGER.debug("channelConnected");
+
+                        reconnectStrategy.start();
+
+                        connectEvent.notifyObservers(this, true);
+
+                        super.channelConnected(ctx, e);
                     }
 
                     @Override
