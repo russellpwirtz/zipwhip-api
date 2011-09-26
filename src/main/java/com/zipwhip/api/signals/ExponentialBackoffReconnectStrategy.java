@@ -74,7 +74,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
         // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
-            reconnectTask.cancel(false);
+            reconnectTask.cancel(true);
         }
 
         super.stop();

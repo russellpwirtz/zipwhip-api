@@ -72,6 +72,8 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      */
     public synchronized final void start() {
 
+        LOGGER.debug("Start reconnect strategy requested...");
+
         if (!isStarted && signalConnection != null) {
 
             LOGGER.debug("Starting reconnect strategy...");
