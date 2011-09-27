@@ -18,7 +18,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
     }
 
-    private ZipwhipClientFactory(ConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
+    public ZipwhipClientFactory(ConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
         this.connectionFactory = connectionFactory;
         this.signalProviderFactory = signalProviderFactory;
     }
