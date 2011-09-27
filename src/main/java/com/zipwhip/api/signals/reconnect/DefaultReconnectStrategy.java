@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.reconnect;
 
 import org.apache.log4j.Logger;
 

@@ -1,5 +1,6 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.sockets.MockReconnectStrategy;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;

@@ -1,7 +1,8 @@
 package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.JsonSignal;
-import com.zipwhip.api.signals.ReconnectStrategy;
+import com.zipwhip.api.signals.PingEvent;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
@@ -128,8 +129,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
-    public void onPing(Observer<Void> observer) {
-
+    public void onPingEvent(Observer<PingEvent> observer) {
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.util.Factory;

@@ -28,7 +28,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
 
-    private ObservableHelper<Void> pingEvent = new ObservableHelper<Void>();
+    private ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
@@ -166,9 +166,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         });
 
         // Forward ping events up to clients
-        connection.onPing(new Observer<Void>() {
+        connection.onPingEvent(new Observer<PingEvent>() {
             @Override
-            public void notify(Object sender, Void item) {
+            public void notify(Object sender, PingEvent item) {
                 pingEvent.notifyObservers(sender, item);
             }
         });
@@ -340,7 +340,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
-    public void onPing(Observer<Void> observer) {
+    public void onPingEvent(Observer<PingEvent> observer) {
         pingEvent.addObserver(observer);
     }
 

@@ -2,6 +2,7 @@ package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SerializingCommand;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 
@@ -99,9 +100,9 @@ public interface SignalConnection extends Destroyable {
     /**
      * Observe an inactive ping event.
      *
-     * @param observer an Observer of type Void to listen for the event.
+     * @param observer an Observer of type PingEvent to indicate the event that happened.
      */
-    void onPing(Observer<Void> observer);
+    void onPingEvent(Observer<PingEvent> observer);
 
     /**
      * Set the host to be used on the NEXT connection.

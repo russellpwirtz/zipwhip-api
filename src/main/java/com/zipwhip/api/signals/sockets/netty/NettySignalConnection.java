@@ -1,7 +1,8 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.DefaultReconnectStrategy;
-import com.zipwhip.api.signals.ReconnectStrategy;
+import com.zipwhip.api.signals.PingEvent;
+import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
@@ -50,7 +51,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ScheduledFuture<?> pongTimeoutFuture;
     private ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
-    private ObservableHelper<Void> pingEvent = new ObservableHelper<Void>();
+    private ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
@@ -204,7 +205,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public void onPing(Observer<Void> observer) {
+    public void onPingEvent(Observer<PingEvent> observer) {
         pingEvent.addObserver(observer);
     }
 
@@ -364,28 +365,30 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             if (pingTimeoutFuture != null) {
 
                 LOGGER.debug("Resetting scheduled PING");
+                pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
 
                 pingTimeoutFuture.cancel(false);
             }
         }
 
         LOGGER.debug("Scheduling a PING");
+        pingEvent.notifyObservers(this, PingEvent.PING_SCHEDULED);
 
         pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
             @Override
             public void run() {
 
                 LOGGER.debug("Sending a PING");
+                pingEvent.notifyObservers(this, PingEvent.PING_SENT);
 
                 send(PingPongCommand.getShortformInstance());
-
-                pingEvent.notifyObservers(this, null);
 
                 pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
                     @Override
                     public void run() {
 
                         LOGGER.warn("PONG timeout, disconnecting...");
+                        pingEvent.notifyObservers(this, PingEvent.PONG_TIMEOUT);
 
                         disconnect(true);
                     }
@@ -411,6 +414,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         } else {
 
             LOGGER.debug("Received a PONG");
+            pingEvent.notifyObservers(this, PingEvent.PONG_RECEIVED);
         }
 
         cancelPong();
@@ -423,6 +427,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
             LOGGER.debug("Resetting timeout PONG");
 
+            pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
             pongTimeoutFuture.cancel(false);
         }
     }

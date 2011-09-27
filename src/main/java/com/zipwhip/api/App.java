@@ -1,6 +1,7 @@
 package com.zipwhip.api;
 
 import com.zipwhip.api.dto.*;
+import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalObserverAdapter;
 import com.zipwhip.events.Observer;
@@ -119,10 +120,10 @@ public class App {
         });
 
         // Observe a PING being sent to the SignalServer indicating that the line has been inactive for a period of time
-        client.getSignalProvider().onPing(new Observer<Void>() {
+        client.getSignalProvider().onPingEvent(new Observer<PingEvent>() {
             @Override
-            public void notify(Object sender, Void item) {
-                LOGGER.debug("APP::PING SENT");
+            public void notify(Object sender, PingEvent item) {
+                LOGGER.debug("APP::PING_EVENT " + item.toString());
             }
         });
 

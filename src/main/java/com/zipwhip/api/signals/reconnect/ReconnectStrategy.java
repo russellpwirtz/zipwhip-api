@@ -1,5 +1,6 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.apache.log4j.Logger;

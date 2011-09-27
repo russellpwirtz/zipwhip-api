@@ -1,7 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.signals.ReconnectStrategy;
-import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 
 import java.util.concurrent.Future;
 
