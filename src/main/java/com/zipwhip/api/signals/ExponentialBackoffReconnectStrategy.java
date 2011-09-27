@@ -72,17 +72,18 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     @Override
     public void stop() {
 
+        // If we have scheduled a reconnect cancel it
+        if (reconnectTask != null && !reconnectTask.isDone()) {
+            reconnectTask.cancel(true);
+        }
+
         // Cleanup any scheduled reconnects
         if (scheduler != null) {
 
             LOGGER.debug("Shutting down scheduled execution");
 
             scheduler.shutdownNow();
-        }
-
-        // If we have scheduled a reconnect cancel it
-        if (reconnectTask != null && !reconnectTask.isDone()) {
-            reconnectTask.cancel(true);
+            scheduler = null;
         }
 
         super.stop();

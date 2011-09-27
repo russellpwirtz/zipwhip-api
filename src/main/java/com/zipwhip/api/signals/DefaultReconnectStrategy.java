@@ -20,18 +20,10 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
     private static final long RECONNECT_DELAY = 5000;
 
     private Future<Boolean> reconnectTask;
-    private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduler;
 
     @Override
     public void stop() {
-
-        // Cleanup any scheduled reconnects
-        if (scheduler != null) {
-
-            LOGGER.debug("Shutting down scheduled execution");
-
-            scheduler.shutdownNow();
-        }
 
         // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
@@ -39,6 +31,15 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
             boolean cancelled = reconnectTask.cancel(false);
 
             LOGGER.debug("Cancelling reconnect task success: " + cancelled);
+        }
+
+        // Cleanup any scheduled reconnects
+        if (scheduler != null) {
+
+            LOGGER.debug("Shutting down scheduled execution");
+
+            scheduler.shutdownNow();
+            scheduler = null;
         }
 
         // Stop listening to SignalConnection events
@@ -49,6 +50,10 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
     protected void doStrategy() {
 
         LOGGER.debug("Scheduling a reconnect attempt in 5 seconds...");
+
+        if (scheduler == null) {
+            scheduler = Executors.newSingleThreadScheduledExecutor();
+        }
 
         scheduler.schedule(new Runnable() {
             @Override
