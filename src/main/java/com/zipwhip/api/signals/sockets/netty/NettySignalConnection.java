@@ -59,7 +59,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ReconnectStrategy reconnectStrategy;
 
     private Channel channel;
-    private ChannelFactory channelFactory;
+    private ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
     private boolean networkDisconnect;
 
@@ -90,9 +90,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
-        // TODO we need to enforce a single connection, maybe null out channelFactory in disconnect()
+        // Enforce a single connection
+        if (channel != null && channel.isConnected()) {
+            throw new Exception("Tried to connect but we already have a channel connected!");
+        }
 
-        channelFactory = new OioClientSocketChannelFactory(Executors.newCachedThreadPool());
         channel = channelFactory.newChannel(getPipeline());
 
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
@@ -142,10 +144,6 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 if (channel != null) {
                     ChannelFuture closeFuture = channel.close().await();
                     LOGGER.debug("Closing channel success was " + closeFuture.isSuccess());
-                }
-
-                if (channelFactory != null) {
-                    channelFactory.releaseExternalResources();
                 }
 
                 executor.shutdownNow();
@@ -347,6 +345,10 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         if (isConnected()) {
             disconnect();
+        }
+
+        if (channelFactory != null) {
+            channelFactory.releaseExternalResources();
         }
 
         if(pingTimeoutFuture != null) {
