@@ -28,7 +28,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         // If we have scheduled a reconnect cancel it
         if (reconnectTask != null && !reconnectTask.isDone()) {
 
-            boolean cancelled = reconnectTask.cancel(false);
+            boolean cancelled = reconnectTask.cancel(true);
 
             LOGGER.debug("Cancelling reconnect task success: " + cancelled);
         }

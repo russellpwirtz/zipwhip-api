@@ -72,19 +72,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     @Override
     public void stop() {
 
-        // If we have scheduled a reconnect cancel it
-        if (reconnectTask != null && !reconnectTask.isDone()) {
-            reconnectTask.cancel(true);
-        }
-
-        // Cleanup any scheduled reconnects
-        if (scheduler != null) {
-
-            LOGGER.debug("Shutting down scheduled execution");
-
-            scheduler.shutdownNow();
-            scheduler = null;
-        }
+        cleanup();
 
         super.stop();
     }
@@ -101,7 +89,10 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
                     if (connected) {
 
-                        LOGGER.debug("We reconnected, resetting count.");
+                        LOGGER.debug("We reconnected, cleaning up and resetting count.");
+
+                        // Cancel any scheduled reconnects
+                        cleanup();
 
                         // We connected, reset
                         consecutiveReconnectAttempts = 0;
@@ -136,7 +127,12 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
                             signalConnection.disconnect(true);
                         }
 
-                    } catch (Exception e) {
+                    }
+                    catch (InterruptedException e) {
+
+                        LOGGER.warn("Execution interrupted, we probably already reconnected", e);
+                    }
+                    catch (Exception e) {
 
                         LOGGER.error("Error reconnecting", e);
                     }
@@ -168,6 +164,25 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
         LOGGER.debug("Backoff calculated as ==>> " + backoff + (backoff == 1 ? " second" : " seconds"));
 
         return (backoff > maxBackoffSeconds ? maxBackoffSeconds : backoff);
+    }
+
+    private void cleanup() {
+        // If we have scheduled a reconnect cancel it
+        if (reconnectTask != null && !reconnectTask.isDone()) {
+
+            boolean cancelled = reconnectTask.cancel(true);
+
+            LOGGER.debug("Cancelling reconnect task success: " + cancelled);
+        }
+
+        // Cleanup any scheduled reconnects
+        if (scheduler != null) {
+
+            LOGGER.debug("Shutting down scheduled execution");
+
+            scheduler.shutdownNow();
+            scheduler = null;
+        }
     }
 
 }

@@ -17,7 +17,6 @@ import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 

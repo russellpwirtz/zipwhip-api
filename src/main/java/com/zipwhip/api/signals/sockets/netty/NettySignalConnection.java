@@ -13,7 +13,7 @@ import com.zipwhip.lifecycle.DestroyableBase;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 
@@ -90,7 +90,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
-        channelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        // TODO we need to enforce a single connection, maybe null out channelFactory in disconnect()
+
+        channelFactory = new OioClientSocketChannelFactory(Executors.newCachedThreadPool());
         channel = channelFactory.newChannel(getPipeline());
 
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
@@ -102,7 +104,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                 channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-                boolean socketConnected = !(channelFuture.isCancelled() || !channelFuture.isSuccess()) && channelFuture.getChannel().isConnected();
+                boolean socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
 
                 networkDisconnect = socketConnected;
 
@@ -124,7 +126,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
-    public Future<Void> disconnect(final boolean network) {
+    public synchronized Future<Void> disconnect(final boolean network) {
 
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
@@ -138,8 +140,8 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 }
 
                 if (channel != null) {
-                    ChannelFuture disconnectFuture = channel.disconnect().await();
-                    LOGGER.debug("Disconnecting success was " + disconnectFuture.isSuccess());
+                    ChannelFuture closeFuture = channel.close().await();
+                    LOGGER.debug("Closing channel success was " + closeFuture.isSuccess());
                 }
 
                 if (channelFactory != null) {
@@ -322,9 +324,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         LOGGER.debug("channelClosed");
 
-                        cancelPong();
+                        disconnect(true);
 
                         disconnectEvent.notifyObservers(this, networkDisconnect);
+
+                        super.channelClosed(ctx, e);
                     }
 
                     @Override
@@ -423,6 +427,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     private void cancelPong() {
+
         if (pongTimeoutFuture != null && !pongTimeoutFuture.isCancelled()) {
 
             LOGGER.debug("Resetting timeout PONG");
