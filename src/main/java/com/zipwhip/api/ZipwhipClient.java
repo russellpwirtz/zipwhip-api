@@ -13,6 +13,7 @@ import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -117,6 +118,13 @@ public interface ZipwhipClient extends Destroyable {
 
     Contact addMember(String groupAddress, String contactAddress, String firstName, String lastName, String phoneKey, String notes) throws Exception;
 
+    public void carbonEnable(boolean enabled, Integer versionCode) throws Exception;
+
+    public Boolean carbonEnabled(boolean enabled) throws Exception;
+
+    public String sessionChallenge(String mobileNumber, String carrier) throws Exception;
+
+    public String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
     /**
      * Connect to Zipwhip Signals if setup.
      *

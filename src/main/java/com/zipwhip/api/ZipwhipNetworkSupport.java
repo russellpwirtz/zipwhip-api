@@ -56,6 +56,10 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String USER_SAVE = "user/save";
     public static final String GROUP_ADD_MEMBER = "group/addMember";
     public static final String SESSION_GET = "session/get";
+    public static final String CARBON_ENABLE = "v1/carbon/enable";
+    public static final String CARBON_ENABLED = "v1/carbon/enabled";
+    public static final String CHALLENGE_REQUEST = "session/challenge";
+    public static final String CHALLENGE_CONFIRM = "session/challenge/confirm";
 
     protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
 
@@ -133,16 +137,20 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     }
 
     protected ServerResponse executeSync(final String method, final Map<String, Object> params) throws Exception {
-        return get(executeAsync(method, params));
+        return get(executeAsync(method, params, true));
     }
 
-    protected Future<ServerResponse> executeAsync(final String method, final Map<String, Object> params) throws Exception {
+    protected ServerResponse executeSync(final String method, final Map<String, Object> params, boolean requiresAuthentication) throws Exception {
+        return get(executeAsync(method, params, requiresAuthentication));
+    }
+
+    protected Future<ServerResponse> executeAsync(final String method, final Map<String, Object> params, final boolean requiresAuthentication) throws Exception {
 
         FutureTask<ServerResponse> task = new FutureTask<ServerResponse>(new Callable<ServerResponse>() {
             @Override
             public ServerResponse call() throws Exception {
 
-                if (!connection.isAuthenticated()) {
+                if (requiresAuthentication && !connection.isAuthenticated()) {
                     throw new Exception("The connection is not authenticated, can't continue.");
                 }
 

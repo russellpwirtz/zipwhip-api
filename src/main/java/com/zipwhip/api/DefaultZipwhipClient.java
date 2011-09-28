@@ -6,6 +6,7 @@ import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.ServerResponse;
+import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.events.Observer;
@@ -16,6 +17,7 @@ import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -338,6 +340,88 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         ServerResponse serverResponse = executeSync(GROUP_ADD_MEMBER, params);
 
         return responseParser.parseContact(serverResponse);
+
+    }
+
+    @Override
+    public void carbonEnable(boolean enabled, Integer versionCode) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("enabled", enabled);
+
+        if(versionCode != null) {
+            params.put("version", versionCode.toString());
+        }
+
+        executeSync(CARBON_ENABLE, params);
+
+    }
+
+    @Override
+    public Boolean carbonEnabled(boolean enabled) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("enabled", enabled);
+
+        ServerResponse response = executeSync(CARBON_ENABLED, params);
+
+        if (response instanceof StringServerResponse) {
+            StringServerResponse stringServerResponse = (StringServerResponse) response;
+
+            Boolean carbonOn = null;
+
+            if(StringUtil.equalsIgnoreCase(stringServerResponse.response, "true")) {
+                carbonOn = true;
+            } else if(StringUtil.equalsIgnoreCase(stringServerResponse.response, "false")) {
+                carbonOn = false;
+            }
+
+            return carbonOn;
+
+        } else {
+            throw new Exception("Unrecognized server response for challenge confirm");
+        }
+
+    }
+
+    @Override
+    public String sessionChallenge(String mobileNumber, String carrier) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("mobileNumber", mobileNumber);
+        params.put("carrier", carrier);
+
+        ServerResponse response = executeSync(CHALLENGE_REQUEST, params, false);
+
+        if (response instanceof StringServerResponse) {
+            StringServerResponse stringServerResponse = (StringServerResponse) response;
+            return stringServerResponse.response;
+        } else {
+            throw new Exception("Unrecognized server response for challenge request");
+        }
+
+    }
+
+    @Override
+    public String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("clientId", clientId);
+        params.put("securityToken", securityToken);
+        params.put("arguments", arguments);
+        params.put("userAgent", userAgent);
+
+        ServerResponse response = executeSync(CHALLENGE_CONFIRM, params, false);
+
+        if (response instanceof StringServerResponse) {
+            StringServerResponse stringServerResponse = (StringServerResponse) response;
+            return stringServerResponse.response;
+        } else {
+            throw new Exception("Unrecognized server response for challenge confirm");
+        }
 
     }
 
