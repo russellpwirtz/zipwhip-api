@@ -47,6 +47,11 @@ public interface SignalConnection extends Destroyable {
     Future<Void> disconnect(boolean network) throws Exception;
 
     /**
+     * Cancel any pending network keepalives and fire one immediately.
+     */
+    void keepalive();
+
+    /**
      * Send something to the SignalServer
      * 
      * @param command the Command to send

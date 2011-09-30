@@ -305,6 +305,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
+    public void nudge() {
+        connection.keepalive();
+    }
+
+    @Override
     public void onSignalReceived(Observer<List<Signal>> observer) {
         signalEvent.addObserver(observer);
     }

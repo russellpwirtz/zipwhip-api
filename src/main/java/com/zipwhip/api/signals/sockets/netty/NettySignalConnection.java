@@ -169,6 +169,15 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
+    public void keepalive() {
+
+        LOGGER.debug("Keepalive requested!");
+
+        cancelPong();
+        schedulePing(true);
+    }
+
+    @Override
     public void send(SerializingCommand command) {
         // send this over the wire.
         channel.write(command);
@@ -297,7 +306,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         } else {
 
                             // We have activity on the wire, reschedule the next PING
-                            schedulePing();
+                            schedulePing(false);
                         }
 
                         Command command = (Command) msg;
@@ -364,7 +373,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         }
     }
 
-    private void schedulePing() {
+    private void schedulePing(boolean now) {
 
         if (pingTimeoutFuture != null && !pingTimeoutFuture.isCancelled()) {
 
@@ -401,7 +410,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                 }, pongTimeout, TimeUnit.MILLISECONDS);
 
             }
-        }, pingTimeout, TimeUnit.MILLISECONDS);
+        }, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
     }
 
     private void receivePong(PingPongCommand command) {
@@ -425,7 +434,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         cancelPong();
 
-        schedulePing();
+        schedulePing(false);
     }
 
     private void cancelPong() {

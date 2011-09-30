@@ -99,6 +99,11 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
+    public void keepalive() {
+
+    }
+
+    @Override
     public boolean isConnected() {
         return isConnected;
     }

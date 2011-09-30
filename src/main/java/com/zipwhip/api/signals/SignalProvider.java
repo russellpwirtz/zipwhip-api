@@ -112,6 +112,14 @@ public interface SignalProvider extends Destroyable {
     Future<Void> disconnect() throws Exception;
 
     /**
+     * This little function is a BIG deal when you are running on a platform that freezes your executions
+     * (i.e. Android) when the CPU goes to sleep.
+     *
+     * Calling {@code nudge} will cancel any pending network keepalives and fire one immediately.
+     */
+    void nudge();
+
+    /**
      * You can Observe this event to capture things that come through
      * 
      * @param observer an Observer of type List<Signal> to listen for new signal events.
