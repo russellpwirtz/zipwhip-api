@@ -1,5 +1,7 @@
 package com.zipwhip.util;
 
+import com.ning.http.util.Base64;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -54,7 +56,7 @@ public class SignTool {
     }
 
     public String encodeBase64(byte[] data) {
-        String base64 = new sun.misc.BASE64Encoder().encodeBuffer(data);
+        String base64 = Base64.encode(data);
         if (base64.endsWith("\r\n")) base64 = base64.substring(0, base64.length() - 2);
         return base64;
     }

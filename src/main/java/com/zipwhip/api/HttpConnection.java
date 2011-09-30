@@ -141,7 +141,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         String url = apiVersion + method + builder.toString();
         String signature = getSignature(url);
 
-        if (signature != null && !signature.isEmpty()) {
+        if (signature != null && signature.length() != 0) {
             builder.append("&signature=");
             builder.append(signature);
         }
