@@ -53,9 +53,9 @@ public class JsonResponseParser implements ResponseParser {
         Map<String, Map<String, List<Signal>>> sessions = null;
 
         JSONObject sessionsObject = thing.optJSONObject("sessions");
+
         if (sessionsObject != null && !EMPTY_OBJECT.equals(sessionsObject.toString())) {
             logger.debug(":NOTNULL: " + sessionsObject);
-            //sessions = parseSessionSignals(sessionsObject);
         } else {
              logger.debug(":NULL: " + sessionsObject);
         }
@@ -168,7 +168,7 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
-        return PresenceUtil.getInstance().parse(new JSONArray(serverResponse.raw));
+        return PresenceUtil.getInstance().parse(new JSONArray(serverResponse.getRaw()));
     }
 
 }

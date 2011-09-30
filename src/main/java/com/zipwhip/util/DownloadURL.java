@@ -1,4 +1,4 @@
-package com.zipwhip.lib;
+package com.zipwhip.util;
 
 //------------------------------------------------------------//
 //  DnldURL.java:                                             //
@@ -21,7 +21,7 @@ import java.net.URL;
 
 public class DownloadURL {
 
-    private static Logger logger = Logger.getLogger(JsonParserUtil.class);
+    private static Logger LOGGER = Logger.getLogger(DownloadURL.class);
 
     public static String get(String url) {
         String result = "";
@@ -75,12 +75,12 @@ public class DownloadURL {
 
         } catch (MalformedURLException mue) {
 
-            logger.fatal("Ouch - a MalformedURLException happened.", mue);
+            LOGGER.fatal("Ouch - a MalformedURLException happened.", mue);
             mue.printStackTrace();
 
         } catch (IOException ioe) {
 
-            logger.fatal("Oops- an IOException happened.", ioe);
+            LOGGER.fatal("Oops- an IOException happened.", ioe);
 
         } finally {
 

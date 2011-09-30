@@ -1,7 +1,5 @@
 package com.zipwhip.api.dto;
 
-import java.util.Date;
-
 /**
  * User: Michael Date: Apr 26, 2010 Time: 6:35:06 PM
  * <p/>

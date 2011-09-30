@@ -1,28 +1,30 @@
-package com.zipwhip.api.signals.commands;
+package com.zipwhip.api.signals;
+
+import com.zipwhip.api.signals.commands.Command;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/19/11 Time: 4:37 PM
  * 
  * This is the basic envelope of a SignalServer packet.
  */
-public class Message {
+public class SignalMessage {
 
     // That's the body
     private Command command;
-    private Address address;
-    private Headers headers;
+    private SignalAddress address;
+    private SignalHeaders headers;
 
-    public Message() {
+    public SignalMessage() {
 
     }
 
-    public Message(Command command, Address address, Headers headers) {
+    public SignalMessage(Command command, SignalAddress address, SignalHeaders headers) {
         this.command = command;
         this.address = address;
         this.headers = headers;
     }
 
-    public Message(Command command) {
+    public SignalMessage(Command command) {
         this.command = command;
     }
 
@@ -34,19 +36,19 @@ public class Message {
         this.command = command;
     }
 
-    public Address getAddress() {
+    public SignalAddress getAddress() {
         return address;
     }
 
-    public void setAddress(Address address) {
+    public void setAddress(SignalAddress address) {
         this.address = address;
     }
 
-    public Headers getHeaders() {
+    public SignalHeaders getHeaders() {
         return headers;
     }
 
-    public void setHeaders(Headers headers) {
+    public void setHeaders(SignalHeaders headers) {
         this.headers = headers;
     }
 

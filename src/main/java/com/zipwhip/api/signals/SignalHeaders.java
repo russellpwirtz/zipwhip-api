@@ -1,12 +1,12 @@
-package com.zipwhip.api.signals.commands;
+package com.zipwhip.api.signals;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/19/11 Time: 4:38 PM
  * 
- * The SignalServer uses Headers to determine who the message was from
+ * The SignalServer uses SignalHeaders to determine who the message was from
  * 
  */
-public class Headers {
+public class SignalHeaders {
 
     private String versionKey;
     private Long version;

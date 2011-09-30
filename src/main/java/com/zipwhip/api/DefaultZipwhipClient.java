@@ -10,12 +10,10 @@ import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.lib.Address;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -30,15 +28,13 @@ import java.util.concurrent.*;
  */
 public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements ZipwhipClient {
 
-    private static Logger logger = Logger.getLogger(DefaultZipwhipClient.class);
-
     /**
      * Create a new DefaultZipwhipClient.
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
      */
-    public DefaultZipwhipClient(Connection connection, SignalProvider signalProvider) {
+    public DefaultZipwhipClient(ApiConnection connection, SignalProvider signalProvider) {
 
         super(connection, signalProvider);
 
@@ -53,7 +49,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
             public void notify(Object sender, String clientId) {
 
                 if (StringUtil.isNullOrEmpty(clientId)) {
-                    logger.warn("Received CONNECT without clientId");
+                    LOGGER.warn("Received CONNECT without clientId");
                     return;
                 }
 
@@ -84,7 +80,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
                             executeSync(SIGNALS_CONNECT, params);
 
                         } catch (Exception e) {
-                            logger.error("Error calling signals/connect", e);
+                            LOGGER.error("Error calling signals/connect", e);
                         }
                     }
                 } else {
@@ -102,7 +98,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
                     } catch (Exception e) {
 
-                        logger.error("Error calling signals/connect", e);
+                        LOGGER.error("Error calling signals/connect", e);
                     }
                 }
             }

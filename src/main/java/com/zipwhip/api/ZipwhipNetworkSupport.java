@@ -17,8 +17,6 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * Created by IntelliJ IDEA. User: Michael Date: 7/5/11 Time: 8:26 PM
- * <p/>
  * A base class for future implementation to extend.
  * <p/>
  * It takes all the non-API specific stuff out of ZipwhipClient implementations.
@@ -29,6 +27,9 @@ import java.util.concurrent.*;
  */
 public abstract class ZipwhipNetworkSupport extends DestroyableBase {
 
+    /**
+     * The timeout when connecting to Zipwhip
+     */
     public static final long DEFAULT_TIMEOUT_SECONDS = 45;
 
     public static final String CONTACT_LIST = "contact/list";
@@ -49,7 +50,6 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String GROUP_SAVE = "group/save";
     public static final String DEVICE_DELETE = "device/delete";
     public static final String USER_ENROLL = "user/enroll";
-    public static final String SESSION_UPDATE = "session/update";
     public static final String SIGNALS_DISCONNECT = "signals/disconnect";
     public static final String SIGNALS_CONNECT = "signals/connect";
     public static final String SIGNAL_SEND = "signal/send";
@@ -63,7 +63,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
 
     protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
 
-    protected Connection connection;
+    protected ApiConnection connection;
     protected SignalProvider signalProvider;
     protected ResponseParser responseParser;
 
@@ -76,7 +76,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         this(null, null);
     }
 
-    public ZipwhipNetworkSupport(Connection connection) {
+    public ZipwhipNetworkSupport(ApiConnection connection) {
         this(connection, null);
     }
 
@@ -84,7 +84,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         this(null, signalProvider);
     }
 
-    public ZipwhipNetworkSupport(Connection connection, SignalProvider signalProvider) {
+    public ZipwhipNetworkSupport(ApiConnection connection, SignalProvider signalProvider) {
 
         if (connection == null || signalProvider == null) {
             throw new IllegalArgumentException("Connection and SignalProvider must not be null");
@@ -116,11 +116,11 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         this.versionsStore = new SettingsVersionStore(store);
     }
 
-    public Connection getConnection() {
+    public ApiConnection getConnection() {
         return connection;
     }
 
-    public void setConnection(Connection connection) {
+    public void setConnection(ApiConnection connection) {
         if (this.connection != null) {
             unlink(this.connection);
         }
@@ -182,7 +182,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
             return;
         }
 
-        if (!serverResponse.success) {
+        if (!serverResponse.isSuccess()) {
             throwError(serverResponse);
         }
     }
@@ -195,7 +195,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
             throw new Exception(string.response);
 
         } else {
-            throw new Exception(serverResponse.raw);
+            throw new Exception(serverResponse.getRaw());
         }
     }
 
@@ -219,7 +219,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     }
 
     protected boolean success(ServerResponse serverResponse) {
-        return (serverResponse != null) && serverResponse.success;
+        return (serverResponse != null) && serverResponse.isSuccess();
     }
 
 }

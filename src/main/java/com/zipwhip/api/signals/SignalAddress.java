@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.commands;
+package com.zipwhip.api.signals;
 
 /**
  * Created by IntelliJ IDEA.
@@ -8,6 +8,6 @@ package com.zipwhip.api.signals.commands;
  *
  * The SignalServer speaks in Addresses
  */
-public class Address {
+public class SignalAddress {
 
 }

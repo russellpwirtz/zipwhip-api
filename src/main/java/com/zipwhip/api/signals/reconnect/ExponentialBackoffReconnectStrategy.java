@@ -7,15 +7,10 @@ import java.util.Date;
 import java.util.concurrent.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: jed
- * Date: 9/15/11
- * Time: 10:29 AM
- * <p/>
  * This class schedules reconnect attempts in a geometrically increasing (2^X by default) way up to a threshold.
  * Once the threshold has been reached all subsequent reconnect attempts will be run at the threshold time.
  * <p/>
- * If an reconnect has been scheduled but has not completed any subsequent disconnect notices will be ignored.
+ * If a reconnect has been scheduled but has not completed any subsequent disconnect notices will be ignored.
  */
 public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
@@ -130,7 +125,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
                     }
                     catch (InterruptedException e) {
 
-                        LOGGER.warn("Execution interrupted, we probably already reconnected", e);
+                        LOGGER.warn("Execution interrupted, we probably already reconnected");
                     }
                     catch (Exception e) {
 

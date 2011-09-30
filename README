@@ -1,2 +1,8 @@
-Zipwhip, Inc.
-Open source Zipwhip API library for general use of the Zipwhip cloud.
+Zipwhip API
+Copyright 2010 Zipwhip Inc
+
+DESCRIPTION
+-----------
+Zipwhip API is an open source library for general use of the Zipwhip cloud. Zipwhip API allows Java applications to
+easily to send and receive SMS messages as if they were sent from your mobile number.
+

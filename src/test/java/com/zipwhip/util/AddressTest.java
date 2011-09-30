@@ -1,5 +1,6 @@
-package com.zipwhip.lib;
+package com.zipwhip.util;
 
+import com.zipwhip.api.Address;
 import junit.framework.Assert;
 import org.junit.Test;
 

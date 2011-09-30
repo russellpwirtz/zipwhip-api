@@ -1,4 +1,4 @@
-package com.zipwhip.lib;
+package com.zipwhip.util;
 
 import org.apache.log4j.Logger;
 

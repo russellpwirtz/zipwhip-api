@@ -8,43 +8,132 @@ import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.events.Observer;
-import com.zipwhip.lib.Address;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Future;
 
 /**
- * This class operates on a Connection.
+ * Implementations of this class provide a high level way to communicate with the Zipwhip web API.
+ * The communication takes place over a {@code ApiConnection} connection.
  *
  * @author Michael
  */
 public interface ZipwhipClient extends Destroyable {
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param message A {@code Message} object from which to send the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Message message) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address Zipwhip {@link Address} scheme.
+     * @param body The body of the message to be sent.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Address address, String body) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address Zipwhip {@link Address} scheme.
+     * @param body The body of the message to be sent.
+     * @param fromName The name of the sender of the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Address address, String body, String fromName) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(String address, String body) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Collection<String> address, String body) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @param fromName The name of the sender of the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Collection<String> address, String body, String fromName) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @param fromName The name of the sender of the message.
+     * @param advertisement A code indicating to Zipwhip what should be appended to the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(Collection<String> address, String body, String fromName, String advertisement) throws Exception;
 
+    /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @param fromName The name of the sender of the message.
+     * @param advertisement A code indicating to Zipwhip what should be appended to the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
     List<MessageToken> sendMessage(String address, String body, String fromName, String advertisement) throws Exception;
 
+    /**
+     * Create a new group.
+     *
+     * @param type The type of group, eg. reply-all.
+     * @param advertisement A code indicating to Zipwhip what should be appended to the message.
+     * @return A {@link Contact} representing the new group.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
     Contact saveGroup(String type, String advertisement) throws Exception;
 
+    /**
+     * Create a new group.
+     *
+     * @return A {@link Contact} representing the new group.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
     Contact saveGroup() throws Exception;
 
+    /**
+     * Save or update the user's information.
+     *
+     * @param contact A {@link Contact} object representing the user to be saved.
+     * @return The {@link Contact} object representing the user that has been saved.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
     Contact saveUser(Contact contact) throws Exception;
 
     /**
@@ -52,7 +141,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param uuid - message uuid
      * @return A Message DTO matching the uuid.
-     * @throws Exception if an error occurs communicating with Zipwhip
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     Message getMessage(String uuid) throws Exception;
 
@@ -61,6 +150,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param uuids A list of message uuids to delete.
      * @return True for a successful delete otherwise false.
+     * @throws Exception If an error occurred while sending or parsing the response.
      */
     boolean messageRead(List<String> uuids) throws Exception;
 
@@ -69,6 +159,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param uuids A list of message uuids to mark as read.
      * @return True for a successful read otherwise false.
+     * @throws Exception If an error occurred while sending or parsing the response.
      */
     boolean messageDelete(List<String> uuids) throws Exception;
 
@@ -93,8 +184,8 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Returns the contact for the provided mobile number.
      *
-     * @param mobileNumber
-     * @return contact
+     * @param mobileNumber The mobile number of the contact to get.
+     * @return contact The contact corresponding to the mobile number.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     Contact getContact(String mobileNumber) throws Exception;
@@ -108,23 +199,105 @@ public interface ZipwhipClient extends Destroyable {
      */
     List<Presence> getPresence(PresenceCategory category) throws Exception;
 
+    /**
+     * Send a signal via Zipwhip SignalServer.
+     * Generally this is for debug since the SignalServer protocol is proprietary.
+     *
+     * @param scope The scope of the signal, ie device.
+     * @param channel The channel the signal is on.
+     * @param event The event of the signal.
+     * @param payload The content of the signal.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
     void sendSignal(String scope, String channel, String event, String payload) throws Exception;
 
+    /**
+     * Save a new contact for the user or update an existing contact.
+     *
+     * @param address The address of the contact, generally mobile number.
+     * @param firstName Contact's first name.
+     * @param lastName Contact's last name.
+     * @param phoneKey  Contact's phone type.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
     void saveContact(String address, String firstName, String lastName, String phoneKey) throws Exception;
 
+    /**
+     * Save a new contact for the user or update an existing contact.
+     *
+     * @param address The address of the contact, generally mobile number.
+     * @param firstName Contact's first name.
+     * @param lastName Contact's last name.
+     * @param phoneKey  Contact's phone type.
+     * @param notes Free text.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
     void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception;
 
+    /**
+     * Add a member to an existing group.
+     *
+     * @param groupAddress The address of the group to add a new member to.
+     * @param contactAddress The address, mobile number, of the new contact.
+     * @return A {@link Contact} representing the new group member.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
     Contact addMember(String groupAddress, String contactAddress) throws Exception;
 
+    /**
+     * Add a member to an existing group.
+     *
+     * @param groupAddress The address of the group to add a new member to.
+     * @param contactAddress The address, mobile number, of the new contact.
+     * @param firstName Contact's first name.
+     * @param lastName Contact's last name.
+     * @param phoneKey  Contact's phone type.
+     * @param notes Free text.
+     * @return A {@link Contact} representing the new group member.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
     Contact addMember(String groupAddress, String contactAddress, String firstName, String lastName, String phoneKey, String notes) throws Exception;
 
-    public void carbonEnable(boolean enabled, Integer versionCode) throws Exception;
+    /**
+     * TODO Austin, could you document this?
+     *
+     * @param enabled
+     * @param versionCode
+     * @throws Exception if an error occurs communicating with Zipwhip.
+     */
+    void carbonEnable(boolean enabled, Integer versionCode) throws Exception;
 
-    public Boolean carbonEnabled(boolean enabled) throws Exception;
+    /**
+     * TODO Austin, could you document this?
+     *
+     * @param enabled
+     * @return
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    Boolean carbonEnabled(boolean enabled) throws Exception;
 
-    public String sessionChallenge(String mobileNumber, String carrier) throws Exception;
+    /**
+     * TODO Austin, could you document this?
+     *
+     * @param mobileNumber
+     * @param carrier
+     * @return
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    String sessionChallenge(String mobileNumber, String carrier) throws Exception;
 
-    public String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
+    /**
+     * TODO Austin, could you document this?
+     *
+     * @param clientId
+     * @param securityToken
+     * @param arguments
+     * @param userAgent
+     * @return
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
+
     /**
      * Connect to Zipwhip Signals if setup.
      *
@@ -161,26 +334,24 @@ public interface ZipwhipClient extends Destroyable {
      * Listen for connection changes. This is a convenience method
      *
      * This observer will be called if:
-     *
      * We lose our TCP/IP connection to the SignalServer
      *
      * @param observer An observer object to receive callbacks on
      */
     void addSignalsConnectionObserver(Observer<Boolean> observer);
 
-
     /**
      * A connection to Zipwhip over a medium.
      *
      * @return the current connection
      */
-    Connection getConnection();
+    ApiConnection getConnection();
 
     /**
      *
      * @param connection the connection to use
      */
-    void setConnection(Connection connection);
+    void setConnection(ApiConnection connection);
 
     /**
      * Getter for the SignalProvider. SignalProvider manages the connection to the SignalServer

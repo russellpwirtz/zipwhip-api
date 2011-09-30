@@ -1,7 +1,6 @@
 package com.zipwhip;
 
-import com.zipwhip.api.Connection;
-import com.zipwhip.api.HttpConnection;
+import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.DeviceToken;
 import com.zipwhip.api.dto.MessageToken;
@@ -27,7 +26,7 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
      * @param connection The connection to Zipwhip
      * @param signalProvider The SignalProvider to SignalServer
      */
-    public DefaultVendorClient(Connection connection, SignalProvider signalProvider) {
+    public DefaultVendorClient(ApiConnection connection, SignalProvider signalProvider) {
         super(connection, signalProvider);
     }
 
@@ -49,13 +48,13 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("address", address);
         params.put("body", body);
-        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey);
+        params.put("apiKey", getConnection().getAuthenticator().apiKey);
 
         return responseParser.parseMessageTokens(executeSync(VENDOR_MESSAGE_SEND, params));
     }
 
     @Override
-    public Connection getConnection() {
+    public ApiConnection getConnection() {
         return connection;
     }
 
@@ -109,7 +108,7 @@ public class DefaultVendorClient extends ZipwhipNetworkSupport implements Vendor
         params.put("address", deviceAddress);
 
         // our API key (so they can verify our signature)
-        params.put("apiKey", ((HttpConnection) getConnection()).getAuthenticator().apiKey);
+        params.put("apiKey", (getConnection().getAuthenticator().apiKey));
 
         // the list of subscriptions we want to add to the device
         if (subscriptions != null) {

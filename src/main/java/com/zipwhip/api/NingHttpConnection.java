@@ -1,12 +1,14 @@
 package com.zipwhip.api;
 
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Response;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.util.SignTool;
-import com.zipwhip.util.DownloadURL;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -19,26 +21,30 @@ import java.util.concurrent.*;
  * <p/>
  * This class is thread safe.
  */
-public class HttpConnection extends DestroyableBase implements ApiConnection {
+public class NingHttpConnection extends DestroyableBase implements ApiConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpConnection.class);
+    public static final String DEFAULT_HOST = "http://network.zipwhip.com";
+
+    private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
 
     private String apiVersion = "/";
     private String host = DEFAULT_HOST;
 
     private String sessionKey;
     private SignTool authenticator;
+
+    private AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
     private ExecutorService executor = Executors.newCachedThreadPool();
 
-    public HttpConnection() {
+    public NingHttpConnection() {
         super();
     }
 
-    public HttpConnection(String apiKey, String secret) throws Exception {
+    public NingHttpConnection(String apiKey, String secret) throws Exception {
         this(new SignTool(apiKey, secret));
     }
 
-    public HttpConnection(SignTool authenticator) {
+    public NingHttpConnection(SignTool authenticator) {
         this();
         this.setAuthenticator(authenticator);
     }
@@ -71,6 +77,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     public String getSessionKey() {
+        LOGGER.debug("Getting sessionKey " + sessionKey);
         return sessionKey;
     }
 
@@ -85,35 +92,45 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
     }
 
     @Override
-    public Future<String> send(String method, Map<String, Object> params) {
+    public Future<String> send(final String method, Map<String, Object> params) {
 
-        RequestBuilder rb = new RequestBuilder();
+        final RequestBuilder rb = new RequestBuilder();
 
         // convert the map into a key/value HTTP params string
         rb.params(params);
 
-        return send(method, rb.build());
-    }
-
-    private Future<String> send(final String method, final String params) {
-
-        // put them together to form the full url
         FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
             @Override
             public String call() throws Exception {
-
-                // this is the base url+api+method
-                final String url = getUrl(method);
-
-                // this is the query string part
-                return DownloadURL.get(url + sign(method, params));
+                return send(method, rb.build()).get().getResponseBody();
             }
         });
 
-        // execute this webcall async
         executor.execute(task);
 
         return task;
+    }
+
+    private Future<Response> send(final String method, final String params) {
+
+        Future<Response> f = null;
+
+        try {
+            String url = getUrl(method);
+
+            f = asyncHttpClient.prepareGet(url + sign(method, params)).execute();
+
+        } catch (IOException e) {
+
+            LOGGER.error("Error calling method " + method, e);
+
+        } catch (Exception e) {
+
+            LOGGER.error("Error signing method " + method + " with params " + params, e);
+
+        }
+
+        return f;
     }
 
     private String sign(String method, String params) throws Exception {
@@ -170,7 +187,9 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     protected void onDestroy() {
+        asyncHttpClient.close();
         executor.shutdownNow();
     }
 
 }
+

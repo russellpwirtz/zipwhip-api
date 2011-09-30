@@ -10,15 +10,38 @@ import java.util.Map;
  */
 public abstract class ServerResponse {
 
-    public boolean success;
-
-    public Map<String, Map<String, List<Signal>>> sessions;
-    public String raw;
+    private boolean success;
+    private Map<String, Map<String, List<Signal>>> sessions;
+    private String raw;
 
     public ServerResponse(String raw, boolean success, Map<String, Map<String, List<Signal>>> sessions) {
         this.raw = raw;
         this.success = success;
         this.sessions = sessions;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public Map<String, Map<String, List<Signal>>> getSessions() {
+        return sessions;
+    }
+
+    public void setSessions(Map<String, Map<String, List<Signal>>> sessions) {
+        this.sessions = sessions;
+    }
+
+    public String getRaw() {
+        return raw;
+    }
+
+    public void setRaw(String raw) {
+        this.raw = raw;
     }
 
 }

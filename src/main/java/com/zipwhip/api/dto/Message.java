@@ -1,14 +1,11 @@
 package com.zipwhip.api.dto;
 
-import java.io.Serializable;
-import java.util.Date;
-
 /**
  * Created by IntelliJ IDEA.
  * * Date: Jul 17, 2009
  * Time: 7:40:55 PM
  */
-public class Message extends BasicDto{
+public class Message extends BasicDto {
 
     private static final long serialVersionUID = 5874121953591365L;
 

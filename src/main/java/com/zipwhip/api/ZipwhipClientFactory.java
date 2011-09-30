@@ -5,27 +5,33 @@ import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.util.Factory;
 
 /**
- * Created by IntelliJ IDEA. User: Michael Date: 7/5/11 Time: 6:24 PM
- * <p/>
- * This factory produces ZipwhipClient's that are authenticated
+ * This factory produces {@code ZipwhipClient}s that are authenticated.
  */
 public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
-    private Factory<Connection> connectionFactory;
+    private Factory<ApiConnection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
 
     public ZipwhipClientFactory() {
 
     }
 
-    public ZipwhipClientFactory(ConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
+    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
         this.connectionFactory = connectionFactory;
         this.signalProviderFactory = signalProviderFactory;
     }
 
+    /**
+     * Create a new ZipwhipClient which has been authenticated via a username and password.
+     *
+     * @param username The mobile number of the user.
+     * @param password The user's Zipwhip password.
+     * @return An authenticated {@link ZipwhipClient}
+     * @throws Exception if an error occurs creating or authenticating the client.
+     */
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
 
-        ConnectionFactory connectionFactory = ConnectionFactory.newInstance().username(username).password(password);
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance().username(username).password(password);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -33,9 +39,16 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
         return zipwhipClientFactory.create();
     }
 
+    /**
+     * Create a new ZipwhipClient which has been pre-authenticated via the sessionKey.
+     *
+     * @param sessionKey A valid Zipwhip sessionKey.
+     * @return An authenticated {@link ZipwhipClient}
+     * @throws Exception if an error occurs creating or authenticating the client.
+     */
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
 
-        ConnectionFactory connectionFactory = ConnectionFactory.newInstance().sessionKey(sessionKey);
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance().sessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

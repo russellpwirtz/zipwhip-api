@@ -1,11 +1,11 @@
-package com.zipwhip.lib;
+package com.zipwhip.api;
 
 /**
  * Created by IntelliJ IDEA.
  * Date: Jul 17, 2009
  * Time: 8:25:37 PM
  * <p/>
- * The Zipwhip Address scheme, broken into different parts. This is mostly for parsing and validation.
+ * The Zipwhip SignalAddress scheme, broken into different parts. This is mostly for parsing and validation.
  */
 public class Address {
 

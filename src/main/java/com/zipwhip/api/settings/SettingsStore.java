@@ -1,6 +1,6 @@
 package com.zipwhip.api.settings;
 
-import com.zipwhip.lib.KeyValueStore;
+import com.zipwhip.util.KeyValueStore;
 
 /**
  * Created by IntelliJ IDEA.

@@ -1,4 +1,4 @@
-package com.zipwhip.lib;
+package com.zipwhip.util;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;

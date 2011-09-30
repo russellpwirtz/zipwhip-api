@@ -1,6 +1,6 @@
 package com.zipwhip;
 
-import com.zipwhip.api.Connection;
+import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.dto.DeviceToken;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.subscriptions.Subscription;
@@ -8,29 +8,64 @@ import com.zipwhip.api.subscriptions.Subscription;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Michael
- * Date: 7/5/11
- * Time: 7:56 PM
- * <p/>
  * Provides administrator tools for a Vendor
  */
 public interface VendorClient {
 
-    void setConnection(Connection connection);
+    /**
+     *
+     * @param connection
+     */
+    void setConnection(ApiConnection connection);
 
-    Connection getConnection();
+    /**
+     *
+     * @return
+     */
+    ApiConnection getConnection();
 
+    /**
+     *
+     * @param address
+     * @param body
+     * @return
+     * @throws Exception
+     */
     List<MessageToken> sendVendorMessage(String address, String body) throws Exception;
 
+    /**
+     *
+     * @param deviceAddress
+     * @param subscription
+     * @return
+     * @throws Exception
+     */
     DeviceToken enrollDevice(String deviceAddress, Subscription subscription) throws Exception;
 
+    /**
+     *
+     * @param deviceAddress
+     * @return
+     * @throws Exception
+     */
     DeviceToken enrollDevice(String deviceAddress) throws Exception;
 
+    /**
+     *
+     * @param deviceAddress
+     * @param subscriptions
+     * @return
+     * @throws Exception
+     */
     DeviceToken enrollDevice(String deviceAddress, List<Subscription> subscriptions) throws Exception;
 
+    /**
+     *
+     * @param sessionKey
+     * @return
+     * @throws Exception
+     */
     DeviceToken getDeviceBySessionKey(String sessionKey) throws Exception;
-
 
     /**
      * Lookup a phone key by the carrierKey. The carrierKey is the phone info from that carrier's LDAP.
