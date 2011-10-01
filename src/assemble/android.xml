@@ -13,7 +13,6 @@
             <unpack>true</unpack>
             <excludes>
                 <exclude>org.json:json</exclude>
-                <exclude>log4j:log4j</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>
