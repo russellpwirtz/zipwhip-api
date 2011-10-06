@@ -57,6 +57,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     private ReconnectStrategy reconnectStrategy;
+    private Runnable onSocketActivity;
 
     private Channel channel;
     private ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
@@ -96,6 +97,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         }
 
         channel = channelFactory.newChannel(getPipeline());
+        if(channel instanceof AbstractChannel) {
+            ((AbstractChannel)channel).setOnSocketActivity(onSocketActivity);
+        }
 
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
 
@@ -264,6 +268,14 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         this.reconnectStrategy = reconnectStrategy;
         this.reconnectStrategy.setSignalConnection(this);
+    }
+
+    public Runnable getOnSocketActivity() {
+        return this.onSocketActivity;
+    }
+
+    public void setOnSocketActivity(Runnable onSocketActivity) {
+        this.onSocketActivity = onSocketActivity;
     }
 
     @Override
