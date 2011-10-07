@@ -42,7 +42,8 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public ApiConnection create() {
 
         try {
-            ApiConnection connection = new NingHttpConnection();
+            // TODO We can swap in the Ning Client here once its ready to go
+            ApiConnection connection = new HttpConnection();
 
             connection.setSessionKey(sessionKey);
             connection.setHost(host);

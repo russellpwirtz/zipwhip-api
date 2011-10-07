@@ -1,7 +1,7 @@
 package com.zipwhip.api;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
+//import com.ning.http.client.AsyncHttpClient;
+//import com.ning.http.client.Response;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -33,7 +33,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     private String sessionKey;
     private SignTool authenticator;
 
-    private AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
+//    private AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
     private ExecutorService executor = Executors.newCachedThreadPool();
 
     public NingHttpConnection() {
@@ -102,7 +102,8 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
         FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
             @Override
             public String call() throws Exception {
-                return send(method, rb.build()).get().getResponseBody();
+//                return send(method, rb.build()).get().getResponseBody();
+                return null;
             }
         });
 
@@ -111,27 +112,27 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
         return task;
     }
 
-    private Future<Response> send(final String method, final String params) {
-
-        Future<Response> f = null;
-
-        try {
-            String url = getUrl(method);
-
-            f = asyncHttpClient.prepareGet(url + sign(method, params)).execute();
-
-        } catch (IOException e) {
-
-            LOGGER.error("Error calling method " + method, e);
-
-        } catch (Exception e) {
-
-            LOGGER.error("Error signing method " + method + " with params " + params, e);
-
-        }
-
-        return f;
-    }
+//    private Future<Response> send(final String method, final String params) {
+//
+//        Future<Response> f = null;
+//
+//        try {
+//            String url = getUrl(method);
+//
+//            f = asyncHttpClient.prepareGet(url + sign(method, params)).execute();
+//
+//        } catch (IOException e) {
+//
+//            LOGGER.error("Error calling method " + method, e);
+//
+//        } catch (Exception e) {
+//
+//            LOGGER.error("Error signing method " + method + " with params " + params, e);
+//
+//        }
+//
+//        return f;
+//    }
 
     private String sign(String method, String params) throws Exception {
 
@@ -187,7 +188,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
 
     @Override
     protected void onDestroy() {
-        asyncHttpClient.close();
+//        asyncHttpClient.close();
         executor.shutdownNow();
     }
 
