@@ -466,7 +466,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
         cancelPong();
 
-        schedulePing(false);
+        if (doKeepalives) {
+            schedulePing(false);
+        }
     }
 
     private void cancelPing() {
