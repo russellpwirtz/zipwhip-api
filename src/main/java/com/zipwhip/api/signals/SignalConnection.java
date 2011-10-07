@@ -47,6 +47,20 @@ public interface SignalConnection extends Destroyable {
     Future<Void> disconnect(boolean network) throws Exception;
 
     /**
+     * By default the connection will send a keepalive packet to the SignalServer periodically.
+     * If {@code stopKeepalives} has been called this will restart them.
+     * Otherwise it will have no effect.
+     */
+    void startKeepalives();
+
+    /**
+     * By default the connection will send a keepalive packet to the SignalServer periodically.
+     * If this has not been called since {@code startKeepalives} was last called then any
+     * pending keepalives will be cancelled and no future ones will be scheduled.
+     */
+    void stopKeepalives();
+
+    /**
      * Cancel any pending network keepalives and fire one immediately.
      */
     void keepalive();
@@ -105,9 +119,16 @@ public interface SignalConnection extends Destroyable {
     /**
      * Observe an inactive ping event.
      *
-     * @param observer an Observer of type PingEvent to indicate the event that happened.
+     * @param observer An Observer of type PingEvent to indicate the event that happened.
      */
     void onPingEvent(Observer<PingEvent> observer);
+
+    /**
+     * Observe a caught exception in the connection.
+     *
+     * @param observer An Observer of type String to indicating the exception that was caught.
+     */
+    void onExceptionCaught(Observer<String> observer);
 
     /**
      * Set the host to be used on the NEXT connection.

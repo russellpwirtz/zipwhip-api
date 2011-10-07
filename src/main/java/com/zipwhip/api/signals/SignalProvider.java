@@ -120,6 +120,20 @@ public interface SignalProvider extends Destroyable {
     void nudge();
 
     /**
+     * By default the connection will ping the SignalServer periodically.
+     * If {@code stopPings} has been called this will restart them.
+     * Otherwise it will have no effect.
+     */
+    void startPings();
+
+    /**
+     * By default the connection will ping the SignalServer periodically.
+     * If this has not been called since {@code startPings} was last called then any
+     * pending pings will be cancelled and no future ones will be scheduled.
+     */
+    void stopPings();
+
+    /**
      * You can Observe this event to capture things that come through
      * 
      * @param observer an Observer of type List<Signal> to listen for new signal events.
@@ -184,5 +198,12 @@ public interface SignalProvider extends Destroyable {
      * @param observer an Observer of type PingEvent indicating the event that happened.
      */
     void onPingEvent(Observer<PingEvent> observer);
+
+    /**
+     * Observe any exceptions in the {@code SignalConnection} layer.
+     *
+     * @param observer an Observer of type String indicating the exception that occurred.
+     */
+    void onExceptionEvent(Observer<String> observer);
 
 }

@@ -54,6 +54,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     private ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+    private ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
     private ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     private ReconnectStrategy reconnectStrategy;
@@ -63,6 +64,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     private ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
     private boolean networkDisconnect;
+    private boolean doKeepalives;
 
     /**
      * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy}.
@@ -81,11 +83,13 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         this.link(pingEvent);
         this.link(receiveEvent);
         this.link(connectEvent);
+        this.link(exceptionEvent);
         this.link(disconnectEvent);
         this.link(reconnectStrategy);
 
         this.reconnectStrategy = reconnectStrategy;
         this.reconnectStrategy.setSignalConnection(this);
+        this.doKeepalives = true;
     }
 
     @Override
@@ -97,8 +101,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         }
 
         channel = channelFactory.newChannel(getPipeline());
-        if(channel instanceof AbstractChannel) {
-            ((AbstractChannel)channel).setOnSocketActivity(onSocketActivity);
+
+        if (channel instanceof AbstractChannel) {
+            ((AbstractChannel) channel).setOnSocketActivity(onSocketActivity);
         }
 
         final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
@@ -182,6 +187,23 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     @Override
+    public void startKeepalives() {
+
+        LOGGER.debug("Start keepalives requested!");
+
+        doKeepalives = true;
+    }
+
+    @Override
+    public void stopKeepalives() {
+
+        LOGGER.debug("Start keepalives requested!");
+
+        doKeepalives = false;
+        cancelPing();
+    }
+
+    @Override
     public void send(SerializingCommand command) {
         // send this over the wire.
         channel.write(command);
@@ -220,6 +242,11 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     @Override
     public void onPingEvent(Observer<PingEvent> observer) {
         pingEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onExceptionCaught(Observer<String> observer) {
+        exceptionEvent.addObserver(observer);
     }
 
     @Override
@@ -318,7 +345,9 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
                         } else {
 
                             // We have activity on the wire, reschedule the next PING
-                            schedulePing(false);
+                            if (doKeepalives) {
+                                schedulePing(false);
+                            }
                         }
 
                         Command command = (Command) msg;
@@ -355,7 +384,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
                         LOGGER.error(e.toString());
 
-                        // TODO queue and report to the server
+                        exceptionEvent.notifyObservers(this, e.toString());
                     }
                 }
         );
@@ -387,16 +416,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
 
     private void schedulePing(boolean now) {
 
-        if (pingTimeoutFuture != null && !pingTimeoutFuture.isCancelled()) {
-
-            if (pingTimeoutFuture != null) {
-
-                LOGGER.debug("Resetting scheduled PING");
-                pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
-
-                pingTimeoutFuture.cancel(false);
-            }
-        }
+        cancelPing();
 
         LOGGER.debug("Scheduling a PING");
         pingEvent.notifyObservers(this, PingEvent.PING_SCHEDULED);
@@ -447,6 +467,20 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
         cancelPong();
 
         schedulePing(false);
+    }
+
+    private void cancelPing() {
+
+        if (pingTimeoutFuture != null && !pingTimeoutFuture.isCancelled()) {
+
+            if (pingTimeoutFuture != null) {
+
+                LOGGER.debug("Resetting scheduled PING");
+                pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
+
+                pingTimeoutFuture.cancel(false);
+            }
+        }
     }
 
     private void cancelPong() {

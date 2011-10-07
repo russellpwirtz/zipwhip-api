@@ -138,6 +138,18 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
     }
 
     @Override
+    public void startKeepalives() {
+    }
+
+    @Override
+    public void stopKeepalives() {
+    }
+
+    @Override
+    public void onExceptionCaught(Observer<String> observer) {
+    }
+
+    @Override
     public void setHost(String host) {
     }
 

@@ -25,7 +25,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     @Override
     public SignalProvider create() {
 
-        NettySignalConnection nettySignalConnection = new NettySignalConnection(reconnectStrategy);
+        NettySignalConnection nettySignalConnection = new NettySignalConnection();
 
         if (reconnectStrategy != null) {
             nettySignalConnection.setReconnectStrategy(reconnectStrategy);

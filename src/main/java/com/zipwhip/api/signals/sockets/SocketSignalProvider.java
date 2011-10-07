@@ -32,6 +32,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
     private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
+    private ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
     private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
     private ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
     private ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
@@ -62,6 +63,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         this.link(connectEvent);
         this.link(newClientIdEvent);
         this.link(signalEvent);
+        this.link(exceptionEvent);
         this.link(signalVerificationEvent);
         this.link(newVersionEvent);
         this.link(presenceReceivedEvent);
@@ -170,6 +172,14 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             @Override
             public void notify(Object sender, PingEvent item) {
                 pingEvent.notifyObservers(sender, item);
+            }
+        });
+
+        // Forward connection exceptions up to clients
+        connection.onExceptionCaught(new Observer<String>() {
+            @Override
+            public void notify(Object sender, String message) {
+                exceptionEvent.notifyObservers(sender, message);
             }
         });
 
@@ -310,6 +320,16 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     @Override
+    public void startPings() {
+        connection.startKeepalives();
+    }
+
+    @Override
+    public void stopPings() {
+        connection.stopKeepalives();
+    }
+
+    @Override
     public void onSignalReceived(Observer<List<Signal>> observer) {
         signalEvent.addObserver(observer);
     }
@@ -347,6 +367,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     @Override
     public void onPingEvent(Observer<PingEvent> observer) {
         pingEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onExceptionEvent(Observer<String> observer) {
+        exceptionEvent.addObserver(observer);
     }
 
     @Override
