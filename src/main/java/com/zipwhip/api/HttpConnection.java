@@ -1,10 +1,13 @@
 package com.zipwhip.api;
 
 import com.zipwhip.api.request.RequestBuilder;
+import com.zipwhip.concurrent.DefaultNetworkFuture;
+import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.DownloadURL;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
+import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -28,7 +31,8 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     private String sessionKey;
     private SignTool authenticator;
-    private ExecutorService executor = Executors.newCachedThreadPool();
+    private ExecutorService bossExecutor = Executors.newCachedThreadPool();
+    private ExecutorService workerExecutor = Executors.newSingleThreadExecutor();
 
     public HttpConnection() {
         super();
@@ -64,6 +68,16 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
     }
 
     @Override
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
+    }
+
+    @Override
+    public String getApiVersion() {
+        return apiVersion;
+    }
+
+    @Override
     public void setSessionKey(String sessionKey) {
         LOGGER.debug("Setting sessionKey to " + sessionKey);
         this.sessionKey = sessionKey;
@@ -76,16 +90,16 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     public boolean isAuthenticated() {
-        return StringUtil.exists(sessionKey);
+        return StringUtil.exists(sessionKey);// || (authenticator != null && authenticator.);
     }
 
     @Override
     public boolean isConnected() {
-        return StringUtil.exists(sessionKey);
+        return isAuthenticated();
     }
 
     @Override
-    public Future<String> send(String method, Map<String, Object> params) {
+    public NetworkFuture<String> send(String method, Map<String, Object> params) {
 
         RequestBuilder rb = new RequestBuilder();
 
@@ -95,82 +109,40 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         return send(method, rb.build());
     }
 
-    private Future<String> send(final String method, final String params) {
+    private NetworkFuture<String> send(final String method, final String params) {
 
-        // put them together to form the full url
-        FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
+        // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock.
+        final NetworkFuture<String> future = new DefaultNetworkFuture<String>(workerExecutor, this);
+
+        bossExecutor.execute(new Runnable() {
             @Override
-            public String call() throws Exception {
+            public void run() {
 
-                // this is the base url+api+method
-                final String url = getUrl(method);
+                String result;
 
-                // this is the query string part
-                return DownloadURL.get(url + sign(method, params));
+                try {
+                    result = DownloadURL.get(UrlUtil.getSignedUrl(host, apiVersion, method, params, sessionKey, authenticator));
+                } catch (Exception e) {
+
+                    LOGGER.fatal("problem with DownloadUrl", e);
+
+                    // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock. (workerExecutor)
+                    future.setFailure(e);
+                    return;
+                }
+
+                // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock. (workerExecutor)
+                future.setSuccess(result);
             }
         });
 
-        // execute this webcall async
-        executor.execute(task);
-
-        return task;
-    }
-
-    private String sign(String method, String params) throws Exception {
-
-        StringBuilder builder = new StringBuilder();
-        builder.append(params);
-
-        String connector = "&";
-
-        if (StringUtil.isNullOrEmpty(params)) {
-            connector = "?";
-        }
-
-        if (!StringUtil.isNullOrEmpty(sessionKey)) {
-            builder.append(connector);
-            builder.append("session=");
-            builder.append(sessionKey);
-            connector = "&";
-        }
-
-        builder.append(connector);
-        builder.append("date=");
-        builder.append(System.currentTimeMillis());
-
-        String url = apiVersion + method + builder.toString();
-        String signature = getSignature(url);
-
-        if (signature != null && signature.length() != 0) {
-            builder.append("&signature=");
-            builder.append(signature);
-        }
-
-        url = host + apiVersion + method + builder.toString();
-        LOGGER.debug("Signed url: " + url);
-
-        return builder.toString();
-    }
-
-    private String getSignature(String url) throws Exception {
-
-        if (this.authenticator == null) {
-            return null;
-        }
-
-        String result = this.authenticator.sign(url);
-        LOGGER.debug("Signing: " + url);
-
-        return result;
-    }
-
-    private String getUrl(String method) {
-        return host + apiVersion + method;
+        return future;
     }
 
     @Override
     protected void onDestroy() {
-        executor.shutdownNow();
+        bossExecutor.shutdownNow();
+        workerExecutor.shutdownNow();
     }
 
 }

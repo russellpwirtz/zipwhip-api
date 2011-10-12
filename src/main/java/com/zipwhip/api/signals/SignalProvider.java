@@ -61,7 +61,7 @@ public interface SignalProvider extends Destroyable {
      * Tell it to connect. This call is idempotent, so if multiple calls to
      * a connection provider will have no effect.
      *
-     * @return a Future task indicating if the connection was successful.
+     * @return a NetworkFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
     Future<Boolean> connect() throws Exception;

@@ -4,6 +4,7 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
+import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
@@ -11,7 +12,6 @@ import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 /**
  * Creates a Connection with the specified parameters.
@@ -23,14 +23,29 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     private ResponseParser responseParser = new JsonResponseParser();
 
     private String host = ApiConnection.DEFAULT_HOST;
+    private String apiVersion = ApiConnection.DEFAULT_API_VERSION;
     private String username;
     private String password;
     private String apiKey;
     private String secret;
     private String sessionKey;
 
+    private ApiConnection connection;
+
+    protected ApiConnectionFactory() {
+
+    }
+
+    public ApiConnectionFactory(ApiConnection connection) {
+        this.connection = connection;
+    }
+
     public static ApiConnectionFactory newInstance() {
-        return new ApiConnectionFactory();
+        return new ApiConnectionFactory(new HttpConnection());
+    }
+
+    public static ApiConnectionFactory newAsyncInstance() {
+        return new ApiConnectionFactory(new NingHttpConnection());
     }
 
     /**
@@ -42,35 +57,31 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public ApiConnection create() {
 
         try {
-            // TODO We can swap in the Ning Client here once its ready to go
-            ApiConnection connection = new HttpConnection();
+            if (connection == null) {
+                connection = new HttpConnection();
+            }
 
             connection.setSessionKey(sessionKey);
+            connection.setApiVersion(apiVersion);
             connection.setHost(host);
             connection.setAuthenticator(new SignTool(apiKey, secret));
 
-            // The authenticator should be ready go to.
-            if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
-
-                if (StringUtil.isNullOrEmpty(sessionKey)) {
-                    // we need a sessionKey
-                    requestSessionKey(connection);
-                }
-            }
-
             // We have a username/password
-            else if (StringUtil.exists(username) && StringUtil.exists(password)) {
+            if (StringUtil.exists(username) && StringUtil.exists(password)) {
 
                 Map<String, Object> params = new HashMap<String, Object>();
                 params.put("mobileNumber", username);
                 params.put("password", password);
 
-                Future<String> future = connection.send("user/login", params);
-                ServerResponse serverResponse = responseParser.parse(future.get());
+                NetworkFuture<String> future = connection.send("user/login", params);
 
-                //DeviceToken token = responseParser.parseDeviceToken(serverResponse);
-                //connection.setAuthenticator(new SignTool(token.getApiKey(), token.getSecret()));
-                //connection.setSessionKey(token.getSessionKey());
+                future.awaitUninterruptibly();
+
+                if (!future.isSuccess()){
+                    throw new RuntimeException("Cannot create connection, login rejected");
+                }
+
+                ServerResponse serverResponse = responseParser.parse(future.getResult());
 
                 if (serverResponse instanceof StringServerResponse) {
                     connection.setSessionKey(((StringServerResponse) serverResponse).response);
@@ -85,23 +96,6 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
             return null;
         }
-    }
-
-    protected void requestSessionKey(final Connection connection) throws Exception {
-
-        Map<String, Object> params = new HashMap<String, Object>();
-
-        params.put("apiKey", apiKey);
-
-        Future<String> future = connection.send(ZipwhipNetworkSupport.SESSION_GET, params);
-
-        String sessionKey = responseParser.parseString(responseParser.parse(future.get()));
-
-        if (StringUtil.isNullOrEmpty(sessionKey)) {
-            throw new Exception("Retrieving a sessionKey failed");
-        }
-
-        connection.setSessionKey(sessionKey);
     }
 
     public ApiConnectionFactory responseParser(ResponseParser responseParser) {
@@ -136,6 +130,11 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
     public ApiConnectionFactory host(String host) {
         this.host = host;
+        return this;
+    }
+
+    public ApiConnectionFactory apiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
         return this;
     }
 

@@ -397,7 +397,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
             if (connectLatch != null) {
                 // we need to countDown the latch, when it hits zero (after this call)
-                // the connect Future will complete. This gives the caller a way to block on our connection
+                // the connect NetworkFuture will complete. This gives the caller a way to block on our connection
                 connectLatch.countDown();
             }
         }
@@ -469,7 +469,6 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
         for (Presence presence : command.getPresence()) {
             if (presence.getCategory().equals(PresenceCategory.Phone)) {
-                // TODO if we have multiple phones see which is last active
                 presenceReceivedEvent.notifyObservers(this, presence.getConnected());
             }
         }

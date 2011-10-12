@@ -1,7 +1,5 @@
 package com.zipwhip.util;
 
-//import com.ning.http.util.Base64;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -9,7 +7,6 @@ import javax.crypto.spec.SecretKeySpec;
  * Created by IntelliJ IDEA.
  * Date: Jul 18, 2009
  * Time: 4:34:17 PM
- * To change this template use File | Settings | File Templates.
  */
 public class SignTool {
 
@@ -32,34 +29,44 @@ public class SignTool {
      * This method converts SecretKey into crypto instance.
      *
      * @param secret SecretKey
-     * @throws Exception
+     * @throws Exception If an error occurs creating the crypto.
      */
     public void setSecret(String secret) throws Exception {
-        if (secret == null){
+        if (secret == null) {
             mac = null;
         } else {
             mac = Mac.getInstance("HmacSHA1");
-            byte[] keyBytes = secret.getBytes("UTF-8");
-            mac.init(new SecretKeySpec(keyBytes, "HacSHA1"));
+            byte[] keyBytes = secret.getBytes("UTF8");
+            mac.init(new SecretKeySpec(keyBytes, "HmacSHA1"));
         }
-
     }
 
-    // This method creates S3 signature for a given String.
+    /**
+     * Creates a signature for a given String.
+     * @param data The String to create the signature for.
+     * @return The signature.
+     * @throws Exception If an error occurs creating the signature.
+     */
     public String sign(String data) throws Exception {
-        if (mac == null){
+        if (mac == null) {
             return null;
         }
 
         // Signed String mst be a BASE64 encoded.
-        return encodeBase64(mac.doFinal(data.getBytes("UTF8")));
+        return encodeBase64(mac.doFinal(data.getBytes("UTF8"))).trim();
     }
 
-    public String encodeBase64(byte[] data) {
-//        String base64 = Base64.encode(data);
-//        if (base64.endsWith("\r\n")) base64 = base64.substring(0, base64.length() - 2);
-//        return base64;
-        return "";
+
+    /**
+     * Base 64 encode a byte array.
+     *
+     * @param data The bytes to be encoded.
+     * @return The base64 encoded String.
+     */
+    protected String encodeBase64(byte[] data) {
+        String base64 = new sun.misc.BASE64Encoder().encodeBuffer(data);
+        if (base64.endsWith("\r\n")) base64 = base64.substring(0, base64.length() - 2);
+        return base64;
     }
 
 }

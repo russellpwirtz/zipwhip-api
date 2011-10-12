@@ -8,9 +8,9 @@ package com.zipwhip.api.subscriptions;
 /**
  * @author Michael
  */
-public class DotJoinSubscription extends Subscription {
+public class DotJoinSubscriptionEntry extends SubscriptionEntry {
 
-    public DotJoinSubscription(String targetDeviceAddress) {
+    public DotJoinSubscriptionEntry(String targetDeviceAddress) {
         super("DotJoin", "{deviceAddress:'" + targetDeviceAddress + "'}");
     }
 

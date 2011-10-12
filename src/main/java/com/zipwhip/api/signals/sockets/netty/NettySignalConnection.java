@@ -298,7 +298,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
     }
 
     public Runnable getOnSocketActivity() {
-        return this.onSocketActivity;
+        return onSocketActivity;
     }
 
     public void setOnSocketActivity(Runnable onSocketActivity) {
