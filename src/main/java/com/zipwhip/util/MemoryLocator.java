@@ -15,7 +15,15 @@ import java.util.Map;
  */
 public class MemoryLocator<T> implements Locator<T> {
 
-    Map<String, T> elements = new HashMap<String, T>();
+    private Map<String, T> elements = new HashMap<String, T>();
+
+    public MemoryLocator() {
+
+    }
+
+    public MemoryLocator(Map<String, T> elements) {
+        this.elements = elements;
+    }
 
     @Override
     public T locate(String key) {
@@ -29,4 +37,5 @@ public class MemoryLocator<T> implements Locator<T> {
     public void setElements(Map<String, T> elements) {
         this.elements = elements;
     }
+
 }

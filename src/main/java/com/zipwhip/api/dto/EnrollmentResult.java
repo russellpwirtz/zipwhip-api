@@ -1,16 +1,20 @@
-package com.zipwhip.api.response;
+package com.zipwhip.api.dto;
+
+import java.io.Serializable;
 
 /**
  * Holds the result of a call to enrollAccount
  */
-public class EnrollmentResult {
+public class EnrollmentResult implements Serializable {
+
+    private static final long serialVersionUID = 45732985435609L;
 
     private boolean isCarbonInstalled;
     private boolean isCarbonEnabled;
-    String apiKey;
-    String apiSecret;
-    long deviceId;
-    int deviceNumber;
+    private String apiKey;
+    private String apiSecret;
+    private long deviceId;
+    private int deviceNumber;
 
     public boolean isCarbonInstalled() {
         return isCarbonInstalled;

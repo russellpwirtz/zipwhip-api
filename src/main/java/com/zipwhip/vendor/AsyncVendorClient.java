@@ -1,11 +1,8 @@
 package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.api.response.EnrollmentResult;
+import com.zipwhip.api.dto.*;
+import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.concurrent.NetworkFuture;
 
 import java.util.List;

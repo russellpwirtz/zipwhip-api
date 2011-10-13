@@ -1,8 +1,14 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.response.JsonDtoParser;
+import com.zipwhip.locators.Locator;
+import com.zipwhip.util.MemoryLocator;
+import com.zipwhip.util.Parser;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 6/27/11 Time: 5:21 PM
@@ -11,22 +17,27 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
 
     private static final Logger LOGGER = Logger.getLogger(JsonSignalParser.class);
 
+    private final Locator<Parser<JSONObject, ?>> LOCATOR;
+
     public static final String CONTACT_KEY = "contact";
     public static final String CONVERSATION_KEY = "conversation";
     public static final String DEVICE_KEY = "device";
     public static final String MESSAGE_KEY = "message";
     public static final String CARBON_KEY = "carbon";
 
-    private JsonDtoParser parser = JsonDtoParser.getInstance();
+    public JsonSignalParser() {
 
-    private static JsonSignalParser instance;
+        JsonDtoParser dtoParser = new JsonDtoParser();
 
-    public static JsonSignalParser getInstance() {
-        if (instance == null) {
-            instance = new JsonSignalParser();
-        }
+        Map<String, Parser<JSONObject, ?>> elements = new HashMap<String, Parser<JSONObject, ?>>(5);
 
-        return instance;
+        elements.put(CONTACT_KEY, dtoParser.CONTACT_PARSER);
+        elements.put(CONVERSATION_KEY, dtoParser.CONVERSATION_PARSER);
+        elements.put(DEVICE_KEY, dtoParser.DEVICE_PARSER);
+        elements.put(MESSAGE_KEY, dtoParser.MESSAGE_PARSER);
+        elements.put(CARBON_KEY, dtoParser.CARBON_PARSER);
+
+        LOCATOR = new MemoryLocator<Parser<JSONObject, ?>>(elements);
     }
 
     @Override
@@ -44,7 +55,9 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         // Get signal.content
         JSONObject content = node.optJSONObject("content");
 
-        LOGGER.debug("SIGNAL>>>" + node.toString());
+        if (LOGGER.isDebugEnabled()){
+            LOGGER.debug("SIGNAL>>>" + node.toString());
+        }
 
         Signal signal = new JsonSignal(node.toString());
 
@@ -55,29 +68,17 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         signal.scope = node.optString("scope");
         signal.uri = node.optString("uri");
 
-        if (mType.equalsIgnoreCase(CONTACT_KEY)) {
+        Parser<JSONObject, ?> parser = LOCATOR.locate(mType.toLowerCase());
 
-            signal.content = parser.parseContact(content);
+        if (parser != null){
 
-        } else if (mType.equalsIgnoreCase(CONVERSATION_KEY)) {
-
-            signal.content = parser.parseConversation(content);
-
-        } else if (mType.equalsIgnoreCase(DEVICE_KEY)) {
-
-            signal.content = parser.parseDevice(content);
-
-        } else if (mType.equalsIgnoreCase(MESSAGE_KEY)) {
-
-            signal.content = parser.parseMessage(content);
-
-        } else if (mType.equalsIgnoreCase(CARBON_KEY)) {
-
-            signal.content = parser.parseCarbonMessageContent(content);
+            signal.content = parser.parse(content);
 
         } else {
 
-            LOGGER.debug("Unparsed signal type: " + mType);
+            if (LOGGER.isDebugEnabled()){
+                LOGGER.debug("Unparsed signal type: " + mType);
+            }
 
             signal.content = node.optString("content");
         }

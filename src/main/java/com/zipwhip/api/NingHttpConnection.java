@@ -1,8 +1,6 @@
 package com.zipwhip.api;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.ListenableFuture;
-import com.ning.http.client.Response;
+import com.ning.http.client.*;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
@@ -36,8 +34,6 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     private SignTool authenticator;
 
     private AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
-
-    private Executor mainExecutor = Executors.newFixedThreadPool(10);
     private Executor workerExecutor = Executors.newFixedThreadPool(10);
 
     /**
@@ -50,22 +46,6 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     /**
      * Create a new {@code NingHttpConnection}
      *
-     * @param mainExecutor   This executor is used to retrieve HTTP responses. It defaults to a fixed 10 thread pool.
-     *                       Our belief is that you'll never need it to be larger for any use case.
-     *                       You generally should leave this to be null. If you set it as null, we'll execute it default. (10 thread pool)
-     * @param workerExecutor This executor is what your code will execute in. Our recommendation is that it's large
-     *                       because we have no idea how slow your code will be.
-     * @param authenticator  A {@code SignTool} to use for signing request URLs.
-     */
-    public NingHttpConnection(Executor mainExecutor, Executor workerExecutor, SignTool authenticator) {
-        this.mainExecutor = mainExecutor;
-        this.workerExecutor = workerExecutor;
-        this.authenticator = authenticator;
-    }
-
-    /**
-     * Create a new {@code NingHttpConnection}
-     *
      * @param workerExecutor This executor is what your code will execute in. Our recommendation is that it's large
      *                       because we have no idea how slow your code will be.
      * @param authenticator  A {@code SignTool} to use for signing request URLs.
@@ -73,23 +53,6 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     public NingHttpConnection(Executor workerExecutor, SignTool authenticator) {
         this.workerExecutor = workerExecutor;
         this.authenticator = authenticator;
-    }
-
-    /**
-     * Create a new {@code NingHttpConnection}
-     *
-     * @param mainExecutor   This executor is used to retrieve HTTP responses. It defaults to a fixed 10 thread pool.
-     *                       Our belief is that you'll never need it to be larger for any use case.
-     *                       You generally should leave this to be null. If you set it as null, we'll execute it default. (10 thread pool)
-     * @param workerExecutor This executor is what your code will execute in. Our recommendation is that it's large
-     *                       because we have no idea how slow your code will be.
-     */
-    public NingHttpConnection(Executor workerExecutor, Executor mainExecutor) {
-        this(workerExecutor);
-
-        if (mainExecutor != null) {
-            this.mainExecutor = mainExecutor;
-        }
     }
 
     /**
@@ -169,16 +132,15 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
 
     @Override
     public boolean isAuthenticated() {
-        return StringUtil.exists(sessionKey);
+        return StringUtil.exists(sessionKey) || (authenticator != null && authenticator.prepared());
     }
 
     @Override
     public boolean isConnected() {
-        return StringUtil.exists(sessionKey);
+        return isAuthenticated();
     }
 
     /**
-     * TODO: Unit test this and create java docs for it.
      *
      * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
      * @param params Map of query params to append to the method
@@ -192,65 +154,39 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
         // convert the map into a key/value HTTP params string
         rb.params(params);
 
-        final NetworkFuture<String> responseFuture = new DefaultNetworkFuture<String>(workerExecutor);
-
-        // TODO: Make sure this is NOT sync call.
-        final ListenableFuture<Response> webCallFuture;
+        final NetworkFuture<String> responseFuture = new DefaultNetworkFuture<String>(this, workerExecutor);
 
         try {
-            webCallFuture = asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute();
+            asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {
+
+                @Override
+                public Object onCompleted(Response response) throws Exception {
+
+                    try {
+                        // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
+                        responseFuture.setSuccess(response.getResponseBody());
+                    } catch (IOException e) {
+                        responseFuture.setFailure(e);
+                    }
+
+                    return response;
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    responseFuture.setFailure(t);
+                }
+
+            });
+
         } catch (Exception e) {
-            LOGGER.fatal("Exception while hitting the web", e);
+
+            LOGGER.error("Exception while hitting the web", e);
+
             // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
             responseFuture.setFailure(e);
             return responseFuture;
         }
-
-        webCallFuture.addListener(new Runnable() {
-
-            /**
-             * This runnable will execute in the "mainExecutor" of this class. We are only doing quick operations
-             * unless "workerExecutor" is synchronous. If that guy blocks, we block this executor.
-             *
-             * Because of the param below, this runnable executes in "mainExecutor"
-             */
-            @Override
-            public void run() {
-
-                if (!webCallFuture.isDone()) {
-                    return;
-                }
-
-                if (webCallFuture.isCancelled()) {
-                    // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
-                    responseFuture.cancel();
-                    return;
-                }
-
-                Response response;
-                try {
-                    // NOTE: this will not block because it's already done (our listener was fired)
-                    response = webCallFuture.get();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
-                    responseFuture.setFailure(e);
-                    return;
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                    // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
-                    responseFuture.setFailure(e);
-                    return;
-                }
-
-                try {
-                    // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
-                    responseFuture.setSuccess(response.getResponseBody());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, mainExecutor);
 
         return responseFuture;
     }

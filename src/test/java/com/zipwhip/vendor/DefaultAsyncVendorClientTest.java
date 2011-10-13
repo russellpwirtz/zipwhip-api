@@ -1,60 +1,123 @@
 package com.zipwhip.vendor;
 
-import com.zipwhip.api.ApiConnection;
-import com.zipwhip.api.ApiConnectionFactory;
-import com.zipwhip.api.NingHttpConnection;
+import com.zipwhip.api.dto.Contact;
+import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.concurrent.NetworkFuture;
-import com.zipwhip.events.MockObserver;
-import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.util.SignTool;
 import org.apache.log4j.BasicConfigurator;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.Executor;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
  * User: jed
- * Date: 10/10/11
- * Time: 4:59 PM
+ * Date: 10/12/11
+ * Time: 10:39 AM
  */
 public class DefaultAsyncVendorClientTest {
 
     String apiKey = "18adc2";
     String secret = "249fasdasdff5cc-5aasdfdf2-4707-9f5e-da1893b92e851dfb4ee0-4156-469b-8ee3-d50912";
 
-    MockObserver<NetworkFuture<Boolean>> observer = new MockObserver<NetworkFuture<Boolean>>();
+    AsyncVendorClient client;
 
-    @Test
-    public void testAuthentication() throws Exception {
-
-        BasicConfigurator.configure();
-
-//        Executor workerExecutor = new SimpleExecutor();
-//        Executor mainExecutor = new SimpleExecutor();
-//        SignTool signTool = new SignTool(apiKey, secret);
-
-//        ApiConnection connection = new NingHttpConnection(mainExecutor, workerExecutor, signTool);
-//        ApiConnectionFactory factory = new ApiConnectionFactory(connection);
-//        factory.create();
+//    @Before
+//    public void setUp() throws Exception {
 //
-//        AsyncVendorClient client = new DefaultAsyncVendorClient(connection);
+//        BasicConfigurator.configure();
+//
+//        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+//        client.getConnection().setHost("http://10.168.1.92:8080");
+//    }
+//
+//    @After
+//    public void tearDown() throws Exception {
+//        BasicConfigurator.resetConfiguration();
+//    }
+//
+//    @Test
+//    public void testEnrollUser() throws Exception {
+//
+//        NetworkFuture<EnrollmentResult> result = client.enrollUser("5555555557");
+//        Assert.assertNotNull(result);
+//
+//        result.await();
+//        Assert.assertTrue(result.isSuccess());
+//    }
+//
+//    @Test
+//    public void testDeactivateUser() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testUserExists() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testSuggestCarbon() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testSendMessage() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testListMessages() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testSaveUser() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testReadMessages() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testDeleteMessages() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testReadConversations() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testDeleteConversations() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testListConversations() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testSaveContact() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testDeleteContact() throws Exception {
+//
+//    }
+//
+//    @Test
+//    public void testListContacts() throws Exception {
+//        NetworkFuture<List<Contact>> f = client.listContacts("5555555555");
+//        Assert.assertNotNull(f);
+//        f.await();
+//    }
 
-//        AsyncVendorClient client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
-//
-//        NetworkFuture<Boolean> future = client.userSubscribe("", null);
-//
-//        future.addObserver(observer);
-//
-//        future.awaitUninterruptibly();
-//
-//        assertTrue(future.isDone());
-//        assertTrue(future.isSuccess());
-//        assertFalse(future.isCancelled());
-//        assertTrue(observer.isCalled());
-
-    }
 }

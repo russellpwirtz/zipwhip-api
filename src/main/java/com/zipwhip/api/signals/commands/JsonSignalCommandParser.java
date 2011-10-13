@@ -23,9 +23,10 @@ import java.util.Map;
  */
 public class JsonSignalCommandParser implements Parser<String, Command> {
 
-    private Map<String, Parser<JSONObject, Command>> parsers;
-    
     private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
+
+    private Map<String, Parser<JSONObject, Command>> parsers;
+    private JsonSignalParser signalContentParser = new JsonSignalParser();
 
     public JsonSignalCommandParser() {
 
@@ -69,7 +70,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         return parser.parse(json);
     }
     
-    private static final Parser<JSONObject, Command> CONNECT_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> CONNECT_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
             
@@ -79,7 +80,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
     
-    private static final Parser<JSONObject, Command> DISCONNECT_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> DISCONNECT_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -93,7 +94,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
 
-    private static final Parser<JSONObject, Command> SUBSCRIPTION_COMPLETE_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> SUBSCRIPTION_COMPLETE_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -126,7 +127,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
         
-    private static final Parser<JSONObject, Command> BACKLOG_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> BACKLOG_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -156,7 +157,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
 
-    private static final Parser<JSONObject, Command> SIGNAL_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> SIGNAL_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -165,14 +166,14 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
                 return null;
             }
 
-            SignalCommand signalCommand = new SignalCommand(JsonSignalParser.getInstance().parseSignal(object));
+            SignalCommand signalCommand = new SignalCommand(signalContentParser.parseSignal(object));
             signalCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
             return signalCommand;
         }
     };
 
-    private static final Parser<JSONObject, Command> PRESENCE_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> PRESENCE_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -188,14 +189,14 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
     
-    private static final Parser<JSONObject, Command> SIGNAL_VERIFICATION_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> SIGNAL_VERIFICATION_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
             return new SignalVerificationCommand();
         }
     };
 
-    private static final Parser<JSONObject, Command> PING_PONG_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> PING_PONG_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {
 
@@ -208,7 +209,7 @@ public class JsonSignalCommandParser implements Parser<String, Command> {
         }
     };
 
-    private static final Parser<JSONObject, Command> NOOP_PARSER = new Parser<JSONObject, Command>() {
+    public final Parser<JSONObject, Command> NOOP_PARSER = new Parser<JSONObject, Command>() {
         @Override
         public Command parse(JSONObject object) throws Exception {                       
             return new NoopCommand();

@@ -2,6 +2,7 @@ package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
 import com.zipwhip.util.JsonDateUtil;
+import com.zipwhip.util.Parser;
 import com.zipwhip.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,23 +21,40 @@ import java.util.List;
  */
 public class JsonDtoParser {
 
-    private static JsonDtoParser instance;
-
-    public static JsonDtoParser getInstance() {
-        if (instance == null) {
-            instance = new JsonDtoParser();
+    public final Parser<JSONObject, Message> MESSAGE_PARSER = new Parser<JSONObject, Message>() {
+        @Override
+        public Message parse(JSONObject jsonObject) throws Exception {
+            return parseMessage(jsonObject);
         }
+    };
 
-        return instance;
-    }
+    public final Parser<JSONObject, Contact> CONTACT_PARSER = new Parser<JSONObject, Contact>() {
+        @Override
+        public Contact parse(JSONObject jsonObject) throws Exception {
+            return parseContact(jsonObject);
+        }
+    };
 
-    private <T extends BasicDto> T parseBasicDto(T dto, JSONObject content) {
-        dto.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
-        dto.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
-        dto.setVersion(content.optLong("version"));
+    public final Parser<JSONObject, Conversation> CONVERSATION_PARSER = new Parser<JSONObject, Conversation>() {
+        @Override
+        public Conversation parse(JSONObject jsonObject) throws Exception {
+            return parseConversation(jsonObject);
+        }
+    };
 
-        return dto;
-    }
+    public final Parser<JSONObject, CarbonEvent> CARBON_PARSER = new Parser<JSONObject, CarbonEvent>() {
+        @Override
+        public CarbonEvent parse(JSONObject jsonObject) throws Exception {
+            return parseCarbonEvent(jsonObject);
+        }
+    };
+
+    public final Parser<JSONObject, Device> DEVICE_PARSER = new Parser<JSONObject, Device>() {
+        @Override
+        public Device parse(JSONObject jsonObject) throws Exception {
+            return parseDevice(jsonObject);
+        }
+    };
 
     /**
      * Parse a Contact from a JSONObject if the object contains it.
@@ -231,9 +249,9 @@ public class JsonDtoParser {
         return device;
     }
 
-    public CarbonEvent parseCarbonMessageContent(JSONObject content) throws JSONException {
+    public CarbonEvent parseCarbonEvent(JSONObject content) throws JSONException {
 
-        if(content == null) {
+        if (content == null) {
             return null;
         }
 
@@ -244,4 +262,11 @@ public class JsonDtoParser {
         return carbonEvent;
     }
 
+    private <T extends BasicDto> T parseBasicDto(T dto, JSONObject content) {
+        dto.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
+        dto.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
+        dto.setVersion(content.optLong("version"));
+
+        return dto;
+    }
 }

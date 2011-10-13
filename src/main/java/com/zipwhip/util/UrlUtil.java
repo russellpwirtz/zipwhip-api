@@ -72,10 +72,10 @@ public class UrlUtil {
             connector = "&";
         }
 
-        if (authenticator != null && StringUtil.exists(authenticator.apiKey)) {
+        if (authenticator != null && StringUtil.exists(authenticator.getApiKey())) {
             builder.append(connector);
             builder.append("apiKey=");
-            builder.append(authenticator.apiKey);
+            builder.append(authenticator.getApiKey());
         }
 
         builder.append(connector);

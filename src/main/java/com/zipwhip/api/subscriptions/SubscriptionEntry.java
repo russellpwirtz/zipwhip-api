@@ -6,11 +6,15 @@ import org.json.JSONObject;
 /**
  * Created by IntelliJ IDEA. Date: Jul 19, 2009 Time: 5:21:03 PM
  */
-public abstract class SubscriptionEntry {
+public class SubscriptionEntry {
 
     private String signalFilters;
     private String subscriptionKey;
     private String encodedSubscriptionSettings;
+
+    public SubscriptionEntry() {
+
+    }
 
     public SubscriptionEntry(String subscriptionKey, String encodedSubscriptionSettings) {
         this.subscriptionKey = subscriptionKey;

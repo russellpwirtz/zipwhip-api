@@ -9,7 +9,6 @@ import com.zipwhip.util.Parser;
 
 import java.util.List;
 
-
 /**
  * Date: Jul 18, 2009
  * Time: 10:22:28 AM
@@ -23,6 +22,8 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
     String parseString(ServerResponse serverResponse) throws Exception;
 
     Contact parseContact(ServerResponse serverResponse) throws Exception;
+
+    List<Contact> parseContacts(ServerResponse serverResponse) throws Exception;
 
     DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception;
 

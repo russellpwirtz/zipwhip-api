@@ -24,7 +24,7 @@ public class JsonDtoParserTest {
 
     @Before
     public void setUp() throws Exception {
-        parser = JsonDtoParser.getInstance();
+        parser = new JsonDtoParser();
     }
 
     @Test
@@ -134,7 +134,7 @@ public class JsonDtoParserTest {
 
     @Test
     public void testParseCarbonMessageContent() throws Exception {
-        CarbonEvent dto = parser.parseCarbonMessageContent(new JSONObject(CARBON).optJSONObject("content"));
+        CarbonEvent dto = parser.parseCarbonEvent(new JSONObject(CARBON).optJSONObject("content"));
         Assert.assertNotNull(dto);
         Assert.assertEquals(dto.getCarbonDescriptor(), new JSONObject(CARBON).optJSONObject("content").optString("carbonDescriptor"));
     }

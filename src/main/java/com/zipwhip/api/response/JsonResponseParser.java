@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,24 +22,15 @@ import java.util.Map;
  */
 public class JsonResponseParser implements ResponseParser {
 
-    private static Logger logger = Logger.getLogger(JsonResponseParser.class);
-
-    private static ResponseParser instance;
+    private static final Logger LOGGER = Logger.getLogger(JsonResponseParser.class);
     private static final String EMPTY_OBJECT = "{}";
 
-    private JsonDtoParser parser = JsonDtoParser.getInstance();
-
-    public synchronized static ResponseParser getInstance() {
-        if (instance == null){
-            instance = new JsonResponseParser();
-        }
-        return instance;
-    }
+    private JsonDtoParser parser = new JsonDtoParser();
 
     @Override
     public ServerResponse parse(String response) throws JSONException {
 
-        logger.debug("Parsing" + response);
+        LOGGER.debug("Parsing" + response);
 
         if (StringUtil.isNullOrEmpty(response)) {
             return null;
@@ -55,9 +47,9 @@ public class JsonResponseParser implements ResponseParser {
         JSONObject sessionsObject = thing.optJSONObject("sessions");
 
         if (sessionsObject != null && !EMPTY_OBJECT.equals(sessionsObject.toString())) {
-            logger.debug(":NOTNULL: " + sessionsObject);
+            LOGGER.debug(":NOTNULL: " + sessionsObject);
         } else {
-             logger.debug(":NULL: " + sessionsObject);
+             LOGGER.debug(":NULL: " + sessionsObject);
         }
 
         /// IS THIS A COMPLEX OBJECT?
@@ -135,6 +127,24 @@ public class JsonResponseParser implements ResponseParser {
         ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
 
         return parser.parseContact(cplx.response);
+    }
+
+    @Override
+    public List<Contact> parseContacts(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            return null;
+        }
+
+        List<Contact> contacts = new ArrayList<Contact>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            contacts.add(parser.parseContact(array.response.getJSONObject(i)));
+        }
+
+        return contacts;
     }
 
     @Override

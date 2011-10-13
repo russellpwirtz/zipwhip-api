@@ -11,18 +11,31 @@ import javax.crypto.spec.SecretKeySpec;
 public class SignTool {
 
     private javax.crypto.Mac mac = null;
-    public String apiKey = null;
+    private String apiKey = null;
 
     public SignTool() {
     }
 
-    public SignTool(String APIKey, String secret) throws Exception {
+    public SignTool(String apiKey, String secret) throws Exception {
         this.setSecret(secret);
-        this.setApiKey(APIKey);
+        this.setApiKey(apiKey);
     }
 
-    public void setApiKey(String APIKey) {
-        this.apiKey = APIKey;
+    public String getApiKey() {
+        return apiKey;
+    }
+
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    /**
+     * Indicates if this {@code SignTool} is prepared to create signatures.
+     *
+     * @return {@code TRUE} if it is prepared otherwise {@code FALSE}
+     */
+    public boolean prepared() {
+        return !(mac == null);
     }
 
     /**

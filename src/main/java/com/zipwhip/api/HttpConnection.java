@@ -90,7 +90,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     public boolean isAuthenticated() {
-        return StringUtil.exists(sessionKey);// || (authenticator != null && authenticator.);
+        return StringUtil.exists(sessionKey) || (authenticator != null && authenticator.prepared());
     }
 
     @Override
@@ -112,7 +112,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
     private NetworkFuture<String> send(final String method, final String params) {
 
         // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock.
-        final NetworkFuture<String> future = new DefaultNetworkFuture<String>(workerExecutor, this);
+        final NetworkFuture<String> future = new DefaultNetworkFuture<String>(this, workerExecutor);
 
         bossExecutor.execute(new Runnable() {
             @Override

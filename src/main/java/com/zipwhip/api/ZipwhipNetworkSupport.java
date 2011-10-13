@@ -118,7 +118,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
             link(signalProvider);
         }
 
-        setResponseParser(JsonResponseParser.getInstance());
+        setResponseParser(new JsonResponseParser());
     }
 
     public SignalProvider getSignalProvider() {
@@ -166,31 +166,31 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         return get(executeAsync(method, params, requiresAuthentication, FORWARD_RUNNABLE));
     }
 
-
     protected <T> NetworkFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
 
         if (requiresAuthentication && !connection.isAuthenticated()) {
             throw new Exception("The connection is not authenticated, can't continue.");
         }
 
-        final NetworkFuture<T> result = new DefaultNetworkFuture<T>(callbackExecutor, this);
+        final NetworkFuture<T> result = new DefaultNetworkFuture<T>(this, callbackExecutor);
 
         final NetworkFuture<String> responseFuture = getConnection().send(method, params);
 
         responseFuture.addObserver(new Observer<NetworkFuture<String>>() {
 
             /**
-             * This code will execute in the "workerExecutor" of the connection. If you pass in a bogus/small executor to him,
-             * our code will lag.
+             * This code will execute in the "workerExecutor" of the connection.
+             * If you pass in a bogus/small executor to him, our code will lag.
              *
-             * @param sender The sender might not be the same object every time, so we'll let it just be object, rather than generics.
+             * @param sender The sender might not be the same object every time.
              * @param item Rich object representing the notification.
              */
             @Override
             public void notify(Object sender, NetworkFuture<String> item) {
+
                 // The network is done! let's check for our cake!
                 if (!item.isDone()) {
-                    return; // TODO: very weird, how did this happen?
+                    return;
                 }
 
                 if (item.isCancelled()) {
@@ -232,7 +232,6 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
                     // this will execute in the "callbackExecutor"
                     result.setFailure(e);
                 }
-
             }
         });
 

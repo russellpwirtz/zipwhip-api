@@ -9,7 +9,7 @@ import com.zipwhip.util.Factory;
  */
 public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
 
-    private static final String API_VERSION = "/api/v1/";
+    private static final String API_VERSION = "/vendor/v1/";
 
     private Factory<ApiConnection> connectionFactory;
 
