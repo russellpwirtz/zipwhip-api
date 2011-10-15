@@ -24,100 +24,100 @@ public class DefaultAsyncVendorClientTest {
 
     AsyncVendorClient client;
 
-//    @Before
-//    public void setUp() throws Exception {
-//
-//        BasicConfigurator.configure();
-//
-//        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
-//        client.getConnection().setHost("http://10.168.1.92:8080");
-//    }
-//
-//    @After
-//    public void tearDown() throws Exception {
-//        BasicConfigurator.resetConfiguration();
-//    }
-//
-//    @Test
-//    public void testEnrollUser() throws Exception {
-//
-//        NetworkFuture<EnrollmentResult> result = client.enrollUser("5555555557");
-//        Assert.assertNotNull(result);
-//
-//        result.await();
-//        Assert.assertTrue(result.isSuccess());
-//    }
-//
-//    @Test
-//    public void testDeactivateUser() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testUserExists() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testSuggestCarbon() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testSendMessage() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testListMessages() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testSaveUser() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testReadMessages() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testDeleteMessages() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testReadConversations() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testDeleteConversations() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testListConversations() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testSaveContact() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testDeleteContact() throws Exception {
-//
-//    }
-//
-//    @Test
-//    public void testListContacts() throws Exception {
-//        NetworkFuture<List<Contact>> f = client.listContacts("5555555555");
-//        Assert.assertNotNull(f);
-//        f.await();
-//    }
+    @Before
+    public void setUp() throws Exception {
+
+        BasicConfigurator.configure();
+
+        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+        client.getConnection().setHost("http://10.168.1.92:8080");
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        BasicConfigurator.resetConfiguration();
+    }
+
+    @Test
+    public void testEnrollUser() throws Exception {
+
+        NetworkFuture<EnrollmentResult> result = client.enrollUser("device:/2063758020/0");
+        Assert.assertNotNull(result);
+
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+    }
+
+    @Test
+    public void testDeactivateUser() throws Exception {
+
+    }
+
+    @Test
+    public void testUserExists() throws Exception {
+
+    }
+
+    @Test
+    public void testSuggestCarbon() throws Exception {
+
+    }
+
+    @Test
+    public void testSendMessage() throws Exception {
+
+    }
+
+    @Test
+    public void testListMessages() throws Exception {
+
+    }
+
+    @Test
+    public void testSaveUser() throws Exception {
+
+    }
+
+    @Test
+    public void testReadMessages() throws Exception {
+
+    }
+
+    @Test
+    public void testDeleteMessages() throws Exception {
+
+    }
+
+    @Test
+    public void testReadConversations() throws Exception {
+
+    }
+
+    @Test
+    public void testDeleteConversations() throws Exception {
+
+    }
+
+    @Test
+    public void testListConversations() throws Exception {
+
+    }
+
+    @Test
+    public void testSaveContact() throws Exception {
+
+    }
+
+    @Test
+    public void testDeleteContact() throws Exception {
+
+    }
+
+    @Test
+    public void testListContacts() throws Exception {
+        NetworkFuture<List<Contact>> f = client.listContacts("device:/2063758020/0");
+        Assert.assertNotNull(f);
+        f.await();
+    }
 
 }

@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.util.StringUtil;
+
 /**
  * Created by IntelliJ IDEA.
  * Date: Jul 17, 2009
@@ -73,4 +75,14 @@ public class Address {
     public void setQuery(String query) {
         this.query = query;
     }
+
+    /**
+     * From the parsed address build an address of the format device:/5555555555/0
+     *
+     * @return A device address of the format device:/5555555555/0
+     */
+    public String toDeviceAddress() {
+        return StringUtil.join(StringUtil.exists(scheme) ? scheme : "device", ":/", StringUtil.exists(authority) ? authority : value, "/", StringUtil.exists(query) ? query : "0");
+    }
+
 }

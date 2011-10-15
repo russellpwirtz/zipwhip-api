@@ -43,11 +43,14 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
     @Override
     public Signal parseSignal(JSONObject object) throws Exception {
 
-        if (!object.has("signal")) {
-            return null;
+        JSONObject node;
+
+        if (object.has("signal")) {
+            node = object.optJSONObject("signal");
+        } else {
+            node = object;
         }
 
-        JSONObject node = object.optJSONObject("signal");
         if (node == null) {
             return null;
         }

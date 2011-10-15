@@ -13,7 +13,9 @@ import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.Directory;
 import com.zipwhip.util.InputRunnable;
+import com.zipwhip.util.ListDirectory;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -37,32 +39,45 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
      */
     public static final long DEFAULT_TIMEOUT_SECONDS = 45;
 
+    public static final String SESSION_GET = "session/get";
+    public static final String PRESENCE_GET = "presence/get";
+
     public static final String CONTACT_LIST = "contact/list";
     public static final String CONTACT_DELETE = "contact/delete";
     public static final String CONTACT_SAVE = "contact/save";
     public static final String CONTACT_GET = "contact/get";
-    public static final String PRESENCE_GET = "presence/get";
-    public static final String PHONE_LOOKUP = "phone/lookup";
+
     public static final String MESSAGE_SEND = "message/send";
-    public static final String VENDOR_MESSAGE_SEND = "vendor/message/send";
     public static final String MESSAGE_LIST = "message/list";
     public static final String MESSAGE_READ = "message/read";
     public static final String MESSAGE_DELETE = "message/delete";
     public static final String MESSAGE_GET = "message/get";
+
+    public static final String CONVERSATION_READ = "conversation/read";
+    public static final String CONVERSATION_DELETE = "conversation/delete";
+
     public static final String DEVICE_SAVE = "device/save";
     public static final String DEVICE_GET = "device/get";
     public static final String DEVICE_LIST = "device/list";
-    public static final String GROUP_SAVE = "group/save";
     public static final String DEVICE_DELETE = "device/delete";
-    public static final String USER_ENROLL = "user/enroll";
+
+    public static final String GROUP_SAVE = "group/save";
+    public static final String GROUP_ADD_MEMBER = "group/addMember";
+
     public static final String SIGNALS_DISCONNECT = "signals/disconnect";
     public static final String SIGNALS_CONNECT = "signals/connect";
     public static final String SIGNAL_SEND = "signal/send";
+
+    public static final String USER_ENROLL = "user/enroll";
+    public static final String USER_DEACT = "user/deact";
     public static final String USER_SAVE = "user/save";
-    public static final String GROUP_ADD_MEMBER = "group/addMember";
-    public static final String SESSION_GET = "session/get";
+    public static final String USER_EXISTS = "user/exists";
+
+
     public static final String CARBON_ENABLE = "v1/carbon/enable";
     public static final String CARBON_ENABLED = "v1/carbon/enabled";
+    public static final String CARBON_SUGGEST = "carbon/suggest";
+
     public static final String CHALLENGE_REQUEST = "session/challenge";
     public static final String CHALLENGE_CONFIRM = "session/challenge/confirm";
 
@@ -93,7 +108,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
      * Create a new default {@code ZipwhipNetworkSupport}
      */
     public ZipwhipNetworkSupport() {
-        this(null, null);
+        this(new HttpConnection(), null);
     }
 
     public ZipwhipNetworkSupport(ApiConnection connection) {
@@ -101,7 +116,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     }
 
     public ZipwhipNetworkSupport(SignalProvider signalProvider) {
-        this(null, signalProvider);
+        this(new HttpConnection(), signalProvider);
     }
 
     public ZipwhipNetworkSupport(ApiConnection connection, SignalProvider signalProvider) {

@@ -1,9 +1,6 @@
 package com.zipwhip.api.response;
 
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.DeviceToken;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Parser;
 
@@ -19,16 +16,24 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     Message parseMessage(ServerResponse serverResponse) throws Exception;
 
+    List<Message> parseMessages(ServerResponse serverResponse) throws Exception;
+
     String parseString(ServerResponse serverResponse) throws Exception;
 
     Contact parseContact(ServerResponse serverResponse) throws Exception;
 
     List<Contact> parseContacts(ServerResponse serverResponse) throws Exception;
 
+    Conversation parseConversation(ServerResponse serverResponse) throws Exception;
+
+    List<Conversation> parseConversations(ServerResponse serverResponse) throws Exception;
+
     DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception;
 
     List<MessageToken> parseMessageTokens(ServerResponse serverResponse) throws Exception;
 
     List<Presence> parsePresence(ServerResponse serverResponse) throws Exception;
+
+    EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception;
 
 }

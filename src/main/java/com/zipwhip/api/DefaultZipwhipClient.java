@@ -194,10 +194,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
-        for (String address : addresses) {
-            params.put("contacts", address);
-        }
-
+        params.put("contacts", addresses);
         params.put("body", body);
         params.put("fromName", fromName);
         params.put("fromAddress", "0");
@@ -215,7 +212,6 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
     public Message getMessage(String uuid) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
-
         params.put("uuid", uuid);
 
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
@@ -229,10 +225,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
-
-        for(String uuid : uuids){
-            params.put("uuid", uuid);
-        }
+        params.put("uuid", uuids);
 
         return success(executeSync(MESSAGE_READ, params));
     }
@@ -245,10 +238,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
-
-        for(String uuid : uuids){
-            params.put("uuids", uuid);
-        }
+        params.put("uuids", uuids);
 
         return success(executeSync(MESSAGE_DELETE, params));
     }

@@ -15,7 +15,7 @@ public class AddressTest {
     @Test
     public void testParse() throws Exception {
 
-        String parsableAddress = "scheme:scheme/authority/query";
+        String parsableAddress = "device:/5555555555/0";
 
         Address address = new Address();
         Assert.assertNull(address.parse(null));
@@ -23,9 +23,25 @@ public class AddressTest {
         address.parse(parsableAddress);
 
         Assert.assertEquals(parsableAddress, address.getValue());
-        Assert.assertEquals("schemescheme", address.getScheme());
-        Assert.assertEquals("authority", address.getAuthority());
-        Assert.assertEquals("query", address.getQuery());
+        Assert.assertEquals("device", address.getScheme());
+        Assert.assertEquals("5555555555", address.getAuthority());
+        Assert.assertEquals("0", address.getQuery());
     }
+
+    @Test
+    public void testDeviceAddress() throws Exception {
+
+        String nonParsableAddress = "5555555555";
+
+        Address address = new Address(nonParsableAddress);
+
+        Assert.assertEquals(nonParsableAddress, address.getValue());
+        Assert.assertNull(address.getScheme());
+        Assert.assertNull(address.getAuthority());
+        Assert.assertNull(address.getQuery());
+
+        Assert.assertEquals(address.toDeviceAddress(), "device:/5555555555/0");
+    }
+
 
 }

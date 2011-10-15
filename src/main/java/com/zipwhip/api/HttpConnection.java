@@ -104,7 +104,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         RequestBuilder rb = new RequestBuilder();
 
         // convert the map into a key/value HTTP params string
-        rb.params(params);
+        rb.params(params, true);
 
         return send(method, rb.build());
     }

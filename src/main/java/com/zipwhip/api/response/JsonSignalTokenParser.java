@@ -49,8 +49,14 @@ public class JsonSignalTokenParser implements Parser<String, SignalToken> {
     private void parseSignals(SignalToken result, JSONObject object) throws JSONException {
 
         List<Signal> signals = new ArrayList<Signal>();
+        result.setSignals(signals);
 
         JSONArray signalArray = object.getJSONArray("signals");
+
+        if (signalArray == null) {
+            LOGGER.warn("No signals for token");
+            return;
+        }
 
         for (int i = 0; i < signalArray.length(); i++) {
 
@@ -66,8 +72,6 @@ public class JsonSignalTokenParser implements Parser<String, SignalToken> {
                 signals.add(signal);
             }
         }
-
-        result.setSignals(signals);
     }
 
     private void parseExtras(SignalToken result, JSONObject object) {

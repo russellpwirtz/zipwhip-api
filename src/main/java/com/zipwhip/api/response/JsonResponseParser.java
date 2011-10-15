@@ -107,8 +107,26 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public List<Message> parseMessages(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
+        }
+
+        List<Message> messages = new ArrayList<Message>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            messages.add(parser.parseMessage(array.response.getJSONObject(i)));
+        }
+
+        return messages;
+    }
+
+    @Override
     public String parseString(ServerResponse serverResponse) throws Exception {
-        String result = null;
+        String result;
         if (serverResponse instanceof StringServerResponse) {
             StringServerResponse stringServerResponse = (StringServerResponse) serverResponse;
             result = stringServerResponse.response;
@@ -120,20 +138,22 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public Contact parseContact(ServerResponse serverResponse) throws Exception {
-        if (!(serverResponse instanceof ObjectServerResponse)) {
-            return null;
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+            return parser.parseContact(cplx.response);
+
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
         }
-
-        ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
-
-        return parser.parseContact(cplx.response);
     }
 
     @Override
     public List<Contact> parseContacts(ServerResponse serverResponse) throws Exception {
 
         if (!(serverResponse instanceof ArrayServerResponse)) {
-            return null;
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
         }
 
         List<Contact> contacts = new ArrayList<Contact>();
@@ -148,6 +168,37 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public Conversation parseConversation(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+            return parser.parseConversation(cplx.response);
+
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
+        }
+    }
+
+    @Override
+    public List<Conversation> parseConversations(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
+        }
+
+        List<Conversation> conversations = new ArrayList<Conversation>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            conversations.add(parser.parseConversation(array.response.getJSONObject(i)));
+        }
+
+        return conversations;
+    }
+
+    @Override
     public DeviceToken parseDeviceToken(ServerResponse serverResponse) throws Exception {
 
         DeviceToken result = null;
@@ -157,7 +208,7 @@ public class JsonResponseParser implements ResponseParser {
             result = new DeviceToken();
             result.setDevice(new Device());
 
-            System.out.println(cplx.response.toString());
+            LOGGER.debug(cplx.response.toString());
 
             if (cplx.response.has("device")) {
                 result.getDevice().setAddress(cplx.response.getJSONObject("device").getString("address"));
@@ -179,6 +230,24 @@ public class JsonResponseParser implements ResponseParser {
     @Override
     public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
         return PresenceUtil.getInstance().parse(new JSONArray(serverResponse.getRaw()));
+    }
+
+    @Override
+    public EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception {
+
+        EnrollmentResult result = null;
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse objectServerResponse = (ObjectServerResponse) serverResponse;
+            result = new EnrollmentResult();
+
+            result.setCarbonEnabled(objectServerResponse.response.optBoolean("carbonEnabled"));
+            result.setCarbonInstalled(objectServerResponse.response.optBoolean("carbonInstalled"));
+            result.setDeviceNumber(objectServerResponse.response.optInt("deviceNumber"));
+        }
+
+        return result;
     }
 
 }
