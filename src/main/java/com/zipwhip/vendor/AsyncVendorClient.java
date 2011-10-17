@@ -146,7 +146,7 @@ public interface AsyncVendorClient {
      *                         Must be an address, as the server will reject mobileNumbers.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<Void> deleteContact(String deviceAddress, Set<String> contactAddresses);
+    NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses);
 
     /**
      *

@@ -53,9 +53,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         super(connection);
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<EnrollmentResult> enrollUser(String deviceAddress) {
 
@@ -82,9 +79,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> deactivateUser(String deviceAddress) {
 
@@ -107,9 +101,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Boolean> userExists(String deviceAddress) {
 
@@ -128,7 +119,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                     if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
                         parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
                     } else {
-                        failureFuture(new Exception("Bad server response type"));
+                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
                     }
                 }
             });
@@ -137,9 +128,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> suggestCarbon(String deviceAddress) {
 
@@ -162,9 +150,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactAddresses, String body) {
 
@@ -197,9 +182,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<List<Message>> listMessages(String deviceAddress) {
 
@@ -226,9 +208,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Contact> saveUser(String deviceAddress, Contact user) {
 
@@ -258,7 +237,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                 @Override
                 public void run(ParsableServerResponse<Contact> parsableServerResponse) {
                     try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseContact(parsableServerResponse.getServerResponse()));
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseUser(parsableServerResponse.getServerResponse()));
                     } catch (Exception e) {
                         parsableServerResponse.getFuture().setFailure(e);
                     }
@@ -269,9 +248,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> readMessages(String deviceAddress, Set<String> uuids) {
 
@@ -295,9 +271,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids) {
 
@@ -321,9 +294,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> readConversation(String deviceAddress, String fingerprint) {
 
@@ -347,9 +317,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Void> deleteConversation(String deviceAddress, String fingerprint) {
 
@@ -373,9 +340,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<List<Conversation>> listConversations(String deviceAddress) {
 
@@ -387,7 +351,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", validateOrTransform(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>> () {
                 @Override
                 public void run(ParsableServerResponse<List<Conversation>> parsableServerResponse) {
                     try {
@@ -402,9 +366,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<Contact> saveContact(String deviceAddress, Contact contact) {
 
@@ -414,6 +375,10 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
         if (contact == null) {
             return invalidArgumentFailureFuture("Contact is a required argument");
+        }
+
+        if (StringUtil.isNullOrEmpty(contact.getAddress())) {
+            return invalidArgumentFailureFuture("Contact.address is a required argument");
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
@@ -426,7 +391,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             params.put("lastName", contact.getLastName());
         }
         if (StringUtil.exists(contact.getAddress())) {
-            params.put("address", contact.getAddress());
+            params.put("address", validateOrTransform(contact.getAddress()));
         }
         if (StringUtil.exists(contact.getMobileNumber())) {
             params.put("mobileNumber", contact.getMobileNumber());
@@ -451,11 +416,8 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
-    public NetworkFuture<Void> deleteContact(String deviceAddress, Set<String> contactAddresses) {
+    public NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -477,9 +439,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    /**
-     *
-     */
     @Override
     public NetworkFuture<List<Contact>> listContacts(String deviceAddress) {
 

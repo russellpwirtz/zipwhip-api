@@ -92,6 +92,8 @@ public class RequestBuilder {
             return this;
         }
 
+        value = StringUtil.replaceAll(value, " ", "+");
+
         String string;
 
         if (encode) {

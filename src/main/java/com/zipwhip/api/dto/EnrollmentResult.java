@@ -37,4 +37,14 @@ public class EnrollmentResult implements Serializable {
         this.deviceNumber = deviceNumber;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder toStringBuilder = new StringBuilder("==> EnrollmentResult details:");
+        toStringBuilder.append("\nIsCarbonInstalled: ").append(isCarbonEnabled());
+        toStringBuilder.append("\nIsCarbonEnabled: ").append(isCarbonEnabled);
+        toStringBuilder.append("\nDeviceNumber: ").append(deviceNumber);
+
+        return toStringBuilder.toString();
+    }
+
 }

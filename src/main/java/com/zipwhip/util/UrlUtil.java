@@ -85,7 +85,7 @@ public class UrlUtil {
         String url = apiVersion + method + builder.toString();
         String signature = getSignature(authenticator, url);
 
-        if (signature != null && signature.length() != 0) {
+        if (StringUtil.exists(signature)) {
             builder.append("&signature=");
             builder.append(signature);
         }

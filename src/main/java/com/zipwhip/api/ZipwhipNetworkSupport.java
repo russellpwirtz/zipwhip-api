@@ -53,6 +53,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String MESSAGE_DELETE = "message/delete";
     public static final String MESSAGE_GET = "message/get";
 
+    public static final String CONVERSATION_LIST = "conversation/list";
     public static final String CONVERSATION_READ = "conversation/read";
     public static final String CONVERSATION_DELETE = "conversation/delete";
 

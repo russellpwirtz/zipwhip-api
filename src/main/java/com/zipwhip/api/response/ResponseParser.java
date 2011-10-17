@@ -22,6 +22,8 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     Contact parseContact(ServerResponse serverResponse) throws Exception;
 
+    Contact parseUser(ServerResponse serverResponse) throws Exception;
+
     List<Contact> parseContacts(ServerResponse serverResponse) throws Exception;
 
     Conversation parseConversation(ServerResponse serverResponse) throws Exception;

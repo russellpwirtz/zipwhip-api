@@ -51,6 +51,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
      * @param authenticator  A {@code SignTool} to use for signing request URLs.
      */
     public NingHttpConnection(Executor workerExecutor, SignTool authenticator) {
+        this();
         this.workerExecutor = workerExecutor;
         this.authenticator = authenticator;
     }
@@ -62,6 +63,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
      *                       because we have no idea how slow your code will be.
      */
     public NingHttpConnection(Executor workerExecutor) {
+        this();
         if (workerExecutor != null) {
             this.workerExecutor = workerExecutor;
         }

@@ -52,28 +52,29 @@ public class JsonResponseParser implements ResponseParser {
              LOGGER.debug(":NULL: " + sessionsObject);
         }
 
-        /// IS THIS A COMPLEX OBJECT?
+        // IS THIS A COMPLEX OBJECT?
         JSONObject jsonObject = thing.optJSONObject(responseKey);
         if (jsonObject != null) {
             return new ObjectServerResponse(response, success, jsonObject, sessions);
         }
 
-        /// IS THIS AN ARRAY?
+        // IS THIS AN ARRAY?
         JSONArray jsonArray = thing.optJSONArray(responseKey);
         if (jsonArray != null) {
             return new ArrayServerResponse(response, success, jsonArray, sessions);
         }
 
-        /// IS THIS A STRING?
-        String string = thing.optString(responseKey, null);
-        if (string != null) {
-            // a string
+        // IS IT A BOOLEAN?
+        try {
+
+            boolean bool = thing.getBoolean(responseKey);
+            return new BooleanServerResponse(response, success, bool, sessions);
+
+        } catch (JSONException e) {
+
+            String string = thing.optString(responseKey, StringUtil.EMPTY_STRING);
             return new StringServerResponse(response, success, string, sessions);
         }
-
-        /// THIS MUST BE A BOOLEAN
-        boolean bool = thing.getBoolean(responseKey);
-        return new BooleanServerResponse(response, success, bool, sessions);
     }
 
     @Override
@@ -144,6 +145,23 @@ public class JsonResponseParser implements ResponseParser {
             ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
             return parser.parseContact(cplx.response);
 
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
+        }
+    }
+
+    @Override
+    public Contact parseUser(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+
+            if (cplx.response.has("user")) {
+                return parser.parseContact(cplx.response.optJSONObject("user"));
+            } else {
+                return null;
+            }
         } else {
             throw new Exception("ServerResponse must by an ObjectServerResponse");
         }
