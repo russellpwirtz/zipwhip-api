@@ -75,7 +75,7 @@ public interface AsyncVendorClient {
     NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactAddresses, String body);
 
     /**
-     *
+     *  List the messages for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
@@ -83,6 +83,7 @@ public interface AsyncVendorClient {
     NetworkFuture<List<Message>> listMessages(String deviceAddress);
 
     /**
+     * Save details for an existing user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param user The user to save or update.
@@ -92,6 +93,8 @@ public interface AsyncVendorClient {
     NetworkFuture<Contact> saveUser(String deviceAddress, Contact user);
 
     /**
+     * Mark a set of messages, identified by their UUIDs, for a given user as read.
+     *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param uuids         A list of message uuids for the messages to be marked as read.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
@@ -99,6 +102,8 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> readMessages(String deviceAddress, Set<String> uuids);
 
     /**
+     * Delete a set of messages, identified by their UUIDs, for a given user.
+     *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param uuids         A list of message uuids for the messages to be deleted.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
@@ -106,6 +111,8 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids);
 
     /**
+     * Mark a conversation identified by its fingerprint as read, for a given user.
+     *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param fingerprint  The fingerprint of the conversation to be marked as read.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
@@ -113,7 +120,7 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> readConversation(String deviceAddress, String fingerprint);
 
     /**
-     *
+     * Mark a set of messages, identified by their UUIDs, for a given user as read.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param fingerprint  The fingerprint of the conversation to be deleted.
@@ -122,7 +129,7 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> deleteConversation(String deviceAddress, String fingerprint);
 
     /**
-     *
+     * Query the list of conversations for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
@@ -130,7 +137,7 @@ public interface AsyncVendorClient {
     NetworkFuture<List<Conversation>> listConversations(String deviceAddress);
 
     /**
-     *
+     * Save the details of a contact for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param contact       The contact to be saved in the user's contact list.
@@ -139,7 +146,7 @@ public interface AsyncVendorClient {
     NetworkFuture<Contact> saveContact(String deviceAddress, Contact contact);
 
     /**
-     *
+     * Delete the details of a set of contacts for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param contactAddresses A list of addresses for the contacts to be deleted.
@@ -149,7 +156,7 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses);
 
     /**
-     *
+     * Query a user's contact list.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
