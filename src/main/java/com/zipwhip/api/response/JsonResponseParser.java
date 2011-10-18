@@ -64,10 +64,11 @@ public class JsonResponseParser implements ResponseParser {
             return new ArrayServerResponse(response, success, jsonArray, sessions);
         }
 
-        ///////////////////////////////////////////////
-        /// IS THIS A STRING?
+        // IS THIS A STRING?
         String string = thing.optString(responseKey, null);
-        if (string != null) {
+
+        // Unfortunately the JSON libs in Android coerce bool into Strings
+        if (string != null && !string.equalsIgnoreCase("true") && !string.equalsIgnoreCase("false")) {
             // a string
             return new StringServerResponse(response, success, string, sessions);
         }
@@ -75,18 +76,6 @@ public class JsonResponseParser implements ResponseParser {
         /// THIS MUST BE A BOOLEAN
         boolean bool = thing.getBoolean(responseKey);
         return new BooleanServerResponse(response, success, bool, sessions);
-
-//        // IS IT A BOOLEAN?
-//        try {
-//
-//            boolean bool = thing.getBoolean(responseKey);
-//            return new BooleanServerResponse(response, success, bool, sessions);
-//
-//        } catch (JSONException e) {
-//
-//            String string = thing.optString(responseKey, StringUtil.EMPTY_STRING);
-//            return new StringServerResponse(response, success, string, sessions);
-//        }
     }
 
     @Override
