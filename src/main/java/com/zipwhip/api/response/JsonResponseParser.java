@@ -64,17 +64,29 @@ public class JsonResponseParser implements ResponseParser {
             return new ArrayServerResponse(response, success, jsonArray, sessions);
         }
 
-        // IS IT A BOOLEAN?
-        try {
-
-            boolean bool = thing.getBoolean(responseKey);
-            return new BooleanServerResponse(response, success, bool, sessions);
-
-        } catch (JSONException e) {
-
-            String string = thing.optString(responseKey, StringUtil.EMPTY_STRING);
+        ///////////////////////////////////////////////
+        /// IS THIS A STRING?
+        String string = thing.optString(responseKey, null);
+        if (string != null) {
+            // a string
             return new StringServerResponse(response, success, string, sessions);
         }
+
+        /// THIS MUST BE A BOOLEAN
+        boolean bool = thing.getBoolean(responseKey);
+        return new BooleanServerResponse(response, success, bool, sessions);
+
+//        // IS IT A BOOLEAN?
+//        try {
+//
+//            boolean bool = thing.getBoolean(responseKey);
+//            return new BooleanServerResponse(response, success, bool, sessions);
+//
+//        } catch (JSONException e) {
+//
+//            String string = thing.optString(responseKey, StringUtil.EMPTY_STRING);
+//            return new StringServerResponse(response, success, string, sessions);
+//        }
     }
 
     @Override
