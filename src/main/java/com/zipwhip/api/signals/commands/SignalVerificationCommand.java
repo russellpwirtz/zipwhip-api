@@ -10,4 +10,9 @@ public class SignalVerificationCommand extends Command {
 
     public static final String ACTION = "signal_verification";
 
+    @Override
+    public String toString() {
+        return ACTION;
+    }
+
 }

@@ -46,6 +46,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private String originalClientId; //So we can detect change
 
     private boolean connectionStateSwitch; // The previous connection state
+    private boolean connectionNegotiated; // Have we finished negotiating with SignalServer
 
     private Presence presence;
     private Map<String, Long> versions = new HashMap<String, Long>();
@@ -159,6 +160,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         connection.onDisconnect(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean disconnected) {
+
+                connectionNegotiated = false;
+
                 // If the state has changed then notify
                 if (connectionStateSwitch) {
                     connectionStateSwitch = false;
@@ -204,7 +208,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
 
     @Override
     public boolean isConnected() {
-        return connection.isConnected() && StringUtil.exists(clientId);
+        return connection.isConnected() && connectionNegotiated;
     }
 
     @Override
@@ -250,10 +254,13 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     @Override
     public Future<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
 
-        if (isConnected()) {
-            LOGGER.debug("Connect requested but already connected");
+        if (isConnected() || (connectLatch != null && connectLatch.getCount() > 0)) {
+            LOGGER.debug("Connect requested but already connected or connecting...");
             return new FakeFuture<Boolean>(true);
         }
+
+        // This will help us do the connect synchronously
+        connectLatch = new CountDownLatch(1);
 
         // keep track of the original one, so we can detect change
         if (StringUtil.exists(clientId)) {
@@ -269,35 +276,35 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             this.versions = versions;
         }
 
-        // this will help us do the connect synchronously
-        connectLatch = new CountDownLatch(1);
+        // Connect our TCP socket
         final Future<Boolean> connectFuture = connection.connect();
 
         FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
-
             @Override
             public Boolean call() {
 
                 try {
+                    // Block until the TCP connection connections or times out
                     connectFuture.get(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    LOGGER.error(e);
-                } catch (ExecutionException e) {
-                    LOGGER.error(e);
-                } catch (TimeoutException e) {
-                    LOGGER.error(e);
-                }
 
-                if (connection.isConnected()) {
+                    if (connection.isConnected()) {
 
-                    connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions, SocketSignalProvider.this.presence));
+                        connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions, SocketSignalProvider.this.presence));
 
-                    // block while the signal server is thinking/hanging.
-                    try {
+                        // block while the signal server is thinking/hanging.
                         connectLatch.await(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+
+                    } else {
+                        // Need to make sure we always count down
+                        connectLatch.countDown();
                     }
+
+                } catch (Exception e) {
+
+                    LOGGER.error(e);
+
+                    // Need to make sure we always count down
+                    connectLatch.countDown();
                 }
 
                 return isConnected();
@@ -384,6 +391,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         LOGGER.debug("Handling ConnectCommand");
 
         if (command.isSuccessful()) {
+
+            connectionNegotiated = true;
+
             // copy it over for stale checking
             originalClientId = clientId;
 
@@ -395,11 +405,15 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                 newClientIdEvent.notifyObservers(this, clientId);
             }
 
-            if (connectLatch != null) {
-                // we need to countDown the latch, when it hits zero (after this call)
-                // the connect NetworkFuture will complete. This gives the caller a way to block on our connection
-                connectLatch.countDown();
-            }
+        } else {
+
+            connectionNegotiated = false;
+        }
+
+        if (connectLatch != null) {
+            // we need to countDown the latch, when it hits zero (after this call)
+            // the connect NetworkFuture will complete. This gives the caller a way to block on our connection
+            connectLatch.countDown();
         }
     }
 
@@ -485,7 +499,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     }
 
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {
-        LOGGER.debug("Processing SignalVerificationCommand");
+        LOGGER.debug("Processing SignalVerificationCommand " + command.toString());
         signalVerificationEvent.notifyObservers(this, null);
     }
 
