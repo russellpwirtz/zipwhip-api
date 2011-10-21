@@ -64,7 +64,10 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
             connection.setSessionKey(sessionKey);
             connection.setApiVersion(apiVersion);
             connection.setHost(host);
-            connection.setAuthenticator(new SignTool(apiKey, secret));
+
+            if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
+                connection.setAuthenticator(new SignTool(apiKey, secret));
+            }
 
             // We have a username/password
             if (StringUtil.exists(username) && StringUtil.exists(password)) {

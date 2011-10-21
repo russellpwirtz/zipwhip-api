@@ -31,8 +31,8 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     private String sessionKey;
     private SignTool authenticator;
-    private ExecutorService bossExecutor = Executors.newCachedThreadPool();
-    private ExecutorService workerExecutor = Executors.newSingleThreadExecutor();
+    private ExecutorService bossExecutor = Executors.newSingleThreadExecutor();
+    private ExecutorService workerExecutor = Executors.newFixedThreadPool(10);
 
     public HttpConnection() {
         super();
@@ -141,6 +141,9 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     protected void onDestroy() {
+
+        LOGGER.debug("Destroying HttpConnection");
+
         bossExecutor.shutdownNow();
         workerExecutor.shutdownNow();
     }

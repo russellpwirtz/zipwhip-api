@@ -126,11 +126,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
         });
 
         connection.onConnect(new Observer<Boolean>() {
-            /**
+            /*
              * The NettySignalConnection will call this method when a TCP socket connection is attempted.
-             *
-             * @param sender The sender might not be the same object every time.
-             * @param connected True, if connected, False if disconnected
              */
             @Override
             public void notify(Object sender, Boolean connected) {
@@ -144,7 +141,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
-        // Forward connect events up to clients
+        /*
+            Forward connect events up to clients
+         */
         connection.onConnect(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean connected) {
@@ -156,10 +155,17 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
-        // Forward disconnect events up to clients
+        /*
+            Forward disconnect events up to clients
+         */
         connection.onDisconnect(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean disconnected) {
+
+                // Ensure that the latch is in a good state for reconnect
+                if (connectLatch != null) {
+                    connectLatch.countDown();
+                }
 
                 connectionNegotiated = false;
 
@@ -171,7 +177,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
-        // Forward ping events up to clients
+        /*
+            Forward ping events up to clients
+         */
         connection.onPingEvent(new Observer<PingEvent>() {
             @Override
             public void notify(Object sender, PingEvent item) {
@@ -179,7 +187,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
-        // Forward connection exceptions up to clients
+        /*
+            Forward connection exceptions up to clients
+         */
         connection.onExceptionCaught(new Observer<String>() {
             @Override
             public void notify(Object sender, String message) {
@@ -187,7 +197,9 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
             }
         });
 
-        // Observe our own version changed events so we can stay in sync internally
+        /*
+            Observe our own version changed events so we can stay in sync internally
+         */
         onVersionChanged(new Observer<VersionMapEntry>() {
             @Override
             public void notify(Object sender, VersionMapEntry version) {
@@ -201,7 +213,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
      * cases when we have been notified by the connection that it has a successful connection.
      */
     private void sendConnect() {
-        if (connectLatch != null && connectLatch.getCount() == 0) {
+        if (connectLatch == null || connectLatch.getCount() == 0) {
             connection.send(new ConnectCommand(clientId, versions, presence));
         }
     }
@@ -292,7 +304,12 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
                         connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions, SocketSignalProvider.this.presence));
 
                         // block while the signal server is thinking/hanging.
-                        connectLatch.await(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                        boolean countedDown = connectLatch.await(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+                        // If we timed out the latch might still blocking other threads
+                        if (!countedDown) {
+                            connectLatch.countDown();
+                        }
 
                     } else {
                         // Need to make sure we always count down

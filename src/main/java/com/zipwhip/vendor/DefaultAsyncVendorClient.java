@@ -110,6 +110,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
         Map<String, Object> params = new HashMap<String, Object> ();
         params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("mobileNumber", new Address(deviceAddress).getAuthority());
 
         try {
             return executeAsync(ZipwhipNetworkSupport.USER_EXISTS, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
@@ -391,7 +392,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             params.put("lastName", contact.getLastName());
         }
         if (StringUtil.exists(contact.getAddress())) {
-            params.put("address", validateOrTransform(contact.getAddress()));
+            params.put("address", contact.getAddress());
         }
         if (StringUtil.exists(contact.getMobileNumber())) {
             params.put("mobileNumber", contact.getMobileNumber());
