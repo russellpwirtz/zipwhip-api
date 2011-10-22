@@ -110,7 +110,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
         Map<String, Object> params = new HashMap<String, Object> ();
         params.put("deviceAddress", validateOrTransform(deviceAddress));
-        params.put("mobileNumber", new Address(deviceAddress).getAuthority());
+        params.put("mobileNumber", new Address(deviceAddress).toMobileNumber());
 
         try {
             return executeAsync(ZipwhipNetworkSupport.USER_EXISTS, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
@@ -144,6 +144,60 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                 @Override
                 public void run(ParsableServerResponse<Void> parsableServerResponse) {
                     parsableServerResponse.getFuture().setSuccess(null);
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+    }
+
+    @Override
+    public NetworkFuture<Boolean> carbonInstalled(String deviceAddress) {
+
+        if (StringUtil.isNullOrEmpty(deviceAddress)) {
+            return invalidArgumentFailureFuture("Device address is a required argument");
+        }
+
+        Map<String, Object> params = new HashMap<String, Object> ();
+        params.put("deviceAddress", validateOrTransform(deviceAddress));
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.CARBON_INSTALLED, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
+                @Override
+                public void run(ParsableServerResponse<Boolean> parsableServerResponse) {
+
+                    if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
+                        parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
+                    } else {
+                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+                    }
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+    }
+
+    @Override
+    public NetworkFuture<Boolean> carbonEnabled(String deviceAddress) {
+
+        if (StringUtil.isNullOrEmpty(deviceAddress)) {
+            return invalidArgumentFailureFuture("Device address is a required argument");
+        }
+
+        Map<String, Object> params = new HashMap<String, Object> ();
+        params.put("deviceAddress", validateOrTransform(deviceAddress));
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.CARBON_ENABLED_VENDOR, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
+                @Override
+                public void run(ParsableServerResponse<Boolean> parsableServerResponse) {
+
+                    if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
+                        parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
+                    } else {
+                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+                    }
                 }
             });
         } catch (Exception e) {
@@ -456,6 +510,36 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                 public void run(ParsableServerResponse<List<Contact>> parsableServerResponse) {
                     try {
                         parsableServerResponse.getFuture().setSuccess(responseParser.parseContacts(parsableServerResponse.getServerResponse()));
+                    } catch (Exception e) {
+                        parsableServerResponse.getFuture().setFailure(e);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+    }
+
+    @Override
+    public NetworkFuture<Contact> getContact(String deviceAddress, String contactMobileNumber) {
+
+        if (StringUtil.isNullOrEmpty(deviceAddress)) {
+            return invalidArgumentFailureFuture("Device address is a required argument");
+        }
+        if (StringUtil.isNullOrEmpty(contactMobileNumber)) {
+            return invalidArgumentFailureFuture("Contact mobileNumber is a required argument");
+        }
+
+        Map<String, Object> params = new HashMap<String, Object> ();
+        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("mobileNumber", new Address(deviceAddress).toMobileNumber());
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.CONTACT_GET, params, true, new InputRunnable<ParsableServerResponse<Contact>> () {
+                @Override
+                public void run(ParsableServerResponse<Contact> parsableServerResponse) {
+                    try {
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseContact(parsableServerResponse.getServerResponse()));
                     } catch (Exception e) {
                         parsableServerResponse.getFuture().setFailure(e);
                     }

@@ -85,4 +85,13 @@ public class Address {
         return StringUtil.join(StringUtil.exists(scheme) ? scheme : "device", ":/", StringUtil.exists(authority) ? authority : value, "/", StringUtil.exists(query) ? query : "0");
     }
 
+    /**
+     * From the parsed address get the authority portion (mobile number) or empty string.
+     *
+     * @return A mobile number or empty string.
+     */
+    public String toMobileNumber() {
+        return (authority == null) ? StringUtil.EMPTY_STRING : authority;
+    }
+
 }

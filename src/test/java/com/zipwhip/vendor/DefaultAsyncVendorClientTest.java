@@ -29,6 +29,7 @@ public class DefaultAsyncVendorClientTest {
     String apiKey = "a1b2c3";
     String secret = "5241fvv354-v5b73nm6j5w4nb64ff-423c53-v345bn6nbq5v";
     String deviceAddress = "device:/2063758020/0";
+    String contactMobileNumber = "2533654478";
 
     public final static String VOID_RESULT = "{\"response\":null,\"sessions\":null,\"success\":true}";
     public final static String BOOLEAN_TRUE_RESULT = "{\"response\":true,\"sessions\":null,\"success\":true}";
@@ -38,6 +39,7 @@ public class DefaultAsyncVendorClientTest {
     public final static String CONVERSATION_LIST_RESULT = "{\"total\":1,\"response\":[{\"lastContactFirstName\":\"\",\"lastContactLastName\":\"\",\"lastContactDeviceId\":0,\"unreadCount\":0,\"bcc\":\"\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"class\":\"com.zipwhip.website.data.dto.Conversation\",\"deviceAddress\":\"device:/2063758020/0\",\"lastNonDeletedMessageDate\":\"2011-10-14T14:59:51-07:00\",\"deleted\":false,\"lastContactId\":408050,\"version\":2,\"lastMessageDate\":\"2011-10-14T14:59:51-07:00\",\"dtoParentId\":270315,\"lastContactMobileNumber\":\"2069308934\",\"id\":1912,\"fingerprint\":\"2216445311\",\"new\":false,\"lastMessageBody\":\"yr cool! \",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:59:05-07:00\",\"cc\":\"\",\"deviceId\":270315}],\"sessions\":null,\"success\":true,\"size\":1}";
     public final static String USER_SAVE_RESULT = "{\"response\":{\"user\":{\"firstName\":\"Im\",\"lastName\":\"Cool\",\"mobileNumber\":\"2063758020\",\"fullName\":\"Im Cool\",\"phoneKey\":\"\",\"email\":\"\",\"notes\":\"\",\"birthday\":\"\",\"carrier\":\"Tmo\",\"loc\":\"\",\"dateCreated\":\"2011-10-14T14:57:35-07:00\",\"lastUpdated\":\"2011-10-17T13:40:01-07:00\"}},\"sessions\":null,\"success\":true}";
     public final static String MESSAGE_SEND_RESULT = "{\"response\":{\"fingerprint\":\"3969778241\",\"root\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"tokens\":[{\"message\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"fingerprint\":\"3969778241\",\"device\":270315,\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":-1}],\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\"},\"sessions\":null,\"success\":true}";
+    public final static String CONTACT_GET_RESPONSE = "{}";
 
     @Before
     public void setUp() throws Exception {
@@ -83,6 +85,24 @@ public class DefaultAsyncVendorClientTest {
         result.await();
         Assert.assertTrue(result.isSuccess());
         Assert.assertNull(result.getResult());
+    }
+
+    @Test
+    public void testCarbonInstalled() throws Exception {
+        NetworkFuture<Boolean> result = client.carbonInstalled(deviceAddress);
+        Assert.assertNotNull(result);
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertTrue(result.getResult());
+    }
+
+    @Test
+    public void testCarbonEnabled() throws Exception {
+        NetworkFuture<Boolean> result = client.carbonEnabled(deviceAddress);
+        Assert.assertNotNull(result);
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertTrue(result.getResult());
     }
 
     @Test
@@ -195,6 +215,15 @@ public class DefaultAsyncVendorClientTest {
         Assert.assertEquals(result.getResult().get(0).getId(), 408050L);
     }
 
+    @Test
+    public void testGetContact() throws Exception {
+        NetworkFuture<Contact> result = client.getContact(deviceAddress, contactMobileNumber);
+        Assert.assertNotNull(result);
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertEquals(result.getResult().getMobileNumber(), contactMobileNumber);
+    }
+
     public class MockApiConnection extends DestroyableBase implements ApiConnection {
 
         @Override
@@ -256,6 +285,18 @@ public class DefaultAsyncVendorClientTest {
             }
             if (ZipwhipNetworkSupport.MESSAGE_SEND.equalsIgnoreCase(method)) {
                 result.setSuccess(MESSAGE_SEND_RESULT);
+                return result;
+            }
+            if (ZipwhipNetworkSupport.CARBON_ENABLED_VENDOR.equalsIgnoreCase(method)) {
+                result.setSuccess(BOOLEAN_TRUE_RESULT);
+                return result;
+            }
+            if (ZipwhipNetworkSupport.CARBON_INSTALLED.equalsIgnoreCase(method)) {
+                result.setSuccess(BOOLEAN_TRUE_RESULT);
+                return result;
+            }
+            if (ZipwhipNetworkSupport.CONTACT_GET.equalsIgnoreCase(method)) {
+                result.setSuccess(CONTACT_GET_RESPONSE);
                 return result;
             }
 
