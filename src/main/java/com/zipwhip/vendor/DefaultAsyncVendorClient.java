@@ -206,19 +206,19 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactAddresses, String body) {
+    public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        if (CollectionUtil.isNullOrEmpty(contactAddresses)) {
-            return invalidArgumentFailureFuture("Must specify at least one contact address");
+        if (CollectionUtil.isNullOrEmpty(contactMobileNumbers)) {
+            return invalidArgumentFailureFuture("Must specify at least one contact number");
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
         params.put("deviceAddress", validateOrTransform(deviceAddress));
-        params.put("contacts", contactAddresses);
+        params.put("contacts", contactMobileNumbers);
         params.put("body", body);
 
         try {

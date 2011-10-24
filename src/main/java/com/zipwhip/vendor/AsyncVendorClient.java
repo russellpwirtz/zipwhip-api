@@ -86,11 +86,11 @@ public interface AsyncVendorClient {
      * The details of the message including the recipient is contained in the {@code Message} object.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param contactAddresses A list of recipients of the message.
+     * @param contactMobileNumbers A list of mobile numbers of the recipients of the message.
      * @param body The text of the message to be sent.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactAddresses, String body);
+    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body);
 
     /**
      *  List the messages for a given user.

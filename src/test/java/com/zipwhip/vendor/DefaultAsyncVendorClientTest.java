@@ -28,18 +28,18 @@ public class DefaultAsyncVendorClientTest {
 
     String apiKey = "a1b2c3";
     String secret = "5241fvv354-v5b73nm6j5w4nb64ff-423c53-v345bn6nbq5v";
-    String deviceAddress = "device:/2063758020/0";
-    String contactMobileNumber = "2533654478";
+    String deviceAddress = "device:/2069998888/0";
+    String contactMobileNumber = "2063758020";
 
     public final static String VOID_RESULT = "{\"response\":null,\"sessions\":null,\"success\":true}";
     public final static String BOOLEAN_TRUE_RESULT = "{\"response\":true,\"sessions\":null,\"success\":true}";
     public final static String ENROLLMENT_RESULT = "{\"response\":{\"carbonEnabled\":true,\"carbonInstalled\":true,\"deviceNumber\":999},\"sessions\":null,\"success\":true}";
-    public final static String CONTACT_LIST_RESULT = "{\"total\":1,\"response\":[{\"birthday\":null,\"state\":\"\",\"version\":4,\"dtoParentId\":270315,\"city\":\"\",\"id\":408050,\"phoneKey\":\"\",\"isZwUser\":false,\"vector\":\"\",\"thread\":\"20000002\",\"phoneId\":0,\"carrier\":\"Tmo\",\"firstName\":\"\",\"deviceId\":270315,\"lastName\":\"\",\"MOCount\":0,\"keywords\":\"\",\"zipcode\":\"\",\"ZOCount\":0,\"class\":\"com.zipwhip.website.data.dto.Contact\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"loc\":\"\",\"targetGroupDevice\":-1,\"fwd\":\"20000102\",\"deleted\":false,\"latlong\":\"\",\"new\":false,\"email\":\"\",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:58:54-07:00\",\"mobileNumber\":\"2069308934\",\"notes\":\"\",\"channel\":\"2\"}],\"sessions\":null,\"page\":1,\"pages\":1,\"success\":true}";
+    public final static String CONTACT_LIST_RESULT = "{\"total\":1,\"response\":[{\"birthday\":null,\"state\":\"\",\"version\":4,\"dtoParentId\":270315,\"city\":\"\",\"id\":408050,\"phoneKey\":\"\",\"isZwUser\":false,\"vector\":\"\",\"thread\":\"20000002\",\"phoneId\":0,\"carrier\":\"Tmo\",\"firstName\":\"\",\"deviceId\":270315,\"lastName\":\"\",\"MOCount\":0,\"keywords\":\"\",\"zipcode\":\"\",\"ZOCount\":0,\"class\":\"com.zipwhip.website.data.dto.Contact\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"loc\":\"\",\"targetGroupDevice\":-1,\"fwd\":\"20000102\",\"deleted\":false,\"latlong\":\"\",\"new\":false,\"email\":\"\",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:58:54-07:00\",\"mobileNumber\":\"2533654478\",\"notes\":\"\",\"channel\":\"2\"}],\"sessions\":null,\"page\":1,\"pages\":1,\"success\":true}";
     public final static String CONTACT_SAVE_RESULT = "{\"response\":{\"birthday\":null,\"state\":\"\",\"version\":1,\"dtoParentId\":270315,\"city\":\"\",\"id\":408077,\"phoneKey\":\"\",\"isZwUser\":false,\"vector\":\"\",\"thread\":\"\",\"phoneId\":0,\"carrier\":\"\",\"firstName\":\"Jon\",\"deviceId\":270315,\"lastName\":\"Dow\",\"MOCount\":0,\"keywords\":\"\",\"zipcode\":\"\",\"ZOCount\":0,\"class\":\"com.zipwhip.website.data.dto.Contact\",\"lastUpdated\":\"2011-10-17T13:19:48-07:00\",\"loc\":\"\",\"targetGroupDevice\":-1,\"fwd\":\"\",\"deleted\":false,\"latlong\":\"\",\"new\":false,\"email\":\"\",\"address\":\"device:/5555555555/0\",\"dateCreated\":\"2011-10-17T13:19:48-07:00\",\"mobileNumber\":\"5555555555\",\"notes\":\"\",\"channel\":\"\"},\"sessions\":null,\"success\":true}";
     public final static String CONVERSATION_LIST_RESULT = "{\"total\":1,\"response\":[{\"lastContactFirstName\":\"\",\"lastContactLastName\":\"\",\"lastContactDeviceId\":0,\"unreadCount\":0,\"bcc\":\"\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"class\":\"com.zipwhip.website.data.dto.Conversation\",\"deviceAddress\":\"device:/2063758020/0\",\"lastNonDeletedMessageDate\":\"2011-10-14T14:59:51-07:00\",\"deleted\":false,\"lastContactId\":408050,\"version\":2,\"lastMessageDate\":\"2011-10-14T14:59:51-07:00\",\"dtoParentId\":270315,\"lastContactMobileNumber\":\"2069308934\",\"id\":1912,\"fingerprint\":\"2216445311\",\"new\":false,\"lastMessageBody\":\"yr cool! \",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:59:05-07:00\",\"cc\":\"\",\"deviceId\":270315}],\"sessions\":null,\"success\":true,\"size\":1}";
     public final static String USER_SAVE_RESULT = "{\"response\":{\"user\":{\"firstName\":\"Im\",\"lastName\":\"Cool\",\"mobileNumber\":\"2063758020\",\"fullName\":\"Im Cool\",\"phoneKey\":\"\",\"email\":\"\",\"notes\":\"\",\"birthday\":\"\",\"carrier\":\"Tmo\",\"loc\":\"\",\"dateCreated\":\"2011-10-14T14:57:35-07:00\",\"lastUpdated\":\"2011-10-17T13:40:01-07:00\"}},\"sessions\":null,\"success\":true}";
     public final static String MESSAGE_SEND_RESULT = "{\"response\":{\"fingerprint\":\"3969778241\",\"root\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"tokens\":[{\"message\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"fingerprint\":\"3969778241\",\"device\":270315,\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":-1}],\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\"},\"sessions\":null,\"success\":true}";
-    public final static String CONTACT_GET_RESPONSE = "{}";
+    public final static String CONTACT_GET_RESPONSE = "{\"response\":{\"birthday\":null,\"state\":\"\",\"version\":4,\"dtoParentId\":270315,\"city\":\"\",\"id\":408050,\"phoneKey\":\"\",\"isZwUser\":false,\"vector\":\"\",\"thread\":\"20000002\",\"phoneId\":0,\"carrier\":\"Tmo\",\"firstName\":\"\",\"deviceId\":270315,\"lastName\":\"\",\"MOCount\":0,\"keywords\":\"\",\"zipcode\":\"\",\"ZOCount\":0,\"class\":\"com.zipwhip.website.data.dto.Contact\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"loc\":\"\",\"targetGroupDevice\":-1,\"fwd\":\"20000102\",\"deleted\":false,\"latlong\":\"\",\"new\":false,\"email\":\"\",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:58:54-07:00\",\"mobileNumber\":\"2063758020\",\"notes\":\"\",\"channel\":\"2\"},\"sessions\":null,\"success\":true}";
 
     @Before
     public void setUp() throws Exception {
@@ -217,11 +217,11 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testGetContact() throws Exception {
-//        NetworkFuture<Contact> result = client.getContact(deviceAddress, contactMobileNumber);
-//        Assert.assertNotNull(result);
-//        result.await();
-//        Assert.assertTrue(result.isSuccess());
-//        Assert.assertEquals(result.getResult().getMobileNumber(), contactMobileNumber);
+        NetworkFuture<Contact> result = client.getContact(deviceAddress, contactMobileNumber);
+        Assert.assertNotNull(result);
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertEquals(result.getResult().getMobileNumber(), contactMobileNumber);
     }
 
     public class MockApiConnection extends DestroyableBase implements ApiConnection {
