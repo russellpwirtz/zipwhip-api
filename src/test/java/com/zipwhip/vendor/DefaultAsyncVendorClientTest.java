@@ -185,7 +185,7 @@ public class DefaultAsyncVendorClientTest {
         Contact contact = new Contact();
         contact.setFirstName("Dennis");
         contact.setLastName("Ritchie");
-        contact.setAddress("device:/5555555555/0");
+        contact.setAddress("ptn:/5555555555");
         NetworkFuture<Contact> result = client.saveContact(deviceAddress, contact);
         Assert.assertNotNull(result);
         result.await();

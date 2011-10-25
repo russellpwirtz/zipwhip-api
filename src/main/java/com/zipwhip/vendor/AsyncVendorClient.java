@@ -167,11 +167,10 @@ public interface AsyncVendorClient {
      * Delete the details of a set of contacts for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param contactAddresses A list of addresses for the contacts to be deleted.
-     *                         Must be an address, as the server will reject mobileNumbers.
+     * @param contactMobileNumbers A list of mobile numbers for the contacts to be deleted.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses);
+    NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers);
 
     /**
      * Query a user's contact list.

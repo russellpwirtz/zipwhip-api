@@ -13,14 +13,25 @@ import org.junit.Test;
 public class AddressTest {
 
     @Test
+    public void testStringToMobileNumber() throws Exception {
+
+        String deviceAddress = "device:/5555555555/0";
+        String ptnAddress = "ptn:/5555555555";
+
+        Assert.assertEquals("5555555555", Address.stripToMobileNumber(deviceAddress));
+        Assert.assertEquals("5555555555", Address.stripToMobileNumber(ptnAddress));
+    }
+
+    @Test
     public void testParse() throws Exception {
 
         String parsableAddress = "device:/5555555555/0";
 
-        Address address = new Address();
-        Assert.assertNull(address.parse(null));
+        Address address = new Address(null);
+        Assert.assertNull(address.getScheme());
+        Assert.assertNull(address.getAuthority());
 
-        address.parse(parsableAddress);
+        address = new Address(parsableAddress);
 
         Assert.assertEquals(parsableAddress, address.getValue());
         Assert.assertEquals("device", address.getScheme());
@@ -29,7 +40,7 @@ public class AddressTest {
     }
 
     @Test
-    public void testDeviceAddress() throws Exception {
+    public void testEncode() throws Exception {
 
         String nonParsableAddress = "5555555555";
 
@@ -40,8 +51,8 @@ public class AddressTest {
         Assert.assertNull(address.getAuthority());
         Assert.assertNull(address.getQuery());
 
-        Assert.assertEquals(address.toDeviceAddress(), "device:/5555555555/0");
+        Assert.assertEquals(Address.encode("device", nonParsableAddress, "0"), "device:/5555555555/0");
+        Assert.assertEquals(Address.encode("ptn", nonParsableAddress), "ptn:/5555555555");
     }
-
 
 }

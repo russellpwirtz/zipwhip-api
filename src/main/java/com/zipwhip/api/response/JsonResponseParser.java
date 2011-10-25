@@ -46,12 +46,6 @@ public class JsonResponseParser implements ResponseParser {
 
         JSONObject sessionsObject = thing.optJSONObject("sessions");
 
-        if (sessionsObject != null && !EMPTY_OBJECT.equals(sessionsObject.toString())) {
-            LOGGER.debug(":NOTNULL: " + sessionsObject);
-        } else {
-             LOGGER.debug(":NULL: " + sessionsObject);
-        }
-
         // IS THIS A COMPLEX OBJECT?
         JSONObject jsonObject = thing.optJSONObject(responseKey);
         if (jsonObject != null) {
