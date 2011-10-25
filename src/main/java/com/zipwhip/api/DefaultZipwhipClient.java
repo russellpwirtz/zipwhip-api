@@ -365,7 +365,7 @@ public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements Zipwh
             return carbonOn;
 
         } else {
-            throw new Exception("Unrecognized server response for challenge confirm");
+            throw new Exception("Unrecognized server response for carbon enabled");
         }
 
     }

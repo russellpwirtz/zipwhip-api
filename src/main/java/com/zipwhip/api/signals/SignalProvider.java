@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
@@ -205,5 +206,12 @@ public interface SignalProvider extends Destroyable {
      * @param observer an Observer of type String indicating the exception that occurred.
      */
     void onExceptionEvent(Observer<String> observer);
+
+    /**
+     * Observe any commands sent from the Signal Server
+     *
+     * @param observer an Observer of type Command indicating the command that was sent.
+     */
+    void onCommandReceived(Observer<Command> observer);
 
 }
