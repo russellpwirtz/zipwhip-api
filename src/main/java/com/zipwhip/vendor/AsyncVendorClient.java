@@ -64,15 +64,33 @@ public interface AsyncVendorClient {
     NetworkFuture<Void> suggestCarbon(String deviceAddress);
 
     /**
+     * This method will query the Zipwhip Network to as to whether Device Carbon is installed on the user's phone.
+     * Returns a {@code true} result if it is installed, otherwise {@code false}.
+     *
+     * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to receive a DeviceCarbon link to their phone.
+     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     */
+    NetworkFuture<Boolean> carbonInstalled(String deviceAddress);
+
+    /**
+     * This method will query the Zipwhip Network to as to whether Device Carbon is enabled on the user's phone.
+     * Returns a {@code true} result if it is enabled, otherwise {@code false}.
+     *
+     * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to receive a DeviceCarbon link to their phone.
+     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     */
+    NetworkFuture<Boolean> carbonEnabled(String deviceAddress);
+
+    /**
      * Send a message via the Zipwhip network. The message is from the user represented by the {@code deviceAddress}.
      * The details of the message including the recipient is contained in the {@code Message} object.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param contactAddresses A list of recipients of the message.
+     * @param contactMobileNumbers A list of mobile numbers of the recipients of the message.
      * @param body The text of the message to be sent.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactAddresses, String body);
+    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body);
 
     /**
      *  List the messages for a given user.
@@ -149,11 +167,10 @@ public interface AsyncVendorClient {
      * Delete the details of a set of contacts for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param contactAddresses A list of addresses for the contacts to be deleted.
-     *                         Must be an address, as the server will reject mobileNumbers.
+     * @param contactMobileNumbers A list of mobile numbers for the contacts to be deleted.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses);
+    NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers);
 
     /**
      * Query a user's contact list.
@@ -162,5 +179,14 @@ public interface AsyncVendorClient {
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
     NetworkFuture<List<Contact>> listContacts(String deviceAddress);
+
+    /**
+     * Query a user's contact list for the specified contact.
+     *
+     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param contactMobileNumber The mobile number of the contact to be queried.
+     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     */
+    NetworkFuture<Contact> getContact(String deviceAddress, String contactMobileNumber);
 
 }

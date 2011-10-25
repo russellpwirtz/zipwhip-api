@@ -74,9 +74,10 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     public static final String USER_SAVE = "user/save";
     public static final String USER_EXISTS = "user/exists";
 
-
     public static final String CARBON_ENABLE = "v1/carbon/enable";
     public static final String CARBON_ENABLED = "v1/carbon/enabled";
+    public static final String CARBON_ENABLED_VENDOR = "carbon/enabled";
+    public static final String CARBON_INSTALLED = "carbon/installed";
     public static final String CARBON_SUGGEST = "carbon/suggest";
 
     public static final String CHALLENGE_REQUEST = "session/challenge";
