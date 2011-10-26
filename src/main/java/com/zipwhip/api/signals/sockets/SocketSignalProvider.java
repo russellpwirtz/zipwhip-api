@@ -37,6 +37,7 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     private ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
     private ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
     private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
+    private ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
     private CountDownLatch connectLatch;
     private SignalConnection connection = new NettySignalConnection();
@@ -80,6 +81,8 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
              */
             @Override
             public void notify(Object sender, Command command) {
+
+                commandReceivedEvent.notifyObservers(this, command);
 
                 // Check if this command has a version number associated with it
                 if (command.getVersion() != null && command.getVersion().getValue() >= 0) {
@@ -396,6 +399,11 @@ public class SocketSignalProvider extends DestroyableBase implements SignalProvi
     @Override
     public void onExceptionEvent(Observer<String> observer) {
         exceptionEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onCommandReceived(Observer<Command> observer) {
+        commandReceivedEvent.addObserver(observer);
     }
 
     @Override

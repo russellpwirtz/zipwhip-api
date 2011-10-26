@@ -61,7 +61,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.USER_ENROLL, params, true, new InputRunnable<ParsableServerResponse<EnrollmentResult>>() {
@@ -87,7 +87,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.USER_DEACT, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
@@ -109,8 +109,8 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
-        params.put("mobileNumber", new Address(deviceAddress).toMobileNumber());
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
+        params.put("mobileNumber", Address.stripToMobileNumber(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.USER_EXISTS, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
@@ -137,7 +137,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CARBON_SUGGEST, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
@@ -159,7 +159,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CARBON_INSTALLED, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
@@ -186,7 +186,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CARBON_ENABLED_VENDOR, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
@@ -221,9 +221,15 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Must specify at least one contact number");
         }
 
+        Set<String> contactAddresses = new HashSet<String>();
+
+        for (String mobileNumber : contactMobileNumbers) {
+            contactAddresses.add(getAddress(mobileNumber));
+        }
+
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
-        params.put("contacts", contactMobileNumbers);
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
+        params.put("contacts", contactAddresses);
         params.put("body", body);
 
         try {
@@ -250,7 +256,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Message>>> () {
@@ -280,7 +286,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         if (StringUtil.exists(user.getFirstName())) {
             params.put("firstName", user.getFirstName());
@@ -316,7 +322,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("uuid", uuids);
 
         try {
@@ -339,7 +345,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("uuids", uuids);
 
         try {
@@ -362,7 +368,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("fingerprint", fingerprint);
 
         try {
@@ -385,7 +391,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("fingerprint", fingerprint);
 
         try {
@@ -408,7 +414,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>> () {
@@ -442,7 +448,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         if (StringUtil.exists(contact.getFirstName())) {
             params.put("firstName", contact.getFirstName());
@@ -451,10 +457,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             params.put("lastName", contact.getLastName());
         }
         if (StringUtil.exists(contact.getAddress())) {
-            params.put("address", contact.getAddress());
-        }
-        if (StringUtil.exists(contact.getMobileNumber())) {
-            params.put("mobileNumber", contact.getMobileNumber());
+            params.put("address", getAddress(contact.getAddress()));
         }
         if (StringUtil.exists(contact.getNotes())) {
             params.put("notes", contact.getNotes());
@@ -477,14 +480,21 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactAddresses) {
+    public NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
+
+        Set<String> contactAddresses = new HashSet<String>();
+
+        for (String mobileNumber : contactMobileNumbers) {
+            contactAddresses.add(getAddress(mobileNumber));
+        }
+
         params.put("contact", contactAddresses);
 
         try {
@@ -507,7 +517,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Contact>>> () {
@@ -536,8 +546,8 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         Map<String, Object> params = new HashMap<String, Object> ();
-        params.put("deviceAddress", validateOrTransform(deviceAddress));
-        params.put("mobileNumber", new Address(deviceAddress).toMobileNumber());
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
+        params.put("address", getAddress(contactMobileNumber));
 
         try {
             return executeAsync(ZipwhipNetworkSupport.CONTACT_GET, params, true, new InputRunnable<ParsableServerResponse<Contact>> () {
@@ -565,9 +575,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         return future;
     }
 
-    private String validateOrTransform(String deviceAddress) {
-        Address address = new Address(deviceAddress);
-        return address.toDeviceAddress();
+    private String getDeviceAddress(String deviceAddress) {
+        return Address.encode("device", Address.stripToMobileNumber(deviceAddress), "0");
+    }
+
+    private String getAddress(String address) {
+        return Address.encode("ptn", Address.stripToMobileNumber(address));
     }
 
     @Override
