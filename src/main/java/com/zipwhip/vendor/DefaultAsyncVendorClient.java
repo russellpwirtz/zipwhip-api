@@ -206,6 +206,11 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
+    public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body) {
+        return sendMessage(deviceAddress, Collections.singleton(friendAddress), body);
+    }
+
+    @Override
     public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
