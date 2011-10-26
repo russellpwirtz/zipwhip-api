@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.dto.SignalToken;
+import com.zipwhip.events.ObservableHelper;
 import org.apache.log4j.Logger;
 
 /**
@@ -11,7 +12,7 @@ import org.apache.log4j.Logger;
  *
  * A simple implementation to help with debugging
  */
-public class LoggingSignalTokenProcessor implements SignalTokenProcessor {
+public class LoggingSignalTokenProcessor extends ObservableHelper<SignalToken> implements SignalTokenProcessor {
 
     private static final Logger LOGGER = Logger.getLogger(LoggingSignalTokenProcessor.class);
 
@@ -24,6 +25,8 @@ public class LoggingSignalTokenProcessor implements SignalTokenProcessor {
         }
 
         LOGGER.debug("Got token " + signalToken.toString());
+
+        super.notifyObservers(this, signalToken);
     }
 
 }

@@ -86,11 +86,22 @@ public interface AsyncVendorClient {
      * The details of the message including the recipient is contained in the {@code Message} object.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param contactMobileNumbers A list of mobile numbers of the recipients of the message.
+     * @param friendAddresses A list of mobile numbers of the recipients of the message.
      * @param body The text of the message to be sent.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */
-    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body);
+    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> friendAddresses, String body);
+
+    /**
+     * Send a message via the Zipwhip network. The message is from the user represented by the {@code deviceAddress}.
+     * The details of the message including the recipient is contained in the {@code Message} object.
+     *
+     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param friendAddresses A list of mobile numbers of the recipients of the message.
+     * @param body The text of the message to be sent.
+     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     */
+    NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body);
 
     /**
      *  List the messages for a given user.
