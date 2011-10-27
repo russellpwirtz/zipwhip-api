@@ -6,7 +6,6 @@ import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.BooleanServerResponse;
-import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.util.CollectionUtil;
@@ -22,26 +21,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
      */
     public DefaultAsyncVendorClient() {
 
-    }
-
-    /**
-     * Create a new {@code DefaultAsyncVendorClient}
-     *
-     * @param connection The connection to Zipwhip. This is mandatory, passing null will result in a {@code IllegalArgumentException} being thrown.
-     * @param signalProvider A {@code SignalProvider} if your client wants to receive signals via Zipwhip SignalServer.
-     */
-    public DefaultAsyncVendorClient(ApiConnection connection, SignalProvider signalProvider) {
-        super(connection, signalProvider);
-    }
-
-    /**
-     * Create a new {@code DefaultAsyncVendorClient} with a default connection configuration.
-     * The default connection is synchronous.
-     *
-     * @param signalProvider A {@code SignalProvider} if your client wants to receive signals via Zipwhip SignalServer.
-     */
-    public DefaultAsyncVendorClient(SignalProvider signalProvider) {
-        super(signalProvider);
     }
 
     /**

@@ -97,7 +97,7 @@ public interface AsyncVendorClient {
      * The details of the message including the recipient is contained in the {@code Message} object.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param friendAddresses A list of mobile numbers of the recipients of the message.
+     * @param friendAddress A mobile number of the recipients of the message.
      * @param body The text of the message to be sent.
      * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
      */

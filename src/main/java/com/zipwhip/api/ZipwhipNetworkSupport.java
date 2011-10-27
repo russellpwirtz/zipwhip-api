@@ -4,18 +4,11 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.api.settings.PreferencesSettingsStore;
-import com.zipwhip.api.settings.SettingsStore;
-import com.zipwhip.api.settings.SettingsVersionStore;
-import com.zipwhip.api.settings.VersionStore;
-import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
-import com.zipwhip.util.Directory;
 import com.zipwhip.util.InputRunnable;
-import com.zipwhip.util.ListDirectory;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -100,28 +93,16 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
     private Executor callbackExecutor = Executors.newSingleThreadExecutor();
 
     protected ApiConnection connection;
-    protected SignalProvider signalProvider;
-
     protected ResponseParser responseParser;
-    protected SettingsStore settingsStore = new PreferencesSettingsStore();
-    protected VersionStore versionsStore = new SettingsVersionStore(settingsStore);
 
     /**
      * Create a new default {@code ZipwhipNetworkSupport}
      */
     public ZipwhipNetworkSupport() {
-        this(new HttpConnection(), null);
+        this(new HttpConnection());
     }
 
     public ZipwhipNetworkSupport(ApiConnection connection) {
-        this(connection, null);
-    }
-
-    public ZipwhipNetworkSupport(SignalProvider signalProvider) {
-        this(new HttpConnection(), signalProvider);
-    }
-
-    public ZipwhipNetworkSupport(ApiConnection connection, SignalProvider signalProvider) {
 
         if (connection == null) {
             throw new IllegalArgumentException("Connection must not be null");
@@ -130,29 +111,7 @@ public abstract class ZipwhipNetworkSupport extends DestroyableBase {
         setConnection(connection);
         link(connection);
 
-        if (signalProvider != null) {
-            setSignalProvider(signalProvider);
-            link(signalProvider);
-        }
-
         setResponseParser(new JsonResponseParser());
-    }
-
-    public SignalProvider getSignalProvider() {
-        return signalProvider;
-    }
-
-    public void setSignalProvider(SignalProvider signalProvider) {
-        this.signalProvider = signalProvider;
-    }
-
-    public SettingsStore getSettingsStore() {
-        return settingsStore;
-    }
-
-    public void setSettingsStore(SettingsStore store) {
-        this.settingsStore = store;
-        this.versionsStore = new SettingsVersionStore(store);
     }
 
     public ApiConnection getConnection() {

@@ -26,7 +26,7 @@ import java.util.concurrent.*;
  * manage your authentication, the Connection abstracts this away from
  * the "Zipwhip" class.
  */
-public class DefaultZipwhipClient extends ZipwhipNetworkSupport implements ZipwhipClient {
+public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements ZipwhipClient {
 
     /**
      * Create a new DefaultZipwhipClient.
