@@ -111,12 +111,7 @@ public class JsonDtoParser {
 
         JSONObject transmissionStateJson = response.optJSONObject("transmissionState");
         if (transmissionStateJson != null) {
-
-            TransmissionState transmissionState = new TransmissionState();
-            transmissionState.setEnumType(transmissionStateJson.optString("enumType"));
-            transmissionState.setName(transmissionStateJson.optString("name"));
-
-            message.setTransmissionState(transmissionState);
+            message.setTransmissionState(TransmissionState.parse(transmissionStateJson.optString("name")));
         }
 
         message.setUuid(response.optString("uuid"));

@@ -20,6 +20,8 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
     /**
      * Create a new AsyncVendorClient which has been authenticated via apiKey.
      *
+     * By default this method will be over HTTPS.
+     *
      * @param apiKey The Zipwhip assigned, vendor specific key.
      * @param secret The Zipwhip assigned, vendor specific secret.
      * @return An authenticated {@link AsyncVendorClient}
@@ -27,7 +29,7 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
      */
     public static AsyncVendorClient createViaApiKey(String apiKey, String secret) throws Exception {
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncInstance().apiKey(apiKey).secret(secret).apiVersion(API_VERSION);
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncHttpsInstance().apiKey(apiKey).secret(secret).apiVersion(API_VERSION);
 
         AsyncVendorClientFactory asyncVendorClientFactory = new AsyncVendorClientFactory(connectionFactory);
 

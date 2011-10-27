@@ -48,6 +48,14 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
         return new ApiConnectionFactory(new NingHttpConnection());
     }
 
+    public static ApiConnectionFactory newAsyncHttpsInstance() {
+
+        ApiConnection connection = new NingHttpConnection();
+        connection.setHost(ApiConnection.DEFAULT_HTTPS_HOST);
+
+        return new ApiConnectionFactory(connection);
+    }
+
     /**
      * Creates a generic unauthenticated ApiConnection.
      *

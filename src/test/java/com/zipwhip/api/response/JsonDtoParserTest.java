@@ -65,8 +65,7 @@ public class JsonDtoParserTest {
 
         Assert.assertNotNull(dto.getTransmissionState());
         TransmissionState state = dto.getTransmissionState();
-        Assert.assertEquals(state.getName(), "QUEUED");
-        Assert.assertEquals(state.getEnumType(), "com.zipwhip.outgoing.TransmissionState");
+        Assert.assertEquals(state.toString(), "QUEUED");
 
         Assert.assertNotNull(dto.getDateCreated());
         Assert.assertNotNull(dto.getLastUpdated());

@@ -8,27 +8,49 @@ import java.io.Serializable;
  * Date: 9/16/11
  * Time: 10:22 AM
  */
-public class TransmissionState implements Serializable {
+public enum TransmissionState implements Serializable {
 
-    private static final long serialVersionUID = 5874121985262365L;
+    PREPPING,
 
-    String enumType;
-    String name;
+    ACCEPTED,
 
-    public String getEnumType() {
-        return enumType;
+    QUEUED,
+
+    DELIVERED,
+
+    ERROR,
+
+    UNKNOWN;
+
+    public static TransmissionState parse(String data) {
+
+        if ("PREPPING".equals(data)) {
+            return PREPPING;
+        }
+        if ("ACCEPTED".equals(data)) {
+            return ACCEPTED;
+        }
+        if ("QUEUED".equals(data)) {
+            return QUEUED;
+        }
+        if ("DELIVERED".equals(data)) {
+            return DELIVERED;
+        }
+        if ("ERROR".equals(data)) {
+            return ERROR;
+        }
+
+        return UNKNOWN;
     }
 
-    public void setEnumType(String enumType) {
-        this.enumType = enumType;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    /**
+     * Tells you if a given state can change.
+     *
+     * @param state The TransmissionState to check.
+     * @return {@code true} if the state id DELIVERED or ERROR, otherwise {@code false}
+     */
+    public static boolean isInFinalState(TransmissionState state) {
+        return state == DELIVERED || state == ERROR;
     }
 
 }
