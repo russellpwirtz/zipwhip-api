@@ -7,6 +7,8 @@ import java.io.Serializable;
  * User: jed
  * Date: 9/16/11
  * Time: 10:22 AM
+ *
+ * A enum representing a Message's TransmissionState across the network.
  */
 public enum TransmissionState implements Serializable {
 
