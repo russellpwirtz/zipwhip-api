@@ -101,7 +101,7 @@ public class RequestBuilder {
                 string = value;
             }
         } else {
-            string = value;
+            string = StringUtil.replaceAll(value, " ", "+");
         }
 
         sb.append(key);
