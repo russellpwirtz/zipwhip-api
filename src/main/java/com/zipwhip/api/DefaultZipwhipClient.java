@@ -343,11 +343,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public Boolean carbonEnabled(boolean enabled) throws Exception {
+    public Boolean carbonEnabled(boolean enabled, Integer versionCode) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("enabled", enabled);
+
+        if(versionCode != null) {
+            params.put("version", versionCode.toString());
+        }
 
         ServerResponse response = executeSync(CARBON_ENABLED, params);
 
