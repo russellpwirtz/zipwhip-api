@@ -1,16 +1,15 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.PingEvent;
-import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
-import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
+import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.lifecycle.DestroyableBase;
-
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
@@ -28,7 +27,7 @@ import static org.jboss.netty.buffer.ChannelBuffers.copiedBuffer;
  * <p/>
  * Connects to the SignalServer via Netty
  */
-public class NettySignalConnection extends DestroyableBase implements SignalConnection, ChannelPipelineFactory {
+public class NettySignalConnection extends CascadingDestroyableBase implements SignalConnection, ChannelPipelineFactory {
 
     private static final Logger LOGGER = Logger.getLogger(NettySignalConnection.class);
 
@@ -170,7 +169,7 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             }
         });
 
-        if(executor != null) {
+        if (executor != null) {
             executor.execute(task);
         }
 
@@ -401,15 +400,15 @@ public class NettySignalConnection extends DestroyableBase implements SignalConn
             channelFactory.releaseExternalResources();
         }
 
-        if(pingTimeoutFuture != null) {
+        if (pingTimeoutFuture != null) {
             pingTimeoutFuture.cancel(true);
         }
 
-        if(pongTimeoutFuture != null) {
+        if (pongTimeoutFuture != null) {
             pongTimeoutFuture.cancel(true);
         }
 
-        if(scheduledExecutor != null) {
+        if (scheduledExecutor != null) {
             scheduledExecutor.shutdownNow();
         }
     }
