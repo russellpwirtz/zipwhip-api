@@ -62,7 +62,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @return An authenticated ZipwhipClient.
      */
     @Override
-    public ZipwhipClient create() {
+    public ZipwhipClient create() throws Exception {
         return new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
     }
 

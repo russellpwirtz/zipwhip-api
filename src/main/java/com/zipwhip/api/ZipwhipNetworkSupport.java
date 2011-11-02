@@ -7,6 +7,8 @@ import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.lifecycle.CascadingDestroyable;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
@@ -23,7 +25,7 @@ import java.util.concurrent.*;
  * class. This class gives functionality that can be used to parse Zipwhip API.
  * This naming convention was copied from Spring (JmsSupport) base class.
  */
-public abstract class ZipwhipNetworkSupport extends DestroyableBase {
+public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
 

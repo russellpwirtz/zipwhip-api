@@ -6,6 +6,7 @@ import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -24,7 +25,7 @@ import java.util.concurrent.*;
  * This interface is intended to be used by 1 and only 1 ZipwhipClient object.
  * This is a very high level interaction where you connect for 1 user.
  */
-public class SocketSignalProvider extends DestroyableBase implements SignalProvider {
+public class SocketSignalProvider extends CascadingDestroyableBase implements SignalProvider {
 
     private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
 
