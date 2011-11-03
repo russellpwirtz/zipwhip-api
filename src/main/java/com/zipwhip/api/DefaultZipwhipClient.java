@@ -5,6 +5,7 @@ import com.zipwhip.api.dto.Message;
 import com.zipwhip.api.dto.MessageStatus;
 import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.exception.NotAuthenticatedException;
+import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
@@ -343,26 +344,22 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public Boolean carbonEnabled(boolean enabled) throws Exception {
+    public Boolean carbonEnabled(boolean enabled, Integer versionCode) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("enabled", enabled);
 
+        if(versionCode != null) {
+            params.put("version", versionCode.toString());
+        }
+
         ServerResponse response = executeSync(CARBON_ENABLED, params);
 
-        if (response instanceof StringServerResponse) {
-            StringServerResponse stringServerResponse = (StringServerResponse) response;
+        if (response instanceof BooleanServerResponse) {
+            BooleanServerResponse booleanServerResponse = (BooleanServerResponse) response;
 
-            Boolean carbonOn = null;
-
-            if(StringUtil.equalsIgnoreCase(stringServerResponse.response, "true")) {
-                carbonOn = true;
-            } else if(StringUtil.equalsIgnoreCase(stringServerResponse.response, "false")) {
-                carbonOn = false;
-            }
-
-            return carbonOn;
+            return booleanServerResponse.getResponse();
 
         } else {
             throw new Exception("Unrecognized server response for carbon enabled");

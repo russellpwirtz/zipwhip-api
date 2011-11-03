@@ -259,41 +259,45 @@ public interface ZipwhipClient extends Destroyable {
     Contact addMember(String groupAddress, String contactAddress, String firstName, String lastName, String phoneKey, String notes) throws Exception;
 
     /**
-     * TODO Austin, could you document this?
+     * Toggles the on/off value of Device Carbon in the cloud. The cloud holds the master value that Device Carbon uses
+     * to override any other value it has.
      *
-     * @param enabled
-     * @param versionCode
+     * @param enabled: turn Device Carbon on/off in the cloud
+     * @param versionCode: What version of Device Carbon is being used?
      * @throws Exception if an error occurs communicating with Zipwhip.
      */
     void carbonEnable(boolean enabled, Integer versionCode) throws Exception;
 
     /**
-     * TODO Austin, could you document this?
+     * Returns the on/off state Device Carbon should be in according to the cloud.
      *
-     * @param enabled
-     * @return
+     * @param enabled: The on/off state Device Carbon is currently in
+     * @return: What state the cloud thinks device carbon is in
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    Boolean carbonEnabled(boolean enabled) throws Exception;
+    Boolean carbonEnabled(boolean enabled, Integer versionCode) throws Exception;
 
     /**
-     * TODO Austin, could you document this?
+     * Initiates the signup process to:
+     * 1) Enroll a new account if one doesn't exist
+     * 2) Create necessary subscriptions
+     * 3) Eventually return a valid session key for this device
      *
-     * @param mobileNumber
-     * @param carrier
-     * @return
+     * @param mobileNumber: mobile number of the account
+     * @param carrier: carrier for the mobileNumber
+     * @return: clientId that is used to finish the challenge process
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     String sessionChallenge(String mobileNumber, String carrier) throws Exception;
 
     /**
-     * TODO Austin, could you document this?
+     * Finishes the challenge process and returns a session key
      *
-     * @param clientId
-     * @param securityToken
-     * @param arguments
-     * @param userAgent
-     * @return
+     * @param clientId: clientId returned by the original sessionChallenge call
+     * @param securityToken: The random string that is sent in an ".signup verify" sms to the phone
+     * @param arguments: any extra arguments for the cloud to react to (.signup devicecarbonall)
+     * @param userAgent: Device's user agent
+     * @return: A session key
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
