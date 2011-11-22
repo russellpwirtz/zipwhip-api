@@ -368,6 +368,19 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public void carbonRegister(String registrationId) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        if(!StringUtil.isNullOrEmpty(registrationId)) {
+            params.put("registrationId", registrationId);
+        }
+
+        executeSync(CARBON_REGISTER, params);
+
+    }
+
+
+    @Override
     public String sessionChallenge(String mobileNumber, String carrier) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
