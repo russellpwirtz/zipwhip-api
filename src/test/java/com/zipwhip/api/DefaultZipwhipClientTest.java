@@ -1,8 +1,8 @@
 package com.zipwhip.api;
 
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
 import org.junit.Assert;
@@ -125,9 +125,9 @@ public class DefaultZipwhipClientTest {
     public class MockApiConnection extends DestroyableBase implements ApiConnection {
 
         @Override
-        public NetworkFuture<String> send(String method, Map<String, Object> params) throws Exception {
+        public ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception {
 
-            NetworkFuture<String> result = new DefaultNetworkFuture<String>(this);
+            ObservableFuture<String> result = new DefaultObservableFuture<String>(this);
 
             if (ZipwhipNetworkSupport.CHALLENGE_REQUEST.equalsIgnoreCase(method)) {
                 result.setSuccess(SESSION_CHALLENGE_RESPONSE);

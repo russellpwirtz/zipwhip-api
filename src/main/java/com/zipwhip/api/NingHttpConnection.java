@@ -2,8 +2,8 @@ package com.zipwhip.api;
 
 import com.ning.http.client.*;
 import com.zipwhip.api.request.RequestBuilder;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
@@ -149,14 +149,14 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
      * @return NetworkFuture<String>  where the String result is the raw serer response.
      */
     @Override
-    public NetworkFuture<String> send(final String method, Map<String, Object> params) {
+    public ObservableFuture<String> send(final String method, Map<String, Object> params) {
 
         final RequestBuilder rb = new RequestBuilder();
 
         // convert the map into a key/value HTTP params string
         rb.params(params);
 
-        final NetworkFuture<String> responseFuture = new DefaultNetworkFuture<String>(this, workerExecutor);
+        final ObservableFuture<String> responseFuture = new DefaultObservableFuture<String>(this, workerExecutor);
 
         try {
             asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {

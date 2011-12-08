@@ -7,7 +7,6 @@ import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
@@ -438,7 +437,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         if (connectLatch != null) {
             // we need to countDown the latch, when it hits zero (after this call)
-            // the connect NetworkFuture will complete. This gives the caller a way to block on our connection
+            // the connect ObservableFuture will complete. This gives the caller a way to block on our connection
             connectLatch.countDown();
         }
     }

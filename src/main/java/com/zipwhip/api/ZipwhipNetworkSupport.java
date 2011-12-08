@@ -4,12 +4,10 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import com.zipwhip.lifecycle.CascadingDestroyable;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
 
@@ -145,17 +143,17 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         return get(executeAsync(method, params, requiresAuthentication, FORWARD_RUNNABLE));
     }
 
-    protected <T> NetworkFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
+    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
 
         if (requiresAuthentication && !connection.isAuthenticated()) {
             throw new Exception("The connection is not authenticated, can't continue.");
         }
 
-        final NetworkFuture<T> result = new DefaultNetworkFuture<T>(this, callbackExecutor);
+        final ObservableFuture<T> result = new DefaultObservableFuture<T>(this, callbackExecutor);
 
-        final NetworkFuture<String> responseFuture = getConnection().send(method, params);
+        final ObservableFuture<String> responseFuture = getConnection().send(method, params);
 
-        responseFuture.addObserver(new Observer<NetworkFuture<String>>() {
+        responseFuture.addObserver(new Observer<ObservableFuture<String>>() {
 
             /**
              * This code will execute in the "workerExecutor" of the connection.
@@ -165,7 +163,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
              * @param item Rich object representing the notification.
              */
             @Override
-            public void notify(Object sender, NetworkFuture<String> item) {
+            public void notify(Object sender, ObservableFuture<String> item) {
 
                 // The network is done! let's check for our cake!
                 if (!item.isDone()) {
@@ -241,7 +239,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         }
     }
 
-    protected <T> T get(NetworkFuture<T> task) throws Exception {
+    protected <T> T get(ObservableFuture<T> task) throws Exception {
 
         task.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
@@ -258,15 +256,15 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     protected static class ParsableServerResponse<T> {
 
-        private NetworkFuture<T> future;
+        private ObservableFuture<T> future;
         private ServerResponse serverResponse;
 
-        private ParsableServerResponse(NetworkFuture<T> future, ServerResponse serverResponse) {
+        private ParsableServerResponse(ObservableFuture<T> future, ServerResponse serverResponse) {
             this.future = future;
             this.serverResponse = serverResponse;
         }
 
-        public NetworkFuture<T> getFuture() {
+        public ObservableFuture<T> getFuture() {
             return future;
         }
 

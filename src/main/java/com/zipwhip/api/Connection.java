@@ -1,6 +1,6 @@
 package com.zipwhip.api;
 
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.Destroyable;
 
 import java.util.Map;
@@ -48,9 +48,9 @@ public interface Connection extends Destroyable {
      *
      * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
      * @param params Map of query params to append to the method
-     * @return A NetworkFuture task which will return the response body as a String on completion.
+     * @return A ObservableFuture task which will return the response body as a String on completion.
      * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
      */
-    NetworkFuture<String> send(String method, Map<String, Object> params) throws Exception;
+    ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception;
 
 }

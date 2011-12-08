@@ -4,7 +4,7 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
@@ -84,7 +84,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
                 params.put("mobileNumber", username);
                 params.put("password", password);
 
-                NetworkFuture<String> future = connection.send("user/login", params);
+                ObservableFuture<String> future = connection.send("user/login", params);
 
                 future.awaitUninterruptibly();
 

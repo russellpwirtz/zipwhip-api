@@ -6,8 +6,8 @@ import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.BooleanServerResponse;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.InputRunnable;
 import com.zipwhip.util.StringUtil;
@@ -33,7 +33,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<EnrollmentResult> enrollUser(String deviceAddress) {
+    public ObservableFuture<EnrollmentResult> enrollUser(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -59,7 +59,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> deactivateUser(String deviceAddress) {
+    public ObservableFuture<Void> deactivateUser(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -81,7 +81,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Boolean> userExists(String deviceAddress) {
+    public ObservableFuture<Boolean> userExists(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -109,7 +109,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> suggestCarbon(String deviceAddress) {
+    public ObservableFuture<Void> suggestCarbon(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -131,7 +131,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Boolean> carbonInstalled(String deviceAddress) {
+    public ObservableFuture<Boolean> carbonInstalled(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -158,7 +158,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Boolean> carbonEnabled(String deviceAddress) {
+    public ObservableFuture<Boolean> carbonEnabled(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -185,12 +185,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body) {
+    public ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body) {
         return sendMessage(deviceAddress, Collections.singleton(friendAddress), body);
     }
 
     @Override
-    public NetworkFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body) {
+    public ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -228,7 +228,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<List<Message>> listMessages(String deviceAddress) {
+    public ObservableFuture<List<Message>> listMessages(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -254,7 +254,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Contact> saveUser(String deviceAddress, Contact user) {
+    public ObservableFuture<Contact> saveUser(String deviceAddress, Contact user) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -294,7 +294,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> readMessages(String deviceAddress, Set<String> uuids) {
+    public ObservableFuture<Void> readMessages(String deviceAddress, Set<String> uuids) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -317,7 +317,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids) {
+    public ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -340,7 +340,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> readConversation(String deviceAddress, String fingerprint) {
+    public ObservableFuture<Void> readConversation(String deviceAddress, String fingerprint) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -363,7 +363,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> deleteConversation(String deviceAddress, String fingerprint) {
+    public ObservableFuture<Void> deleteConversation(String deviceAddress, String fingerprint) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -386,7 +386,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<List<Conversation>> listConversations(String deviceAddress) {
+    public ObservableFuture<List<Conversation>> listConversations(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -412,7 +412,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Contact> saveContact(String deviceAddress, Contact contact) {
+    public ObservableFuture<Contact> saveContact(String deviceAddress, Contact contact) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -459,7 +459,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers) {
+    public ObservableFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -489,7 +489,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<List<Contact>> listContacts(String deviceAddress) {
+    public ObservableFuture<List<Contact>> listContacts(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -515,7 +515,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public NetworkFuture<Contact> getContact(String deviceAddress, String contactMobileNumber) {
+    public ObservableFuture<Contact> getContact(String deviceAddress, String contactMobileNumber) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
@@ -544,12 +544,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
     }
 
-    private <T> NetworkFuture<T> invalidArgumentFailureFuture(String message) {
+    private <T> ObservableFuture<T> invalidArgumentFailureFuture(String message) {
         return failureFuture(new IllegalAccessException(message));
     }
 
-    private <T> NetworkFuture<T> failureFuture(Exception e) {
-        NetworkFuture<T> future = new DefaultNetworkFuture<T>(this);
+    private <T> ObservableFuture<T> failureFuture(Exception e) {
+        ObservableFuture<T> future = new DefaultObservableFuture<T>(this);
         future.setFailure(e);
         return future;
     }

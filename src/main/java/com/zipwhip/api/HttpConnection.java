@@ -1,8 +1,8 @@
 package com.zipwhip.api;
 
 import com.zipwhip.api.request.RequestBuilder;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.DownloadURL;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -99,7 +99,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
     }
 
     @Override
-    public NetworkFuture<String> send(String method, Map<String, Object> params) {
+    public ObservableFuture<String> send(String method, Map<String, Object> params) {
 
         RequestBuilder rb = new RequestBuilder();
 
@@ -109,10 +109,10 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         return send(method, rb.build());
     }
 
-    private NetworkFuture<String> send(final String method, final String params) {
+    private ObservableFuture<String> send(final String method, final String params) {
 
         // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock.
-        final NetworkFuture<String> future = new DefaultNetworkFuture<String>(this, workerExecutor);
+        final ObservableFuture<String> future = new DefaultObservableFuture<String>(this, workerExecutor);
 
         bossExecutor.execute(new Runnable() {
             @Override

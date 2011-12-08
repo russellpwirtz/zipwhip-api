@@ -6,8 +6,8 @@ import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Conversation;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.concurrent.DefaultNetworkFuture;
-import com.zipwhip.concurrent.NetworkFuture;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
 import org.junit.Assert;
@@ -49,7 +49,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testEnrollUser() throws Exception {
-        NetworkFuture<EnrollmentResult> result = client.enrollUser(deviceAddress);
+        ObservableFuture<EnrollmentResult> result = client.enrollUser(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -61,7 +61,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testDeactivateUser() throws Exception {
-        NetworkFuture<Void> result = client.deactivateUser(deviceAddress);
+        ObservableFuture<Void> result = client.deactivateUser(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -70,7 +70,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testUserExists() throws Exception {
-        NetworkFuture<Boolean> result = client.userExists(deviceAddress);
+        ObservableFuture<Boolean> result = client.userExists(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -80,7 +80,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testSuggestCarbon() throws Exception {
-        NetworkFuture<Void> result = client.suggestCarbon(deviceAddress);
+        ObservableFuture<Void> result = client.suggestCarbon(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -89,7 +89,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testCarbonInstalled() throws Exception {
-        NetworkFuture<Boolean> result = client.carbonInstalled(deviceAddress);
+        ObservableFuture<Boolean> result = client.carbonInstalled(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -98,7 +98,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testCarbonEnabled() throws Exception {
-        NetworkFuture<Boolean> result = client.carbonEnabled(deviceAddress);
+        ObservableFuture<Boolean> result = client.carbonEnabled(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -107,7 +107,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testSendMessage() throws Exception {
-        NetworkFuture<List<MessageToken>> result = client.sendMessage(deviceAddress, Collections.singleton("5554443333"), "Hi mom");
+        ObservableFuture<List<MessageToken>> result = client.sendMessage(deviceAddress, Collections.singleton("5554443333"), "Hi mom");
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -120,7 +120,7 @@ public class DefaultAsyncVendorClientTest {
         Contact user = new Contact();
         user.setFirstName("Im");
         user.setLastName("Cool");
-        NetworkFuture<Contact> result = client.saveUser(deviceAddress, user);
+        ObservableFuture<Contact> result = client.saveUser(deviceAddress, user);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -133,7 +133,7 @@ public class DefaultAsyncVendorClientTest {
         Set<String> messages = new HashSet<String>();
         messages.add("123456");
         messages.add("654321");
-        NetworkFuture<Void> result = client.readMessages(deviceAddress, messages);
+        ObservableFuture<Void> result = client.readMessages(deviceAddress, messages);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -145,7 +145,7 @@ public class DefaultAsyncVendorClientTest {
         Set<String> messages = new HashSet<String>();
         messages.add("123456");
         messages.add("654321");
-        NetworkFuture<Void> result = client.deleteMessages(deviceAddress, messages);
+        ObservableFuture<Void> result = client.deleteMessages(deviceAddress, messages);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -154,7 +154,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testReadConversation() throws Exception {
-        NetworkFuture<Void> result = client.readConversation(deviceAddress, "123456");
+        ObservableFuture<Void> result = client.readConversation(deviceAddress, "123456");
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -163,7 +163,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testDeleteConversation() throws Exception {
-        NetworkFuture<Void> result = client.deleteConversation(deviceAddress, "123456");
+        ObservableFuture<Void> result = client.deleteConversation(deviceAddress, "123456");
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -172,7 +172,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testListConversations() throws Exception {
-        NetworkFuture<List<Conversation>> result = client.listConversations(deviceAddress);
+        ObservableFuture<List<Conversation>> result = client.listConversations(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -186,7 +186,7 @@ public class DefaultAsyncVendorClientTest {
         contact.setFirstName("Dennis");
         contact.setLastName("Ritchie");
         contact.setAddress("ptn:/5555555555");
-        NetworkFuture<Contact> result = client.saveContact(deviceAddress, contact);
+        ObservableFuture<Contact> result = client.saveContact(deviceAddress, contact);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -198,7 +198,7 @@ public class DefaultAsyncVendorClientTest {
         Set<String> contacts = new HashSet<String>();
         contacts.add("123456");
         contacts.add("654321");
-        NetworkFuture<Void> result = client.deleteContacts(deviceAddress, contacts);
+        ObservableFuture<Void> result = client.deleteContacts(deviceAddress, contacts);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -207,7 +207,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testListContacts() throws Exception {
-        NetworkFuture<List<Contact>> result = client.listContacts(deviceAddress);
+        ObservableFuture<List<Contact>> result = client.listContacts(deviceAddress);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -217,7 +217,7 @@ public class DefaultAsyncVendorClientTest {
 
     @Test
     public void testGetContact() throws Exception {
-        NetworkFuture<Contact> result = client.getContact(deviceAddress, contactMobileNumber);
+        ObservableFuture<Contact> result = client.getContact(deviceAddress, contactMobileNumber);
         Assert.assertNotNull(result);
         result.await();
         Assert.assertTrue(result.isSuccess());
@@ -227,9 +227,9 @@ public class DefaultAsyncVendorClientTest {
     public class MockApiConnection extends DestroyableBase implements ApiConnection {
 
         @Override
-        public NetworkFuture<String> send(String method, Map<String, Object> params) throws Exception {
+        public ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception {
 
-            NetworkFuture<String> result = new DefaultNetworkFuture<String>(this);
+            ObservableFuture<String> result = new DefaultObservableFuture<String>(this);
 
             if (ZipwhipNetworkSupport.USER_ENROLL.equalsIgnoreCase(method)) {
                 result.setSuccess(ENROLLMENT_RESULT);
