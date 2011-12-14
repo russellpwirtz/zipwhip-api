@@ -282,7 +282,7 @@ public interface ZipwhipClient extends Destroyable {
      * @param registrationId - Google provided registrationId to send push notifications too
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    void carbonRegister(String registrationId) throws Exception;
+    Boolean carbonRegister(String registrationId) throws Exception;
 
     /**
      * Initiates the signup process to:
