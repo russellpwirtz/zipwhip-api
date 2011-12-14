@@ -421,6 +421,16 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public boolean userUnenroll(String packageName) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("package", packageName);
+
+        return success(executeSync(USER_UNENROLL, params));
+
+    }
+
+    @Override
     public void addSignalObserver(Observer<List<Signal>> observer) {
         getSignalProvider().onSignalReceived(observer);
     }

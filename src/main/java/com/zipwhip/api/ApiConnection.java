@@ -17,6 +17,21 @@ public interface ApiConnection extends Connection {
     public static final String DEFAULT_HOST = "http://network.zipwhip.com";
 
     /**
+     * The Zipwhip staing domain
+     */
+    public static final String STAGING_HOST = "http://staging.zipwhip.com";
+
+    /**
+     * The Zipwhip test domain
+     */
+    public static final String TEST_HOST = "http://test.zipwhip.com";
+
+    /**
+     * The Zipwhip dev domain
+     */
+    public static final String DEVELOPMENT_HOST = "http://office.zipwhip.com:6092";
+
+    /**
      * The default Zipwhip HTTPS domain
      */
     public static final String DEFAULT_HTTPS_HOST = "https://network.zipwhip.com";

@@ -309,6 +309,8 @@ public interface ZipwhipClient extends Destroyable {
      */
     String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
 
+    boolean userUnenroll(String packageName) throws Exception;
+
     /**
      * Connect to Zipwhip Signals if setup.
      *
