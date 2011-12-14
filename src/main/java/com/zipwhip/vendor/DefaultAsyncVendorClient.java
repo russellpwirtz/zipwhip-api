@@ -6,6 +6,8 @@ import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.BooleanServerResponse;
+import com.zipwhip.api.response.ObjectServerResponse;
+import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.concurrent.DefaultNetworkFuture;
 import com.zipwhip.concurrent.NetworkFuture;
 import com.zipwhip.util.CollectionUtil;
@@ -542,6 +544,79 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         } catch (Exception e) {
             return failureFuture(e);
         }
+    }
+
+    @Override
+    public NetworkFuture<Void> textlineProvision(String phoneNumber) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(phoneNumber)) {
+            return invalidArgumentFailureFuture("Phone number is a required argument");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("phoneNumber", phoneNumber);
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_PROVISION, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+                @Override
+                public void run(ParsableServerResponse<Void> parsableServerResponse) {
+                    parsableServerResponse.getFuture().setSuccess(null);
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+
+    }
+
+    @Override
+    public NetworkFuture<Void> textlineEnroll(String phoneNumber, String email) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(phoneNumber)) {
+            return invalidArgumentFailureFuture("Phone number is a required argument");
+        }
+        if (StringUtil.isNullOrEmpty(email)) {
+            return invalidArgumentFailureFuture("Email is a required argument");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("phoneNumber", phoneNumber);
+        params.put("email", email);
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_ENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+                @Override
+                public void run(ParsableServerResponse<Void> parsableServerResponse) {
+                    parsableServerResponse.getFuture().setSuccess(null);
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+
+    }
+
+    @Override
+    public NetworkFuture<Void> textlineUnenroll(String phoneNumber) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(phoneNumber)) {
+            return invalidArgumentFailureFuture("Phone number is a required argument");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("phoneNumber", phoneNumber);
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_UNENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+                @Override
+                public void run(ParsableServerResponse<Void> parsableServerResponse) {
+                    parsableServerResponse.getFuture().setSuccess(null);
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+
     }
 
     private <T> NetworkFuture<T> invalidArgumentFailureFuture(String message) {

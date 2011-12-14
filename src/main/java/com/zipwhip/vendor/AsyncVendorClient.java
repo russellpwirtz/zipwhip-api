@@ -200,4 +200,8 @@ public interface AsyncVendorClient {
      */
     NetworkFuture<Contact> getContact(String deviceAddress, String contactMobileNumber);
 
+    NetworkFuture<Void> textlineProvision(String phoneNumber) throws Exception;
+    NetworkFuture<Void> textlineEnroll(String phoneNumber, String email) throws Exception;
+    NetworkFuture<Void> textlineUnenroll(String phoneNumber) throws Exception;
+
 }
