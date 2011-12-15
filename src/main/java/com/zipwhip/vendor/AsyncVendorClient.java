@@ -32,7 +32,7 @@ public interface AsyncVendorClient {
      * Enroll a user in Zipwhip. If the user is already enrolled the this call will have no effect.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to be enrolled in Zipwhip.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the enrollment.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the enrollment.
      */
     ObservableFuture<EnrollmentResult> enrollUser(String deviceAddress);
 
@@ -40,7 +40,7 @@ public interface AsyncVendorClient {
      * Unenroll a user from Zipwhip. When a user is unenrolled their account is removed from Zipwhip.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to be unenrolled from Zipwhip.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deactivateUser(String deviceAddress);
 
@@ -48,7 +48,7 @@ public interface AsyncVendorClient {
      * Query Zipwhip to see if a user already exists.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user to query if they are enrolled in Zipwhip.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      *         The result will be {@code TRUE} if the user exists, {@code FALSE} otherwise.
      */
     ObservableFuture<Boolean> userExists(String deviceAddress);
@@ -59,7 +59,7 @@ public interface AsyncVendorClient {
      * download of the Carbon software. If the user's phone is not supported an error message is presented to the user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to receive a DeviceCarbon link to their phone.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> suggestCarbon(String deviceAddress);
 
@@ -68,7 +68,7 @@ public interface AsyncVendorClient {
      * Returns a {@code true} result if it is installed, otherwise {@code false}.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to receive a DeviceCarbon link to their phone.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Boolean> carbonInstalled(String deviceAddress);
 
@@ -77,7 +77,7 @@ public interface AsyncVendorClient {
      * Returns a {@code true} result if it is enabled, otherwise {@code false}.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user who wishes to receive a DeviceCarbon link to their phone.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Boolean> carbonEnabled(String deviceAddress);
 
@@ -88,7 +88,7 @@ public interface AsyncVendorClient {
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param friendAddresses A list of mobile numbers of the recipients of the message.
      * @param body The text of the message to be sent.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> friendAddresses, String body);
 
@@ -99,7 +99,7 @@ public interface AsyncVendorClient {
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param friendAddress A mobile number of the recipients of the message.
      * @param body The text of the message to be sent.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body);
 
@@ -107,7 +107,7 @@ public interface AsyncVendorClient {
      *  List the messages for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<Message>> listMessages(String deviceAddress);
 
@@ -116,7 +116,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param user The user to save or update.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      *         The result is the saved user.
      */
     ObservableFuture<Contact> saveUser(String deviceAddress, Contact user);
@@ -126,7 +126,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param uuids         A list of message uuids for the messages to be marked as read.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> readMessages(String deviceAddress, Set<String> uuids);
 
@@ -135,7 +135,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param uuids         A list of message uuids for the messages to be deleted.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids);
 
@@ -144,7 +144,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param fingerprint  The fingerprint of the conversation to be marked as read.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> readConversation(String deviceAddress, String fingerprint);
 
@@ -153,7 +153,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param fingerprint  The fingerprint of the conversation to be deleted.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deleteConversation(String deviceAddress, String fingerprint);
 
@@ -161,7 +161,7 @@ public interface AsyncVendorClient {
      * Query the list of conversations for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<Conversation>> listConversations(String deviceAddress);
 
@@ -170,7 +170,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param contact       The contact to be saved in the user's contact list.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Contact> saveContact(String deviceAddress, Contact contact);
 
@@ -179,7 +179,7 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param contactMobileNumbers A list of mobile numbers for the contacts to be deleted.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers);
 
@@ -187,7 +187,7 @@ public interface AsyncVendorClient {
      * Query a user's contact list.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<Contact>> listContacts(String deviceAddress);
 
@@ -196,8 +196,33 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param contactMobileNumber The mobile number of the contact to be queried.
-     * @return A {@code NetworkFuture} that will asynchronously report the result of the call.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Contact> getContact(String deviceAddress, String contactMobileNumber);
+
+    /**
+     *
+     * @param phoneNumber
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
+     * @throws Exception
+     */
+    ObservableFuture<Void> textlineProvision(String phoneNumber) throws Exception;
+
+    /**
+     *
+     * @param phoneNumber
+     * @param email
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
+     * @throws Exception
+     */
+    ObservableFuture<Void> textlineEnroll(String phoneNumber, String email) throws Exception;
+
+    /**
+     *
+     * @param phoneNumber
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
+     * @throws Exception
+     */
+    ObservableFuture<Void> textlineUnenroll(String phoneNumber) throws Exception;
 
 }

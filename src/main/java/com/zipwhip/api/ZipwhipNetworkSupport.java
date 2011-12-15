@@ -66,6 +66,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String USER_DEACT = "user/deact";
     public static final String USER_SAVE = "user/save";
     public static final String USER_EXISTS = "user/exists";
+    public static final String USER_UNENROLL = "user/unenroll";
 
     public static final String CARBON_ENABLE = "v1/carbon/enable";
     public static final String CARBON_ENABLED = "v1/carbon/enabled";
@@ -76,6 +77,10 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String CHALLENGE_REQUEST = "session/challenge";
     public static final String CHALLENGE_CONFIRM = "session/challenge/confirm";
+
+    public static final String TEXTLINE_PROVISION = "textline/provision";
+    public static final String TEXTLINE_ENROLL = "textline/enroll";
+    public static final String TEXTLINE_UNENROLL = "textline/unenroll";
 
     /**
      * A runnable for for for executing asynchronous server responses.

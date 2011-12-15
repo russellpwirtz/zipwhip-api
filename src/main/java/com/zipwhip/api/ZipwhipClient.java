@@ -272,7 +272,7 @@ public interface ZipwhipClient extends Destroyable {
      * Returns the on/off state Device Carbon should be in according to the cloud.
      *
      * @param enabled: The on/off state Device Carbon is currently in
-     * @return: What state the cloud thinks device carbon is in
+     * @return What state the cloud thinks device carbon is in
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     Boolean carbonEnabled(boolean enabled, Integer versionCode) throws Exception;
@@ -292,7 +292,7 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param mobileNumber: mobile number of the account
      * @param carrier: carrier for the mobileNumber
-     * @return: clientId that is used to finish the challenge process
+     * @return clientId that is used to finish the challenge process
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     String sessionChallenge(String mobileNumber, String carrier) throws Exception;
@@ -304,10 +304,18 @@ public interface ZipwhipClient extends Destroyable {
      * @param securityToken: The random string that is sent in an ".signup verify" sms to the phone
      * @param arguments: any extra arguments for the cloud to react to (.signup devicecarbonall)
      * @param userAgent: Device's user agent
-     * @return: A session key
+     * @return A session key
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
+
+    /**
+     *
+     * @param packageName
+     * @return
+     * @throws Exception
+     */
+    boolean userUnenroll(String packageName) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
