@@ -1,219 +1,223 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.api.signals.JsonSignalParser;
-import com.zipwhip.api.signals.PresenceUtil;
-import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.api.signals.sockets.netty.StringToChannelBuffer;
-import com.zipwhip.util.Parser;
-import com.zipwhip.util.StringUtil;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.zipwhip.api.signals.JsonSignalParser;
+import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.sockets.netty.StringToChannelBuffer;
+import com.zipwhip.signals.message.Action;
+import com.zipwhip.util.Parser;
+import com.zipwhip.util.StringUtil;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/3/11 Time: 5:20 PM
  * <p/>
  * Parse out a SignalCommand from a String.
  */
-public class JsonSignalCommandParser implements Parser<String, Command> {
+public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
-    private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
+	private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
 
-    private Map<String, Parser<JSONObject, Command>> parsers;
-    private JsonSignalParser signalContentParser = new JsonSignalParser();
+	private Map<Action, Parser<JSONObject, Command<?>>> parsers;
+	private JsonSignalParser signalContentParser = new JsonSignalParser();
 
-    public JsonSignalCommandParser() {
+	public JsonSignalCommandParser() {
 
-        parsers = new HashMap<String, Parser<JSONObject, Command>>();
+		parsers = new HashMap<Action, Parser<JSONObject, Command<?>>>();
 
-        parsers.put(ConnectCommand.ACTION, CONNECT_PARSER);
-        parsers.put(DisconnectCommand.ACTION, DISCONNECT_PARSER);
-        parsers.put(SubscriptionCompleteCommand.ACTION, SUBSCRIPTION_COMPLETE_PARSER);
-        parsers.put(BacklogCommand.ACTION, BACKLOG_PARSER);
-        parsers.put(SignalCommand.ACTION, SIGNAL_PARSER);
-        parsers.put(PresenceCommand.ACTION, PRESENCE_PARSER);
-        parsers.put(SignalVerificationCommand.ACTION, SIGNAL_VERIFICATION_PARSER);
-        parsers.put(PingPongCommand.ACTION, PING_PONG_PARSER);
-        parsers.put(NoopCommand.ACTION, NOOP_PARSER);
-    }
+		parsers.put(ConnectCommand.ACTION, CONNECT_PARSER);
+		parsers.put(DisconnectCommand.ACTION, DISCONNECT_PARSER);
+		parsers.put(SubscriptionCompleteCommand.ACTION, SUBSCRIPTION_COMPLETE_PARSER);
+		parsers.put(BacklogCommand.ACTION, BACKLOG_PARSER);
+		parsers.put(SignalCommand.ACTION, SIGNAL_PARSER);
+		parsers.put(PresenceCommand.ACTION, PRESENCE_PARSER);
+		parsers.put(SignalVerificationCommand.ACTION, SIGNAL_VERIFICATION_PARSER);
+		parsers.put(PingPongCommand.ACTION, PING_PONG_PARSER);
+		parsers.put(NoopCommand.ACTION, NOOP_PARSER);
+	}
 
-    @Override
-    public Command parse(String string) throws Exception {
+	@Override
+	public Command<?> parse(String string) throws Exception {
 
-        // First check if it is a short form PONG command
-        if (StringToChannelBuffer.CRLF.equals(string)) {
-            return PingPongCommand.getShortformInstance();
-        }
+		// First check if it is a short form PONG command
+		if (StringToChannelBuffer.CRLF.equals(string)) {
+			return PingPongCommand.getShortformInstance();
+		}
 
-        JSONObject json = new JSONObject(string);
+		JSONObject json = new JSONObject(string);
 
-        String action = json.optString("action");
+		String action = json.optString("action");
 
-        if (action != null) {
-            action = action.toLowerCase();
-        }
+		if (action != null) {
+			action = action.toLowerCase();
+		}
 
-        Parser<JSONObject, Command> parser = parsers.get(action);
+		Action valueOf = Action.valueOf(action.toUpperCase());
+		Parser<JSONObject, Command<?>> parser = parsers.get(valueOf);
 
-        if (parser == null) {
-            throw new RuntimeException("No parser for " + action + " was found.");
-        }
+		if (parser == null) {
+			throw new RuntimeException("No parser for " + action + " was found.");
+		}
 
-        LOGGER.debug("Parsing" + string);
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("Parsing" + string);
+		}
 
-        return parser.parse(json);
-    }
-    
-    public final Parser<JSONObject, Command> CONNECT_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
-            
-            String clientId = object.optString("clientId");
+		return parser.parse(json);
+	}
 
-            return new ConnectCommand(clientId);
-        }
-    };
-    
-    public final Parser<JSONObject, Command> DISCONNECT_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+	public final Parser<JSONObject, Command<?>> CONNECT_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-            String host = object.optString("host", StringUtil.EMPTY_STRING);
-            int port = object.optInt("port", 0);
-            int reconnectDelay = object.optInt("reconnectDelay", 0);
-            boolean stop = object.optBoolean("stop", false);
-            boolean ban = object.optBoolean("ban", false);
-            
-            return new DisconnectCommand(host, port, reconnectDelay, stop, ban);
-        }
-    };
+			String clientId = object.optString("clientId");
 
-    public final Parser<JSONObject, Command> SUBSCRIPTION_COMPLETE_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+			return new ConnectCommand(clientId);
+		}
+	};
 
-            if (!object.has("channels")) {
-                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
-                return null;
-            }
+	public final Parser<JSONObject, Command<?>> DISCONNECT_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-            List<Object> channels = new ArrayList<Object>();
+			String host = object.optString("host", StringUtil.EMPTY_STRING);
+			int port = object.optInt("port", 0);
+			int reconnectDelay = object.optInt("reconnectDelay", 0);
+			boolean stop = object.optBoolean("stop", false);
+			boolean ban = object.optBoolean("ban", false);
 
-            JSONArray channelArray = object.optJSONArray("channels");
+			return new DisconnectCommand(host, port, reconnectDelay, stop, ban);
+		}
+	};
 
-            if (channelArray == null) {
+	public final Parser<JSONObject, Command<?>> SUBSCRIPTION_COMPLETE_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-                LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
+			if (!object.has("channels")) {
+				LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
+				return null;
+			}
 
-            } else {
+			List<Object> channels = new ArrayList<Object>();
 
-                for (int i = 0; i < channelArray.length(); i++) {
-                    channels.add(channelArray.get(i));
-                }
-            }
+			JSONArray channelArray = object.optJSONArray("channels");
 
-            String subscriptionId = object.optString("subscriptionId");
+			if (channelArray == null) {
 
-            SubscriptionCompleteCommand subscriptionCompleteCommand = new SubscriptionCompleteCommand(subscriptionId, channels);
-            subscriptionCompleteCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
-                        
-            return subscriptionCompleteCommand;
-        }
-    };
-        
-    public final Parser<JSONObject, Command> BACKLOG_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+				LOGGER.warn("SUBSCRIPTION_COMPLETE command received with no channels.");
 
-            if (!object.has("messages")) {
-                LOGGER.warn("BACKLOG command received with no messages.");
-                return null;
-            }
+			} else {
 
-            JSONArray messages = object.optJSONArray("messages");
-            if (messages == null) {
-                LOGGER.warn("BACKLOG command received with no messages.");
-                return null;
-            }
+				for (int i = 0; i < channelArray.length(); i++) {
+					channels.add(channelArray.get(i));
+				}
+			}
 
-            List<SignalCommand> signalCommands = new ArrayList<SignalCommand>();
+			String subscriptionId = object.optString("subscriptionId");
 
-            for (int i = 0; i < messages.length(); i++) {
+			SubscriptionCompleteCommand subscriptionCompleteCommand = new SubscriptionCompleteCommand(subscriptionId, channels);
+			subscriptionCompleteCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
-                JSONObject signalJson = messages.optJSONObject(i);
+			return subscriptionCompleteCommand;
+		}
+	};
 
-                if (signalJson != null && signalJson.has("signal")) {
-                    signalCommands.add((SignalCommand) SIGNAL_PARSER.parse(signalJson));
-                }
-            }
+	public final Parser<JSONObject, Command<?>> BACKLOG_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-            return new BacklogCommand(signalCommands);
-        }
-    };
+			if (!object.has("messages")) {
+				LOGGER.warn("BACKLOG command received with no messages.");
+				return null;
+			}
 
-    public final Parser<JSONObject, Command> SIGNAL_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+			JSONArray messages = object.optJSONArray("messages");
+			if (messages == null) {
+				LOGGER.warn("BACKLOG command received with no messages.");
+				return null;
+			}
 
-            if (!object.has("signal")) {
-                LOGGER.warn("SIGNAL command received with no signal object.");
-                return null;
-            }
+			List<SignalCommand> signalCommands = new ArrayList<SignalCommand>();
 
-            SignalCommand signalCommand = new SignalCommand(signalContentParser.parseSignal(object));
-            signalCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+			for (int i = 0; i < messages.length(); i++) {
 
-            return signalCommand;
-        }
-    };
+				JSONObject signalJson = messages.optJSONObject(i);
 
-    public final Parser<JSONObject, Command> PRESENCE_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+				if ((signalJson != null) && signalJson.has("signal")) {
+					signalCommands.add((SignalCommand) SIGNAL_PARSER.parse(signalJson));
+				}
+			}
 
-            if (!object.has("presence")) {
-                LOGGER.warn("PRESENCE command received with no presence object.");
-                return null;
-            }
+			return new BacklogCommand(signalCommands);
+		}
+	};
 
-            PresenceCommand presenceCommand = new PresenceCommand(PresenceUtil.getInstance().parse(object.optJSONArray("presence")));
-            presenceCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+	public final Parser<JSONObject, Command<?>> SIGNAL_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-            return presenceCommand;
-        }
-    };
-    
-    public final Parser<JSONObject, Command> SIGNAL_VERIFICATION_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
-            return new SignalVerificationCommand();
-        }
-    };
+			if (!object.has("signal")) {
+				LOGGER.warn("SIGNAL command received with no signal object.");
+				return null;
+			}
 
-    public final Parser<JSONObject, Command> PING_PONG_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {
+			SignalCommand signalCommand = new SignalCommand(signalContentParser.parseSignal(object));
+			signalCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
-            PingPongCommand pingPongCommand = PingPongCommand.getNewLongformInstance();
-            pingPongCommand.setTimestamp(object.optLong("timestamp", 0));
-            pingPongCommand.setRequest(object.optBoolean("request", false));
-            pingPongCommand.setToken(object.optString("token", StringUtil.EMPTY_STRING));
+			return signalCommand;
+		}
+	};
 
-            return pingPongCommand;
-        }
-    };
+	public final Parser<JSONObject, Command<?>> PRESENCE_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
 
-    public final Parser<JSONObject, Command> NOOP_PARSER = new Parser<JSONObject, Command>() {
-        @Override
-        public Command parse(JSONObject object) throws Exception {                       
-            return new NoopCommand();
-        }
-    };
+			if (!object.has("presence")) {
+				LOGGER.warn("PRESENCE command received with no presence object.");
+				return null;
+			}
+
+			PresenceCommand presenceCommand = new PresenceCommand(PresenceUtil.getInstance().parse(object.optJSONArray("presence")));
+			presenceCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+
+			return presenceCommand;
+		}
+	};
+
+	public final Parser<JSONObject, Command<?>> SIGNAL_VERIFICATION_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
+			return new SignalVerificationCommand();
+		}
+	};
+
+	public final Parser<JSONObject, Command<?>> PING_PONG_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
+
+			PingPongCommand pingPongCommand = PingPongCommand.getNewLongformInstance();
+			pingPongCommand.setTimestamp(object.optLong("timestamp", 0));
+			pingPongCommand.setRequest(object.optBoolean("request", false));
+			pingPongCommand.setToken(object.optString("token", StringUtil.EMPTY_STRING));
+
+			return pingPongCommand;
+		}
+	};
+
+	public final Parser<JSONObject, Command<?>> NOOP_PARSER = new Parser<JSONObject, Command<?>>() {
+		@Override
+		public Command<?> parse(JSONObject object) throws Exception {
+			return new NoopCommand();
+		}
+	};
 
 }

@@ -1,12 +1,14 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.api.signals.PresenceUtil;
-import com.zipwhip.signals.presence.Presence;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.List;
+import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.signals.message.Action;
+import com.zipwhip.signals.presence.Presence;
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,42 +18,48 @@ import java.util.List;
  */
 public class PresenceCommand extends SerializingCommand {
 
-    public static final String ACTION = "presence";
+	private static final long serialVersionUID = 1L;
 
-    private static Logger logger = Logger.getLogger(PresenceCommand.class);
+	public static final Action ACTION = Action.PRESENCE; // "presence";
 
-    private List<Presence> presence;
+	private static Logger logger = Logger.getLogger(PresenceCommand.class);
 
-    /**
-     * Create a new PresenceCommand
-     *
-     * @param presence JSONObject representing the signal
-     */
-    public PresenceCommand(List<Presence> presence) {
-        this.presence = presence;
-    }
+	private List<Presence> presence;
 
-    public List<Presence> getPresence() {
-        return presence;
-    }
+	/**
+	 * Create a new PresenceCommand
+	 *
+	 * @param presence JSONObject representing the signal
+	 */
+	public PresenceCommand(List<Presence> presence) {
+		this.presence = presence;
+	}
 
-    @Override
-    public String serialize() {
+	public List<Presence> getPresence() {
+		return presence;
+	}
 
-        JSONObject json = new JSONObject();
+	@Override
+	public String serialize() {
 
-        try {
-            json.put(ACTION, PresenceUtil.getInstance().serialize(presence));
-        } catch (JSONException e) {
-            logger.error("Error serializing PresenceCommand", e);
-        }
+		JSONObject json = new JSONObject();
 
-        return json.toString();
-    }
+		try {
+			json.put(ACTION.name(), PresenceUtil.getInstance().serialize(presence));
+		} catch (JSONException e) {
+			logger.error("Error serializing PresenceCommand", e);
+		}
 
-    @Override
-    public String toString() {
-        return serialize();
-    }
+		return json.toString();
+	}
 
+	@Override
+	public String toString() {
+		return serialize();
+	}
+
+	@Override
+	public Action getAction() {
+		return ACTION;
+	}
 }

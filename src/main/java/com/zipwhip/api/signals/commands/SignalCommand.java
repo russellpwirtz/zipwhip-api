@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.commands;
 
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.signals.message.Action;
 
 /**
  * @author jed
@@ -8,21 +9,27 @@ import com.zipwhip.api.signals.Signal;
  */
 public class SignalCommand extends Command {
 
-    public static final String ACTION = "signal";
+	private static final long serialVersionUID = 1L;
 
-    private Signal signal;
+	public static final Action ACTION = Action.SIGNAL;// "signal";
 
-    /**
-     * Create a new SignalCommand
-     *
-     * @param signal JSONObject representing the signal
-     */
-    public SignalCommand(Signal signal) {
-        this.signal = signal;
-    }
+	private Signal signal;
 
-    public Signal getSignal() {
-        return signal;
-    }
+	/**
+	 * Create a new SignalCommand
+	 *
+	 * @param signal JSONObject representing the signal
+	 */
+	public SignalCommand(Signal signal) {
+		this.signal = signal;
+	}
 
+	public Signal getSignal() {
+		return signal;
+	}
+
+	@Override
+	public Action getAction() {
+		return ACTION;
+	}
 }
