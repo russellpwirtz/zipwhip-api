@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jms="http://www.springframework.org/schema/jms" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms-3.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+		
+		<bean name="signalConnection" class="com.zipwhip.api.signals.sockets.netty.NettySignalConnection">
+			<property name="host" value="127.0.0.1"/>
+			<property name="port" value=""/>
+			<property name="reconnectStrategy" ref="reconnectStrategy"/>
+			<property name="pipelineFactory" ref="rawSocketPipelineFactory"/>			
+		</bean>
+
+		<!-- Pipeline factories to choose from -->
+		<bean name="rawSocketPipelineFactory" class=""		
+
+</beans>
