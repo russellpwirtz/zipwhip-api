@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
  */
 public class SocketIoProtocol {
 
+	private static final String HEARTBEAT_INFO = ":1680:1800:"; // 28minutes:30minutes
 	private static final Pattern socketIoPattern = Pattern.compile(":");
 	private static final int LIMIT = 4;
 	public static final long NO_ID = -1;
@@ -143,7 +144,7 @@ public class SocketIoProtocol {
 	 * @return
 	 */
 	public static String connectResponse(Long clientId) {
-		return clientId + ":30:10:" + supportedProtocols;
+		return clientId + HEARTBEAT_INFO + supportedProtocols;
 	}
 
 	public static String messageResponse(long messageId, String message) {
@@ -160,6 +161,10 @@ public class SocketIoProtocol {
 
 	public static String connectMessageResponse(String message, String clientId) {
 		return baseMessageResponse(CONNECT, 0l, message, null);
+	}
+
+	public static String heartBeatMessageResponse(long messageId, String message) {
+		return baseMessageResponse(HEART_BEAT, messageId, message, null);
 	}
 
 	private static final String baseMessageResponse(char messageType, long messageId, String message, String clientId) {
