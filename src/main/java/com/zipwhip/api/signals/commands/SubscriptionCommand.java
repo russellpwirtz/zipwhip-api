@@ -4,6 +4,7 @@
 package com.zipwhip.api.signals.commands;
 
 import java.util.List;
+import java.util.Map;
 
 import com.zipwhip.signals.message.Action;
 
@@ -11,22 +12,23 @@ import com.zipwhip.signals.message.Action;
  * @author jdinsel
  *
  */
-public final class SubscriptionCommand extends Command<String> {
+public final class SubscriptionCommand extends Command<Map<String, String>> {
 
 	private static final long serialVersionUID = 1L;
 	private static final Action action = Action.SUBSCRIBE;
 
 	private String id;
-	private List<String> data;
+	private List<Map<String, String>> data;
 
 	public SubscriptionCommand() {
 	}
 
-	public SubscriptionCommand(String id, List<String> data) {
+	public SubscriptionCommand(String id, List<Map<String, String>> data) {
 		this.id = id;
 		this.data = data;
 	}
 
+	@Override
 	public Action getAction() {
 		return action;
 	}
@@ -39,11 +41,11 @@ public final class SubscriptionCommand extends Command<String> {
 		this.id = id;
 	}
 
-	public final List<String> getData() {
+	public final List<Map<String, String>> getData() {
 		return data;
 	}
 
-	public final void setData(List<String> data) {
+	public final void setData(List<Map<String, String>> data) {
 		this.data = data;
 	}
 
