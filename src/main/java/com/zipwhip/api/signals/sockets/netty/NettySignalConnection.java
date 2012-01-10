@@ -1,11 +1,9 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.JsonSignalCommandParser;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
@@ -21,9 +19,6 @@ import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 public class NettySignalConnection extends SignalConnectionBase {
 
     public static final int DEFAULT_FRAME_SIZE = 8192;
-
-    private static final Logger LOG = Logger.getLogger(NettySignalConnection.class);
-    private static final JsonSignalCommandParser commandParser = new JsonSignalCommandParser();
 
     /**
      * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy}.
@@ -57,22 +52,6 @@ public class NettySignalConnection extends SignalConnectionBase {
                 new StringEncoder(),
                 new SocketIoCommandEncoder(),
                 new SimpleChannelHandler() {
-
-                    @Override
-                    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-
-                        LOGGER.debug("handleUpstream");
-
-                        super.handleUpstream(ctx, e);
-                    }
-
-                    @Override
-                    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-
-                        LOGGER.debug("handleDownstream");
-
-                        super.handleDownstream(ctx, e);
-                    }
 
                     @Override
                     public void messageReceived(final ChannelHandlerContext ctx, MessageEvent e) throws Exception {

@@ -37,7 +37,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 	protected static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
 
 	public static final int CONNECTION_TIMEOUT_SECONDS = 45;
-	public static final int MAX_FRAME_SIZE = 65535;
 
 	private static final int DEFAULT_PING_TIMEOUT = 1000 * 30; // when to ping, inactive seconds
 	private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
