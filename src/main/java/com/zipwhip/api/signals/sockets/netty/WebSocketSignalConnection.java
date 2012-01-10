@@ -5,6 +5,8 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import static org.jboss.netty.channel.Channels.pipeline;
 
+import com.zipwhip.api.signals.commands.ConnectCommand;
+import com.zipwhip.signals.server.protocol.SocketIoProtocol;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
@@ -26,6 +28,8 @@ import com.zipwhip.api.signals.sockets.netty.pipeline.handler.WebsocketChannelHa
 public class WebSocketSignalConnection extends SignalConnectionBase {
 
 	private static final int maxContentLength = 65536;
+
+    private long messageId = 0l;
 
 	/**
 	 * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy}.
@@ -80,13 +84,30 @@ public class WebSocketSignalConnection extends SignalConnectionBase {
 	@Override
 	public void send(SerializingCommand command) {
 
-//		String message = constructMessage(command);
+		String message = constructMessage(command);
 
 		WebSocketFrame defaultWebSocketFrame = new DefaultWebSocketFrame();
-//		defaultWebSocketFrame.setData(0, ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8));
+		defaultWebSocketFrame.setData(0, ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8));
 
 		// send this over the wire.
 		channel.write(defaultWebSocketFrame);
 	}
+
+
+    protected String constructMessage(SerializingCommand command) {
+        return constructMessage(command, null);
+    }
+
+    protected String constructMessage(SerializingCommand command, String clientId) {
+
+        String message;
+
+        if (command instanceof ConnectCommand) {
+            message = SocketIoProtocol.connectMessageResponse(command.serialize(), clientId);
+        } else {
+            message = SocketIoProtocol.jsonMessageResponse(messageId++, command.serialize());
+        }
+        return message;
+    }
 
 }
