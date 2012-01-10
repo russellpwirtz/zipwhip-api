@@ -51,7 +51,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("SocketIO message: " + message);
             }
-            
+
             // We have a Socket.IO JSON message, try to parse it to a command
             if (SocketIoProtocol.isJsonMessageCommand(message)) {
 
@@ -85,7 +85,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
             else {
 
                 // convert and notify that a connection response was received
-                   String[] params = message.split(":");
+                String[] params = message.split(":");
 
                 if ((params != null) && (params.length >= 3)) {
 

@@ -30,7 +30,9 @@ public class SocketIoCommandEncoder extends OneToOneEncoder implements ChannelHa
 
         if (msg instanceof ConnectCommand) {
 
-            message = SocketIoProtocol.connectMessageResponse(((ConnectCommand) msg).serialize(), ((ConnectCommand) msg).getClientId());
+            ConnectCommand command = (ConnectCommand) msg;
+
+            message = SocketIoProtocol.connectMessageResponse(command.serialize(), command.getClientId());
 
         } else if (msg instanceof PingPongCommand) {
 
@@ -38,7 +40,9 @@ public class SocketIoCommandEncoder extends OneToOneEncoder implements ChannelHa
 
         } else if (msg instanceof SerializingCommand) {
 
-            message = SocketIoProtocol.jsonMessageResponse(messageId++, ((SerializingCommand) msg).serialize());
+            SerializingCommand command = (SerializingCommand) msg;
+
+            message = SocketIoProtocol.jsonMessageResponse(messageId++, command.serialize());
         }
 
         if (LOGGER.isDebugEnabled()) {
