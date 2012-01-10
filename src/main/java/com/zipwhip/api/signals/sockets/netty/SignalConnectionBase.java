@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.zipwhip.api.signals.sockets.netty;
 
 import java.net.InetSocketAddress;
@@ -30,7 +27,6 @@ import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.signals.server.protocol.SocketIoProtocol;
 
 /**
  * @author jdinsel
@@ -41,13 +37,12 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 	protected static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
 
 	public static final int CONNECTION_TIMEOUT_SECONDS = 45;
+	public static final int MAX_FRAME_SIZE = 65535;
 
-	private static final int MAX_FRAME_SIZE = 65535;
-
-	private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
+	private static final int DEFAULT_PING_TIMEOUT = 1000 * 30; // when to ping, inactive seconds
 	private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
-	private String host = "signals.zipwhip.com";
+    private String host = "signal-server-01.lynnwood.zipwhip.com";
 	private int port = 3000;
 
 	private int pingTimeout = DEFAULT_PING_TIMEOUT;
@@ -71,11 +66,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 	protected Channel channel;
 	private ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
-	private boolean networkDisconnect;
-	private boolean doKeepalives;
-
-	private long messageId = 0l;
-	protected boolean connectionSent = false;
+	protected boolean networkDisconnect;
+	protected boolean doKeepalives;
 
 	public void init(ReconnectStrategy reconnectStrategy) {
 
@@ -118,7 +110,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 				networkDisconnect = socketConnected;
 
-				return Boolean.valueOf(socketConnected);
+				return socketConnected;
 			}
 		});
 
@@ -205,26 +197,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 	@Override
 	public void send(SerializingCommand command) {
-
-		String message = constructMessage(command, null);
-
-		// send this over the wire.
-		channel.write(message);
-	}
-
-	protected String constructMessage(SerializingCommand command) {
-		return constructMessage(command, null);
-	}
-
-	protected String constructMessage(SerializingCommand command, String clientId) {
-		String message;
-		if (connectionSent) {
-			message = SocketIoProtocol.jsonMessageResponse(messageId++, command.serialize());
-		} else {
-			message = SocketIoProtocol.connectMessageResponse(command.serialize(), clientId);
-			connectionSent = true;
-		}
-		return message;
+        // send this over the wire.
+        channel.write(command);
 	}
 
 	@Override
@@ -323,6 +297,14 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		this.onSocketActivity = onSocketActivity;
 	}
 
+    public final String getHost() {
+        return host;
+    }
+
+    public final int getPort() {
+        return port;
+    }
+
 	@Override
 	protected void onDestroy() {
 
@@ -347,7 +329,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		}
 	}
 
-	private void schedulePing(boolean now) {
+    protected abstract ChannelPipeline getPipeline();
+
+    protected void schedulePing(boolean now) {
 
 		cancelPing();
 
@@ -378,7 +362,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		}, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
 	}
 
-	private void receivePong(PingPongCommand command) {
+    protected void receivePong(PingPongCommand command) {
 
 		if (command.isRequest()) {
 
@@ -404,7 +388,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		}
 	}
 
-	private void cancelPing() {
+	protected void cancelPing() {
 
 		if ((pingTimeoutFuture != null) && !pingTimeoutFuture.isCancelled()) {
 
@@ -418,7 +402,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		}
 	}
 
-	private void cancelPong() {
+	protected void cancelPong() {
 
 		if ((pongTimeoutFuture != null) && !pongTimeoutFuture.isCancelled()) {
 
@@ -427,16 +411,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 			pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
 			pongTimeoutFuture.cancel(false);
 		}
-	}
-
-	protected abstract ChannelPipeline getPipeline();
-
-	public final String getHost() {
-		return host;
-	}
-
-	public final int getPort() {
-		return port;
 	}
 
 }

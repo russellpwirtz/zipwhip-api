@@ -87,30 +87,30 @@ public class HttpSocketSignalConnection extends SignalConnectionBase {
 	public void send(SerializingCommand command) {
 
 		// An http polling socket is always in the connect state
-		connectionSent = false;
+//		connectionSent = false;
 
 		// These are always connect commands for this transport
 		ConnectCommand connectCommand = (ConnectCommand) command;
 		String clientId = connectCommand.getClientId();
 
-		String message = path + "/" + constructMessage(command, clientId);
+//		String message = path + "/" + constructMessage(command, clientId);
 
-		int idx = message.lastIndexOf('\n');
-		if (idx != -1) {
-			message = message.substring(0, idx);
-		}
-
-		// TODO remove
-		System.out.println("Writing: " + message);
-
-		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, message);
-		request.setHeader(HttpHeaders.Names.HOST, getHost());
-		request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-		request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
-		request.setHeader(Names.ORIGIN, "http://" + getHost() + ":" + getPort());
-
-		// send this over the wire.
-		channel.write(request);
+//		int idx = message.lastIndexOf('\n');
+//		if (idx != -1) {
+//			message = message.substring(0, idx);
+//		}
+//
+//		// TODO remove
+//		System.out.println("Writing: " + message);
+//
+//		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, message);
+//		request.setHeader(HttpHeaders.Names.HOST, getHost());
+//		request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+//		request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+//		request.setHeader(Names.ORIGIN, "http://" + getHost() + ":" + getPort());
+//
+//		// send this over the wire.
+//		channel.write(request);
 	}
 
 }

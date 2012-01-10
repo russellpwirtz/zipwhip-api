@@ -80,10 +80,10 @@ public class WebSocketSignalConnection extends SignalConnectionBase {
 	@Override
 	public void send(SerializingCommand command) {
 
-		String message = constructMessage(command);
+//		String message = constructMessage(command);
 
 		WebSocketFrame defaultWebSocketFrame = new DefaultWebSocketFrame();
-		defaultWebSocketFrame.setData(0, ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8));
+//		defaultWebSocketFrame.setData(0, ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8));
 
 		// send this over the wire.
 		channel.write(defaultWebSocketFrame);
