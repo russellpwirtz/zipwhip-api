@@ -65,7 +65,7 @@ public abstract class ObservableChannelHandler extends SimpleChannelUpstreamHand
 					map.put("heartbeat", Long.valueOf(params[1]));
 					map.put("disconnect", Long.valueOf(params[2]));
 
-					command = new ConnectCommand(params[0], map, null);
+					command = new ConnectCommand(params[0], map);
 					receiveEvent.notifyObservers(this, command);
 				}
 

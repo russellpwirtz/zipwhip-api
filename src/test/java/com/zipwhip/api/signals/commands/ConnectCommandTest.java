@@ -53,7 +53,7 @@ public class ConnectCommandTest {
         Map<String, Long> versions = new HashMap<String, Long>();
         versions.put("ver1",1L);
         versions.put("ver2",2L);
-        command = new ConnectCommand("123456", versions, null);
+        command = new ConnectCommand("123456", versions);
         serial = command.serialize();
         Assert.assertEquals("{\"versions\":{\"ver2\":2,\"ver1\":1},\"action\":\"CONNECT\",\"clientId\":\"123456\"}", serial);
     }

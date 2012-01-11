@@ -96,7 +96,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
                     map.put("heartbeat", Long.valueOf(params[1]));
                     map.put("disconnect", Long.valueOf(params[2]));
 
-                    command = new ConnectCommand(clientId, map, null);
+                    command = new ConnectCommand(clientId, map);
                 }
             }
         }

@@ -48,7 +48,7 @@ public class MockSignalConnection extends DestroyableBase implements SignalConne
                 }
 
                 for (Observer<Command> o : receiveEvent) {
-                    o.notify(this, new ConnectCommand("1234-5678-1234-5678", null, null));
+                    o.notify(this, new ConnectCommand("1234-5678-1234-5678", null));
                 }
 
                 return isConnected;

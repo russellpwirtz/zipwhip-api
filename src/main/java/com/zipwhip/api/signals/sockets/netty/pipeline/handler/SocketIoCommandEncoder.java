@@ -4,7 +4,6 @@ import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
-import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
@@ -36,7 +35,7 @@ public class SocketIoCommandEncoder extends OneToOneEncoder implements ChannelHa
 
         } else if (msg instanceof PingPongCommand) {
 
-            message = SocketIoProtocol.heartBeatMessageResponse(messageId, StringUtil.EMPTY_STRING);
+            message = SocketIoProtocol.jsonMessageResponse(messageId++, "{action:\"PING\"}");
 
         } else if (msg instanceof SerializingCommand) {
 
