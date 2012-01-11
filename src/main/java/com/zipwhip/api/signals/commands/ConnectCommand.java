@@ -1,12 +1,15 @@
 package com.zipwhip.api.signals.commands;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.zipwhip.api.signals.PresenceUtil;
 import com.zipwhip.signals.message.Action;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 
@@ -23,17 +26,22 @@ public class ConnectCommand extends SerializingCommand {
 	private static Logger LOGGER = Logger.getLogger(ConnectCommand.class);
 
 	private final String clientId;
-	// This versions field is never used. in fact, it's not usable via a getter
 	private final Map<String, Long> versions;
+	private final Presence presence;
 
 	public ConnectCommand(String clientId) {
         this(clientId, null);
 	}
 
 	public ConnectCommand(String clientId, Map<String, Long> versions) {
-		this.clientId = clientId;
-		this.versions = versions;
+        this(clientId, versions, null);
 	}
+
+    public ConnectCommand(String clientId, Map<String, Long> versions, Presence presence) {
+        this.clientId = clientId;
+        this.versions = versions;
+        this.presence = presence;
+    }
 
 	public boolean isSuccessful() {
 		return StringUtil.exists(clientId);
@@ -41,6 +49,10 @@ public class ConnectCommand extends SerializingCommand {
 
 	public String getClientId() {
 		return clientId;
+	}
+
+	public final Presence getPresence() {
+		return presence;
 	}
 
 	@Override
@@ -65,6 +77,10 @@ public class ConnectCommand extends SerializingCommand {
 				json.put("versions", new JSONObject(versions));
 			}
 
+			if (presence != null) {
+				json.put("presence", PresenceUtil.getInstance().serialize(Collections.singletonList(presence)));
+			}
+
 		} catch (JSONException e) {
 			LOGGER.error("Error serializing ConnectCommand", e);
 		}
@@ -76,4 +92,5 @@ public class ConnectCommand extends SerializingCommand {
 	public Action getAction() {
 		return ACTION;
 	}
+
 }

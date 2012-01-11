@@ -76,7 +76,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
                 command = PingPongCommand.getShortformInstance();
             }
 
-            // TODO: What kind of non-JSON commands can we expect?
+            // A non-JSON Socket.IO command
             else if (SocketIoProtocol.isMessageCommand(message)) {
                 LOGGER.info("Received a Socket.IO message command");
             }
