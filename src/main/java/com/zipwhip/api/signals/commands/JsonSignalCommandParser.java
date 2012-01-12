@@ -55,9 +55,12 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
 		String action = json.optString("action");
 
-		if (action != null) {
+		if (action != null && !StringUtil.EMPTY_STRING.equals(action)) {
 			action = action.toLowerCase();
-		}
+		} else {
+            // No action, assume its a JSON style PONG
+            return PingPongCommand.getShortformInstance();
+        }
 
 		Action valueOf = Action.valueOf(action.toUpperCase());
 		Parser<JSONObject, Command<?>> parser = parsers.get(valueOf);

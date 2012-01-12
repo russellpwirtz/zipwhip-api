@@ -14,6 +14,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.zipwhip.signals.address.ClientAddress;
 import org.apache.log4j.Logger;
 
 import com.zipwhip.api.signals.PingEvent;
@@ -549,6 +550,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		LOGGER.debug("Handling SubscriptionCompleteCommand");
 
         if (presence != null) {
+
+            if (presence.getAddress() == null) {
+                presence.setAddress(new ClientAddress());
+            }
 
             // Set our clientId in case its not already there
             presence.getAddress().setClientId(clientId);
