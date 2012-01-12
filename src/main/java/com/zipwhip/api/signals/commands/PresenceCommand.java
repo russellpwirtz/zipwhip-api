@@ -45,7 +45,9 @@ public class PresenceCommand extends SerializingCommand {
 		JSONObject json = new JSONObject();
 
 		try {
-			json.put(ACTION.name(), PresenceUtil.getInstance().serialize(presence));
+            json.put("class", PresenceCommand.class.getName());
+            json.put("action", ACTION.name());
+            json.put(ACTION.name(), PresenceUtil.getInstance().serialize(presence));
 		} catch (JSONException e) {
 			logger.error("Error serializing PresenceCommand", e);
 		}

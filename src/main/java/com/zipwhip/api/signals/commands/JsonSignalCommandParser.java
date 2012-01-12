@@ -46,6 +46,11 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 	@Override
 	public Command<?> parse(String string) throws Exception {
 
+		// First check if it is a short form PING/PONG command
+		if (PingPongCommand.getShortformInstance().serialize().equals(string)) {
+			return PingPongCommand.getShortformInstance();
+		}
+
 		JSONObject json = new JSONObject(string);
 
 		String action = json.optString("action");

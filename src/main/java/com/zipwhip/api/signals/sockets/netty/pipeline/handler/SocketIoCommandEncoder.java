@@ -1,7 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
 
 import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
 import org.apache.log4j.Logger;
@@ -32,10 +31,6 @@ public class SocketIoCommandEncoder extends OneToOneEncoder implements ChannelHa
             ConnectCommand command = (ConnectCommand) msg;
 
             message = SocketIoProtocol.connectMessageResponse(command.serialize(), command.getClientId());
-
-        } else if (msg instanceof PingPongCommand) {
-
-            message = SocketIoProtocol.jsonMessageResponse(messageId++, "{action:\"PING\"}");
 
         } else if (msg instanceof SerializingCommand) {
 

@@ -106,8 +106,9 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 			@Override
 			public void notify(Object sender, Command command) {
 
-				// TODO remove
-				LOGGER.fatal("Received a response from the server: " + command);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Received a response from the server: " + command);
+                }				
 
 				commandReceivedEvent.notifyObservers(this, command);
 
@@ -244,7 +245,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 	 */
 	private void sendConnect() {
 		if ((connectLatch == null) || (connectLatch.getCount() == 0)) {
-//			connection.send(new ConnectCommand(clientId, versions, presence));
             connection.send(new ConnectCommand(clientId, versions));
 		}
 	}
@@ -332,7 +332,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 					if (connection.isConnected()) {
 
-//						connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions, SocketSignalProvider.this.presence));
                         connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions));
 
 						// block while the signal server is thinking/hanging.
@@ -483,10 +482,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		}
 
 		if (command.isBan()) {
-
-			LOGGER.warn("BANNED by SignalServer!");
-
-			// TODO ban the user somehow?
+			LOGGER.warn("BANNED by SignalServer! Those jerks!");
 		}
 
 		// If the command has not said 'ban' or 'stop'
@@ -553,6 +549,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		LOGGER.debug("Handling SubscriptionCompleteCommand");
 
         if (presence != null) {
+
+            // Set our clientId in case its not already there
+            presence.getAddress().setClientId(clientId);
+
             connection.send(new PresenceCommand(Collections.singletonList(presence)));
         }
 

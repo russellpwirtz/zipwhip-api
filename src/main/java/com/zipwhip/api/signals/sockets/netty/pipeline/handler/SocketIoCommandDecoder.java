@@ -70,7 +70,9 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
             // We have a Socket.IO HeartBeat message, convert it to a PingPongCommand
             else if (SocketIoProtocol.isHeartBeatCommand(message)) {
 
-                LOGGER.info("Received a HeartBeat");
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Received a HeartBeat");
+                }
 
                 // We received a PONG, cancel the PONG timeout.
                 command = PingPongCommand.getShortformInstance();
@@ -78,7 +80,12 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
 
             // A non-JSON Socket.IO command
             else if (SocketIoProtocol.isMessageCommand(message)) {
-                LOGGER.info("Received a Socket.IO message command");
+
+                String extractedCommand = SocketIoProtocol.extractCommand(message);
+
+                if (PingPongCommand.getShortformInstance().serialize().equals(extractedCommand)) {
+                    command = PingPongCommand.getShortformInstance();
+                }
             }
 
             // We are assuming that this is a Socket.IO connect command
