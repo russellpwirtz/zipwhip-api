@@ -160,7 +160,7 @@ public class SocketIoProtocol {
 	}
 
 	public static String connectMessageResponse(String message, String clientId) {
-		return baseMessageResponse(CONNECT, 0l, message, null);
+		return baseMessageResponse(CONNECT, 0l, message, clientId);
 	}
 
 	public static String heartBeatMessageResponse(long messageId, String message) {
