@@ -31,12 +31,12 @@ public class BackfillCommand extends SerializingCommand<Long> {
      * 2. Just start version
      * 3. Channel to get signals from (versionKey) channel
      *
-     * @param command A list of version where [0] is start version ans [1] is (optionally) end version
+     * @param command A list of version where [0] is start version and [1] is (optionally) end version
      * @param channel The channel you wish to receive signals for
      */
 	public BackfillCommand(List<Long> command, String channel) {
 		this.command = command;
-        this.channel = channel;
+        this.setChannel(channel);
 	}
 
     @Override
@@ -48,8 +48,8 @@ public class BackfillCommand extends SerializingCommand<Long> {
 
             json.put("action", ACTION);
 
-            if (StringUtil.exists(channel)) {
-                json.put("channel", channel);
+            if (StringUtil.exists(getChannel())) {
+                json.put("channel", getChannel());
             }
 
             if (!CollectionUtil.isNullOrEmpty(command)) {
@@ -66,6 +66,14 @@ public class BackfillCommand extends SerializingCommand<Long> {
     @Override
 	public Action getAction() {
 		return ACTION;
+	}
+
+	public String getChannel() {
+		return channel;
+	}
+
+	public void setChannel(String channel) {
+		this.channel = channel;
 	}
 
 }
