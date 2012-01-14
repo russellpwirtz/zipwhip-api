@@ -35,7 +35,6 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 		parsers.put(ConnectCommand.ACTION, CONNECT_PARSER);
 		parsers.put(DisconnectCommand.ACTION, DISCONNECT_PARSER);
 		parsers.put(SubscriptionCompleteCommand.ACTION, SUBSCRIPTION_COMPLETE_PARSER);
-		parsers.put(BacklogCommand.ACTION, BACKLOG_PARSER);
 		parsers.put(SignalCommand.ACTION, SIGNAL_PARSER);
 		parsers.put(PresenceCommand.ACTION, PRESENCE_PARSER);
 		parsers.put(SignalVerificationCommand.ACTION, SIGNAL_VERIFICATION_PARSER);
@@ -130,36 +129,6 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 			subscriptionCompleteCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
 			return subscriptionCompleteCommand;
-		}
-	};
-
-	public final Parser<JSONObject, Command<?>> BACKLOG_PARSER = new Parser<JSONObject, Command<?>>() {
-		@Override
-		public Command<?> parse(JSONObject object) throws Exception {
-
-			if (!object.has("messages")) {
-				LOGGER.warn("BACKLOG command received with no messages.");
-				return null;
-			}
-
-			JSONArray messages = object.optJSONArray("messages");
-			if (messages == null) {
-				LOGGER.warn("BACKLOG command received with no messages.");
-				return null;
-			}
-
-			List<SignalCommand> signalCommands = new ArrayList<SignalCommand>();
-
-			for (int i = 0; i < messages.length(); i++) {
-
-				JSONObject signalJson = messages.optJSONObject(i);
-
-				if ((signalJson != null) && signalJson.has("signal")) {
-					signalCommands.add((SignalCommand) SIGNAL_PARSER.parse(signalJson));
-				}
-			}
-
-			return new BacklogCommand(signalCommands);
 		}
 	};
 

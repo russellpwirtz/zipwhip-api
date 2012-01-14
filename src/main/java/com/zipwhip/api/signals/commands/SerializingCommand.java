@@ -9,6 +9,6 @@ package com.zipwhip.api.signals.commands;
  * Base class for SignalServer commands that are bidirectional.
  *
  */
-public abstract class SerializingCommand extends Command implements CommandSerializer {
+public abstract class SerializingCommand<T> extends Command<T> implements CommandSerializer {
 
 }

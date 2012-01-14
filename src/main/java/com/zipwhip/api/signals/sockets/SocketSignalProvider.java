@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +13,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.signals.address.ClientAddress;
 import org.apache.log4j.Logger;
 
@@ -22,15 +22,6 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.api.signals.commands.BacklogCommand;
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.DisconnectCommand;
-import com.zipwhip.api.signals.commands.NoopCommand;
-import com.zipwhip.api.signals.commands.PresenceCommand;
-import com.zipwhip.api.signals.commands.SignalCommand;
-import com.zipwhip.api.signals.commands.SignalVerificationCommand;
-import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
@@ -129,10 +120,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 				} else if (command instanceof SubscriptionCompleteCommand) {
 
 					handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) command);
-
-				} else if (command instanceof BacklogCommand) {
-
-					handleBacklogCommand((BacklogCommand) command);
 
 				} else if (command instanceof SignalCommand) {
 
@@ -459,6 +446,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 				newClientIdEvent.notifyObservers(this, clientId);
 			}
 
+            if (versions != null) {
+                // Send a BackfillCommand for each version key - in practice this is a single key/version
+                for (String key : versions.keySet()) {
+                    connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
+                }
+            }
+
+            startPings();
+
 		} else {
 
 			connectionNegotiated = false;
@@ -469,7 +465,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 			// the connect ObservableFuture will complete. This gives the caller a way to block on our connection
 			connectLatch.countDown();
 		}
-		startPings();
 	}
 
 	private void handleDisconnectCommand(DisconnectCommand command) {
@@ -509,24 +504,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 				}
 			}, command.getReconnectDelay(), TimeUnit.SECONDS);
 		}
-	}
-
-	private void handleBacklogCommand(BacklogCommand command) {
-
-		LOGGER.debug("Handling BacklogCommand");
-
-		List<Signal> signals = new ArrayList<Signal>();
-
-		for (SignalCommand signalCommand : command.getCommands()) {
-
-			signals.add(signalCommand.getSignal());
-
-			if ((signalCommand.getVersion() != null) && (signalCommand.getVersion().getValue() >= 0)) {
-				newVersionEvent.notifyObservers(this, signalCommand.getVersion());
-			}
-		}
-
-		signalEvent.notifyObservers(this, signals);
 	}
 
 	private void handlePresenceCommand(PresenceCommand command) {

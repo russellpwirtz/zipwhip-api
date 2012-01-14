@@ -8,6 +8,7 @@ import com.zipwhip.signals.message.Action;
  * @author jed
  * 
  */
+@Deprecated
 public class BacklogCommand extends Command<SignalCommand> {
 
 	private static final long serialVersionUID = 1L;

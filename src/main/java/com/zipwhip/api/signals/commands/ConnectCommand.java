@@ -67,7 +67,7 @@ public class ConnectCommand extends SerializingCommand {
 
 		try {
 
-			json.put("action", "CONNECT");
+			json.put("action", ACTION);
 
 			if (StringUtil.exists(clientId)) {
 				json.put("clientId", clientId);
