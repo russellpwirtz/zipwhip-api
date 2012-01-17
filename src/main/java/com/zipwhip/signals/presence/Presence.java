@@ -1,9 +1,9 @@
 package com.zipwhip.signals.presence;
 
-import com.zipwhip.signals.address.ClientAddress;
-
 import java.io.Serializable;
 import java.util.Date;
+
+import com.zipwhip.signals.address.ClientAddress;
 
 /**
  * 
@@ -188,6 +188,21 @@ public class Presence implements Serializable {
 	public void setExtraInfo(PresenceExtraInfo extraInfo)
 	{
 		this.extraInfo = extraInfo;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder(128);
+		sb.append("Presence [ip=").append(ip).append(", address=").append(address).append(", category=").append(category).append(", userAgent=").append(userAgent)
+				.append(", status=").append(status).append(", connected=").append(connected + ", subscriptionId=").append(subscriptionId).append(", lastActive=")
+				.append(lastActive).append("]");
+
+		return sb.toString();
 	}
 
 }
