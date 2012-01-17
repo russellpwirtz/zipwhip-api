@@ -40,6 +40,27 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     }
 
     /**
+     * Create a new ZipwhipClient which has been authenticated via a username and password.
+     *
+     * The Connection will use {@code NingHttpConnection}
+     *
+     * @param username The mobile number of the user.
+     * @param password The user's Zipwhip password.
+     * @return An authenticated {@link ZipwhipClient}
+     * @throws Exception if an error occurs creating or authenticating the client.
+     */
+    public static ZipwhipClient createAsyncViaUsername(String username, String password) throws Exception {
+
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncInstance().username(username).password(password);
+        SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
+
+        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
+
+        return zipwhipClientFactory.create();
+    }
+
+
+    /**
      * Create a new ZipwhipClient which has been pre-authenticated via the sessionKey.
      *
      * @param sessionKey A valid Zipwhip sessionKey.
@@ -49,6 +70,25 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
 
         ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance().sessionKey(sessionKey);
+        SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
+
+        ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
+
+        return zipwhipClientFactory.create();
+    }
+
+    /**
+     * Create a new ZipwhipClient which has been pre-authenticated via the sessionKey.
+     *
+     * The Connection will use {@code NingHttpConnection}
+     *
+     * @param sessionKey A valid Zipwhip sessionKey.
+     * @return An authenticated {@link ZipwhipClient}
+     * @throws Exception if an error occurs creating or authenticating the client.
+     */
+    public static ZipwhipClient createAsyncViaSessionKey(String sessionKey) throws Exception {
+
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncInstance().sessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
