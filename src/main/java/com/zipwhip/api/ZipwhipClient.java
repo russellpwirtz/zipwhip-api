@@ -331,8 +331,8 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param mobileNumber The mobile number of the user you wish to query.
      * @param thumbnail true if you want a thumbnail, false for the full image
-     * @return A byte[] of the user's image or an empty array if the image is not found.
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     * @return A byte[] of the user's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
     byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
 

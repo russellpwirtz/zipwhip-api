@@ -11,6 +11,7 @@ import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -167,6 +168,62 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
                     try {
                         // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
                         responseFuture.setSuccess(response.getResponseBody());
+                    } catch (IOException e) {
+                        responseFuture.setFailure(e);
+                    }
+
+                    return response;
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    responseFuture.setFailure(t);
+                }
+
+            });
+
+        } catch (Exception e) {
+
+            LOGGER.error("Exception while hitting the web", e);
+
+            // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
+            responseFuture.setFailure(e);
+            return responseFuture;
+        }
+
+        return responseFuture;
+    }
+
+    @Override
+    public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
+
+        final RequestBuilder rb = new RequestBuilder();
+
+        // convert the map into a key/value HTTP params string
+        rb.params(params);
+
+        final ObservableFuture<InputStream> responseFuture = new DefaultObservableFuture<InputStream>(this, workerExecutor);
+
+        try {
+            asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {
+
+                @Override
+                public Object onCompleted(Response response) throws Exception {
+
+                    // TODO Remove this once zipwhip uses real HTTP codes
+                    if (response.getContentType().contains("json")) {
+                        responseFuture.setFailure(new Exception("404 - Resource not found"));
+                        return response;
+                    }
+
+                    if (response.getStatusCode() >= 400) {
+                        responseFuture.setFailure(new Exception(response.getStatusText()));
+                        return response;
+                    }
+
+                    try {
+                        // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
+                        responseFuture.setSuccess(response.getResponseBodyAsStream());
                     } catch (IOException e) {
                         responseFuture.setFailure(e);
                     }

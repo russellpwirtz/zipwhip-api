@@ -3,6 +3,7 @@ package com.zipwhip.api;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.Destroyable;
 
+import java.io.InputStream;
 import java.util.Map;
 
 /**
@@ -52,5 +53,15 @@ public interface Connection extends Destroyable {
      * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
      */
     ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception;
+
+    /**
+     * Execute a call to the Zipwhip API ASYNCHRONOUSLY.
+     *
+     * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
+     * @param params Map of query params to append to the method
+     * @return A ObservableFuture task which will return the response body as a String on completion.
+     * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
+     */
+    ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception;
 
 }

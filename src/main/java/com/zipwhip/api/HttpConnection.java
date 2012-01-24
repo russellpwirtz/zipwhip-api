@@ -9,7 +9,9 @@ import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -137,6 +139,11 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         });
 
         return future;
+    }
+
+    @Override
+    public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
+        throw new NotImplementedException();
     }
 
     @Override

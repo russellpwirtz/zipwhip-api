@@ -10,6 +10,7 @@ import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.*;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -519,19 +520,11 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("mobileNumber", mobileNumber);
         params.put("thumbnail", thumbnail);
 
-        ServerResponse response;
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
 
-        try {
-           response = executeSync(FACE_IMAGE, params, false);
-        } catch (Exception e) {
-            return new byte[0];
-        }
-
-//        if (response instanceof BinaryServerResponse) {
-//            return ((BinaryServerResponse) response).getBytes();
-//        }
-
-        return new byte[0];
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
     }
 
     @Override

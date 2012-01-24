@@ -8,6 +8,9 @@ import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -23,6 +26,8 @@ import java.util.concurrent.*;
 public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
+
+    private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
 
     /**
      * The default timeout when connecting to Zipwhip
@@ -220,6 +225,53 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         return result;
     }
 
+    protected ObservableFuture<byte[]> executeAsyncBinaryResponse(String method, Map<String, Object> params, boolean requiresAuthentication) throws Exception {
+
+        if (requiresAuthentication && !connection.isAuthenticated()) {
+            throw new Exception("The connection is not authenticated, can't continue.");
+        }
+
+        final ObservableFuture<byte[]> result = new DefaultObservableFuture<byte[]>(this, callbackExecutor);
+
+        final ObservableFuture<InputStream> responseFuture = getConnection().sendBinaryResponse(method, params);
+
+        responseFuture.addObserver(new Observer<ObservableFuture<InputStream>>() {
+
+            @Override
+            public void notify(Object sender, ObservableFuture<InputStream> item) {
+
+                // The network is done! let's check for our cake!
+                if (!item.isDone()) {
+                    return;
+                }
+
+                if (item.isCancelled()) {
+                    // this will execute in the "callbackExecutor"
+                    result.cancel();
+                    return;
+                }
+                if (!item.isSuccess()) {
+                    // this will execute in the "callbackExecutor"
+                    result.setFailure(item.getCause());
+                    return;
+                }
+
+                byte[] bytes;
+
+                try {
+                    bytes = toByteArray(item.getResult());
+                } catch (IOException e) {
+                    result.setFailure(e);
+                    return;
+                }
+
+                result.setSuccess(bytes);
+            }
+        });
+
+        return result;
+    }
+
     protected void checkAndThrowError(ServerResponse serverResponse) throws Exception {
 
         if (serverResponse == null) {
@@ -242,6 +294,21 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         } else {
             throw new Exception(serverResponse.getRaw());
         }
+    }
+
+    protected static byte[] toByteArray(InputStream input) throws IOException {
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+
+        int numBytes;
+
+        while (-1 != (numBytes = input.read(buffer))) {
+            output.write(buffer, 0, numBytes);
+        }
+
+        return output.toByteArray();
     }
 
     protected <T> T get(ObservableFuture<T> task) throws Exception {
