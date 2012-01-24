@@ -1,9 +1,6 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.response.JsonResponseParser;
-import com.zipwhip.api.response.ResponseParser;
-import com.zipwhip.api.response.ServerResponse;
-import com.zipwhip.api.response.StringServerResponse;
+import com.zipwhip.api.response.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
@@ -81,6 +78,9 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String TEXTLINE_PROVISION = "textline/provision";
     public static final String TEXTLINE_ENROLL = "textline/enroll";
     public static final String TEXTLINE_UNENROLL = "textline/unenroll";
+
+    public static final String FACE_IMAGE = "face/image";
+    public static final String FACE_NAME = "face/name";
 
     /**
      * A runnable for for for executing asynchronous server responses.

@@ -263,4 +263,17 @@ public class JsonResponseParser implements ResponseParser {
         return result;
     }
 
+    @Override
+    public String parseFaceName(ServerResponse serverResponse) throws Exception {
+
+        String name = StringUtil.EMPTY_STRING;
+
+        if (serverResponse instanceof ObjectServerResponse) {
+            ObjectServerResponse objectServerResponse = (ObjectServerResponse) serverResponse;
+            name = objectServerResponse.response.optString("fullName");
+        }
+
+        return name;
+    }
+
 }

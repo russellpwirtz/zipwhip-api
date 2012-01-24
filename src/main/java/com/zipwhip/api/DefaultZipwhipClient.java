@@ -504,6 +504,37 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public String getFaceName(String mobileNumber) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+
+        return responseParser.parseFaceName(executeSync(FACE_NAME, params, false));
+    }
+
+    @Override
+    public byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+        params.put("thumbnail", thumbnail);
+
+        ServerResponse response;
+
+        try {
+           response = executeSync(FACE_IMAGE, params, false);
+        } catch (Exception e) {
+            return new byte[0];
+        }
+
+//        if (response instanceof BinaryServerResponse) {
+//            return ((BinaryServerResponse) response).getBytes();
+//        }
+
+        return new byte[0];
+    }
+
+    @Override
     protected void onDestroy() {
 
     }

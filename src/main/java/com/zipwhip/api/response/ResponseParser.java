@@ -38,4 +38,6 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception;
 
+    String parseFaceName(ServerResponse serverResponse) throws Exception;
+
 }

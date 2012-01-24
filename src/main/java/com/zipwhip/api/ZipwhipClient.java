@@ -318,6 +318,25 @@ public interface ZipwhipClient extends Destroyable {
     boolean userUnenroll(String packageName) throws Exception;
 
     /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile name.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @return The user's full name if it exists or empty string.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    String getFaceName(String mobileNumber) throws Exception;
+
+    /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param thumbnail true if you want a thumbnail, false for the full image
+     * @return A byte[] of the user's image or an empty array if the image is not found.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
+
+    /**
      * Connect to Zipwhip Signals if setup.
      *
      * @param presence a Presence object to pass to the SignalServer
