@@ -9,6 +9,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
 import java.util.Map;
 
 /**
@@ -190,6 +191,11 @@ public class DefaultZipwhipClientTest {
         @Override
         protected void onDestroy() {
 
+        }
+
+        @Override
+        public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
+            return null;
         }
 
     }
