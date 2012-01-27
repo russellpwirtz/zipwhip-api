@@ -12,7 +12,7 @@ public class JsonDateUtil {
 	private static final Format GRAILS_DATE_FORMATTER = new ISO8601DateTimeFormat();
 	private static final Logger LOGGER = Logger.getLogger(JsonDateUtil.class);
 
-	private static final SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy");
+	private static final SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy h:mm:ss aaa");
 
 	/**
 	 * Utility class --> private constructor

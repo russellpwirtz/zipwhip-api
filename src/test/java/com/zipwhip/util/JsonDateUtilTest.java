@@ -1,8 +1,5 @@
 package com.zipwhip.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -72,12 +69,21 @@ public class JsonDateUtilTest {
 
 	@Test
 	public void testGetANormalDate() {
-		Date date = new Date();
 
-		Date theDate = JsonDateUtil.getDate(date.toString());
-		assertNotNull(theDate);
+        String dateString = "Jan 26, 2012 3:45:36 PM";
+        Date d = JsonDateUtil.getDate(dateString);
+        Assert.assertNotNull(d);
 
-		assertEquals(date.toString(), theDate.toString());
+        Calendar c = new GregorianCalendar();
+        c.setTime(d);
+
+        // Yes, MONTH is 0 based as opposed to all the other fields, lame
+        Assert.assertEquals(c.get(Calendar.MONTH), 0);
+        Assert.assertEquals(c.get(Calendar.YEAR), 2012);
+        Assert.assertEquals(c.get(Calendar.DAY_OF_MONTH), 26);
+        Assert.assertEquals(c.get(Calendar.HOUR_OF_DAY), 15);
+        Assert.assertEquals(c.get(Calendar.MINUTE), 45);
+        Assert.assertEquals(c.get(Calendar.SECOND), 36);
 	}
 
 }
