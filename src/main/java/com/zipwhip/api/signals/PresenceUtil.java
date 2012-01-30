@@ -154,7 +154,14 @@ public class PresenceUtil implements Parser<JSONArray, List<Presence>>, Serializ
 				Presence presence = new Presence();
 
 				// category
-				String category = presenceJsonObject.optString("category");
+				String category;
+                JSONObject categoryObject = presenceJsonObject.optJSONObject("category");
+
+                if (categoryObject != null) {
+                    category = categoryObject.optString("name");
+                } else {
+                    category = presenceJsonObject.optString("category");
+                }
 
 				if (StringUtil.isNullOrEmpty(category)) {
 					presence.setCategory(PresenceCategory.NONE);
@@ -181,7 +188,16 @@ public class PresenceUtil implements Parser<JSONArray, List<Presence>>, Serializ
 						product.setBuild(productJsonObject.optString("build", StringUtil.EMPTY_STRING));
 						product.setVersion(productJsonObject.optString("version", StringUtil.EMPTY_STRING));
 
-						String name = productJsonObject.optString("name", StringUtil.EMPTY_STRING);
+                        // name
+                        String name;
+                        JSONObject nameObject = productJsonObject.optJSONObject("name");
+
+                        if (nameObject != null) {
+                            name = nameObject.optString("name");
+                        } else {
+                            name = productJsonObject.optString("name");
+                        }
+
 						if (StringUtil.exists(name)) {
 							try {
 								product.setName(ProductLine.valueOf(name));
@@ -207,7 +223,14 @@ public class PresenceUtil implements Parser<JSONArray, List<Presence>>, Serializ
 				}
 
 				// presenceStatus
-				String status = presenceJsonObject.optString("status");
+                String status;
+                JSONObject statusObject = presenceJsonObject.optJSONObject("status");
+
+                if (statusObject != null) {
+                    status = statusObject.optString("name");
+                } else {
+                    status = presenceJsonObject.optString("status");
+                }
 
 				if (StringUtil.isNullOrEmpty(status)) {
 					presence.setStatus(PresenceStatus.OFFLINE);

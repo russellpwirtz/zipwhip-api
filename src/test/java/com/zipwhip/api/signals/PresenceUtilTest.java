@@ -18,6 +18,8 @@ import java.util.List;
  */
 public class PresenceUtilTest {
 
+    public static final String PRESENCE_LIST_JSON = "[{\"category\":{\"name\":\"Phone\",\"enumType\":\"com.zipwhip.signals.presence.PresenceCategory\"},\"userAgent\":{\"product\":{\"name\":{\"name\":\"DEVICE_CARBON\",\"enumType\":\"com.zipwhip.signals.presence.ProductLine\"},\"class\":\"com.zipwhip.signals.presence.Product\",\"build\":\"Zipwhip\",\"version\":\"104\"},\"class\":\"com.zipwhip.signals.presence.UserAgent\",\"makeModel\":\"samsung Nexus S\",\"build\":\"4.0.3\"},\"status\":{\"name\":\"OFFLINE\",\"enumType\":\"com.zipwhip.signals.presence.PresenceStatus\"},\"address\":{\"class\":\"com.zipwhip.signals.address.ClientAddress\",\"clientId\":\"8c5d5e9f-f3e1-46ff-bb3e-5df0640e8ced\"},\"lastActive\":\"2012-01-05T21:45:58-08:00\",\"connected\":false,\"extraInfo\":null,\"class\":\"com.zipwhip.signals.presence.Presence\",\"subscriptionId\":null,\"ip\":\"208.54.32.186\"},{\"category\":{\"name\":\"Phone\",\"enumType\":\"com.zipwhip.signals.presence.PresenceCategory\"},\"userAgent\":{\"product\":{\"name\":{\"name\":\"DEVICE_CARBON\",\"enumType\":\"com.zipwhip.signals.presence.ProductLine\"},\"class\":\"com.zipwhip.signals.presence.Product\",\"build\":\"Zipwhip\",\"version\":\"104\"},\"class\":\"com.zipwhip.signals.presence.UserAgent\",\"makeModel\":\"samsung Nexus S\",\"build\":\"4.0.3\"},\"status\":{\"name\":\"OFFLINE\",\"enumType\":\"com.zipwhip.signals.presence.PresenceStatus\"},\"address\":{\"class\":\"com.zipwhip.signals.address.ClientAddress\",\"clientId\":\"ee841130-94a6-43f6-b81c-d3c9c183adad\"},\"lastActive\":\"2012-01-13T10:29:54-08:00\",\"connected\":false,\"extraInfo\":null,\"class\":\"com.zipwhip.signals.presence.Presence\",\"subscriptionId\":null,\"ip\":\"208.54.32.213\"},{\"category\":{\"name\":\"Phone\",\"enumType\":\"com.zipwhip.signals.presence.PresenceCategory\"},\"userAgent\":{\"product\":{\"name\":{\"name\":\"DEVICE_CARBON\",\"enumType\":\"com.zipwhip.signals.presence.ProductLine\"},\"class\":\"com.zipwhip.signals.presence.Product\",\"build\":\"Zipwhip\",\"version\":\"112\"},\"class\":\"com.zipwhip.signals.presence.UserAgent\",\"makeModel\":\"samsung Nexus S\",\"build\":\"4.0.3\"},\"status\":{\"name\":\"ONLINE\",\"enumType\":\"com.zipwhip.signals.presence.PresenceStatus\"},\"address\":{\"class\":\"com.zipwhip.signals.address.ClientAddress\",\"clientId\":\"164054844846510080\"},\"lastActive\":\"2012-01-30T12:15:31-08:00\",\"connected\":true,\"extraInfo\":null,\"class\":\"com.zipwhip.signals.presence.Presence\",\"subscriptionId\":\"/device/10c0f34c-9372-44b7-bd45-804f5439f277\",\"ip\":null}]";
+    
     public static final String IP = "10.1.1.255";
     public static final String SUB_ID = "subscription__123456-123456";
     public static final String CLIENT_ID = "1234-1234-1234-1234";
@@ -82,6 +84,20 @@ public class PresenceUtilTest {
             Assert.assertEquals(p.getUserAgent().getProduct().getVersion(), VERSION);
         }
 
+    }
+
+    @Test
+    public void testParsePresence() throws Exception {
+
+        JSONArray jsonArray = new JSONArray(PRESENCE_LIST_JSON);
+        Assert.assertTrue(jsonArray.length() == 3);
+
+        List<Presence> presences = PresenceUtil.getInstance().parse(jsonArray);
+
+        for (Presence p : presences) {
+            Assert.assertEquals(PresenceCategory.Phone, p.getCategory());
+            Assert.assertEquals(ProductLine.DEVICE_CARBON, p.getUserAgent().getProduct().getName());
+        }
     }
 
 }

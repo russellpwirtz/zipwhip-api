@@ -242,7 +242,15 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
-        return PresenceUtil.getInstance().parse(new JSONArray(serverResponse.getRaw()));
+
+        JSONObject raw = new JSONObject(serverResponse.getRaw());
+        JSONObject response = raw.optJSONObject("response");
+        JSONArray result = response.getJSONArray("result");
+
+        if (result.length() != 1) {
+            throw new Exception("More than one result array for this presence category.");
+        }
+        return PresenceUtil.getInstance().parse(result.optJSONObject(0).optJSONArray("presenceList"));
     }
 
     @Override
