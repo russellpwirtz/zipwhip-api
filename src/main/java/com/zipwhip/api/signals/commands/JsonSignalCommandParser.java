@@ -152,12 +152,12 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 		@Override
 		public Command<?> parse(JSONObject object) throws Exception {
 
-			if (!object.has("presence")) {
+			if (!object.has("PRESENCE")) {
 				LOGGER.warn("PRESENCE command received with no presence object.");
 				return null;
 			}
 
-			PresenceCommand presenceCommand = new PresenceCommand(PresenceUtil.getInstance().parse(object.optJSONArray("presence")));
+			PresenceCommand presenceCommand = new PresenceCommand(PresenceUtil.getInstance().parse(object.optJSONArray("PRESENCE")));
 			presenceCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
 			return presenceCommand;
