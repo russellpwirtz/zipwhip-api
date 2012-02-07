@@ -60,13 +60,13 @@ public interface ApiConnection extends Connection {
      *
      * @param host The host to connect to.
      */
-    void setHost(String host);
+    public void setHost(String host);
 
     /**
      * Get the host to connect to. The default is {@code DEFAULT_HOST}.
      * @return The host to connect to. The default is {@code DEFAULT_HOST}.
      */
-    String getHost();
+    public String getHost();
 
     /**
      * Get the Zipwhip API version to be used in web calls.

@@ -285,6 +285,13 @@ public interface ZipwhipClient extends Destroyable {
     Boolean carbonRegister(String registrationId) throws Exception;
 
     /**
+     * Informs Zipwhip of Device Carbon usage statistics
+     * @param totalPhoneMessages - total messages sent/receive on the device
+     * @throws Exception
+     */
+    void carbonStats(int totalPhoneMessages) throws Exception;
+
+    /**
      * Initiates the signup process to:
      * 1) Enroll a new account if one doesn't exist
      * 2) Create necessary subscriptions

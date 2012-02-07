@@ -380,6 +380,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     }
 
+    @Override
+    public void carbonStats(int totalPhoneMessages) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("messageCount", totalPhoneMessages);
+
+        executeSync(CARBON_STATS, params);
+    }
+
 
     @Override
     public String sessionChallenge(String mobileNumber, String carrier) throws Exception {
