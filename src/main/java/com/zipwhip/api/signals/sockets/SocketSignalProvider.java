@@ -493,11 +493,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 			}
 
 			ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
 			scheduler.schedule(new Runnable() {
 				@Override
 				public void run() {
 					try {
+
+                        // Clear the clientId so we will re-up on connect
+                        originalClientId = StringUtil.EMPTY_STRING;
+
 						connect();
+
 					} catch (Exception e) {
 						LOGGER.error("Error connecting", e);
 					}
