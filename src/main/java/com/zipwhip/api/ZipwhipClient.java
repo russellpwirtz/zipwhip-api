@@ -1,9 +1,6 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageStatus;
-import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
@@ -144,6 +141,92 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     Message getMessage(String uuid) throws Exception;
+
+    /**
+     * 
+     * @return A list of all {@link Device}s associated with the user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Device> listDevices() throws Exception;
+
+    /**
+     * 
+     * @return A list of the most recent {@link Conversation}s associated with the user, up to the server's predefined limit.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Conversation> listConversations() throws Exception;
+
+    /**
+     *
+     * @param limit The maximum limit of how many conversations to return.
+     * @return A list of the most recent {@link Conversation}s associated with the user, up to the specified limit.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Conversation> listConversations(int limit) throws Exception;
+
+    /**
+     *
+     * @return A list of all {@link Contact}s associated with the supplied user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response, or the server returns a failure message.
+     */
+    public List<Contact> listContacts() throws Exception;
+
+    /**
+     * 
+     * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
+     * @return A boolean which represents whether or not the operation completed successfully.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public boolean readConversation(String fingerprint) throws Exception;
+
+    /**
+     *
+     * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
+     * @return A boolean which represents whether or not the operation completed successfully.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public boolean deleteConversation(String fingerprint) throws Exception;
+
+    /**
+     * Returns the contact for the provided contact id.
+     *
+     * @param contactId The id of the contact to be deleted.
+     * @return A boolean which represents whether or not the operation completed successfully.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
+    public boolean deleteContact(long contactId) throws Exception;
+
+    /**
+     * Returns the most recent messages for the user, up to a limit maintained by the zipwhip server.
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessagesByFingerprint(String fingerprint) throws Exception;
+
+    /**
+     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @param limit The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception;
+
+    /**
+     *
+     * @return A list consisting of the most recent messages associated with the user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessages() throws Exception;
+
+    /**
+     * Returns the most recent messages for the user, up to the supplied limit.
+     * @param limit The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with this user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessages(int limit) throws Exception;
 
     /**
      * Delete messages by their corresponding UUIDs.

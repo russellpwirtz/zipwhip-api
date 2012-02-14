@@ -121,6 +121,52 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public List<Message> parseMessagesFromConversation(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse instanceof ObjectServerResponse) {
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+
+            if (cplx.response.has("messages")) {
+                List<Message> messages = new ArrayList<Message>();
+                JSONArray json = cplx.response.optJSONArray("messages");
+                for (int i=0; i<json.length(); i++){
+                    messages.add(parser.parseMessage(json.getJSONObject(i)));
+                }
+                return messages;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Device parseDevice(ServerResponse serverResponse) throws Exception {
+        if (serverResponse instanceof ObjectServerResponse) {
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+
+            return parser.parseDevice(cplx.response);
+        }
+        return null;
+    }
+
+    @Override
+    public List<Device> parseDevices(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
+        }
+
+        List<Device> devices = new ArrayList<Device>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            devices.add(parser.parseDevice(array.response.getJSONObject(i)));
+        }
+
+        return devices;
+    }
+
+    @Override
     public String parseString(ServerResponse serverResponse) throws Exception {
         String result;
         if (serverResponse instanceof StringServerResponse) {

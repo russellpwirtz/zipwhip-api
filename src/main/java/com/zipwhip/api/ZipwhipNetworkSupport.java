@@ -51,6 +51,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String CONVERSATION_LIST = "conversation/list";
     public static final String CONVERSATION_READ = "conversation/read";
     public static final String CONVERSATION_DELETE = "conversation/delete";
+    public static final String CONVERSATION_GET = "conversation/get";
 
     public static final String DEVICE_SAVE = "device/save";
     public static final String DEVICE_GET = "device/get";
@@ -67,6 +68,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String USER_ENROLL = "user/enroll";
     public static final String USER_DEACT = "user/deact";
     public static final String USER_SAVE = "user/save";
+    public static final String USER_GET = "user/get";
     public static final String USER_EXISTS = "user/exists";
     public static final String USER_UNENROLL = "user/unenroll";
 

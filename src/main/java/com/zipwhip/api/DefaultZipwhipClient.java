@@ -1,9 +1,6 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageStatus;
-import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
@@ -219,6 +216,105 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
+
+    @Override
+    public List<Device> listDevices() throws Exception {
+        return responseParser.parseDevices(executeSync(DEVICE_LIST, new HashMap<String, Object>()));
+    }
+
+    @Override
+    public List<Conversation> listConversations() throws Exception {
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, new HashMap<String, Object>()));
+    }
+
+    @Override
+    public List<Conversation> listConversations(int limit) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("limit", Integer.toString(limit));
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, params));
+    }
+
+    @Override
+    public List<Contact> listContacts() throws Exception {
+        return responseParser.parseContacts(executeSync(CONTACT_LIST, new HashMap<String, Object>()));
+    }
+
+    @Override
+    public boolean readConversation(String fingerprint) throws Exception {
+        if (StringUtil.isNullOrEmpty(fingerprint)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("fingerprint", fingerprint);
+
+        return success(executeSync(CONVERSATION_READ, params));
+    }
+
+    @Override
+    public boolean deleteConversation(String fingerprint) throws Exception {
+        if (StringUtil.isNullOrEmpty(fingerprint)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("fingerprint", fingerprint);
+
+        return success(executeSync(CONVERSATION_DELETE, params));
+    }
+
+    @Override
+    public boolean deleteContact(long contactId) throws Exception {
+        if (contactId <= 0){
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("contact", Long.toString(contactId));
+        
+        return success(executeSync(CONTACT_DELETE, params));
+    }
+
+    @Override
+    public List<Message> listMessagesByFingerprint(String fingerprint) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(fingerprint)){
+            throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("fingerprint", fingerprint);
+
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
+    }
+
+
+    @Override
+    public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception {
+        if (StringUtil.isNullOrEmpty(fingerprint)){
+            throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("fingerprint", fingerprint);
+        params.put("limit", Integer.toString(limit));
+
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
+    }
+
+    @Override
+    public List<Message> listMessages() throws Exception {
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, new HashMap<String, Object>()));
+    }
+
+    @Override
+    public List<Message> listMessages(int limit) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("limit", Integer.toString(limit));
+        
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
+    }
+
     @Override
     public boolean messageRead(List<String> uuids) throws Exception {
 
@@ -276,6 +372,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
+
+
 
     @Override
     public List<Presence> getPresence(PresenceCategory category) throws Exception {
