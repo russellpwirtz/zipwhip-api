@@ -18,6 +18,7 @@ public class MessageToken implements Serializable {
     String message;
     long deviceId;
     long contactId;
+    String fingerprint;
 
     public String getMessage() {
         return message;
@@ -43,12 +44,21 @@ public class MessageToken implements Serializable {
         this.contactId = contactId;
     }
 
+    public String getFingerprint() {
+        return fingerprint;
+    }
+
+    public void setFingerprint(String fingerprint) {
+        this.fingerprint = fingerprint;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> MessageToken details:");
         toStringBuilder.append("\nMessage: ").append(message);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);
         toStringBuilder.append("\nContactId: ").append(contactId);
+        toStringBuilder.append("\nFingerprint: ").append(fingerprint);
         return toStringBuilder.toString();
     }
 
