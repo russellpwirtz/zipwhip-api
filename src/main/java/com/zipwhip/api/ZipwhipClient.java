@@ -427,6 +427,16 @@ public interface ZipwhipClient extends Destroyable {
     byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
 
     /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param size the size of thumnail in pixels
+     * @return A byte[] of the user's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
      * Connect to Zipwhip Signals if setup.
      *
      * @param presence a Presence object to pass to the SignalServer

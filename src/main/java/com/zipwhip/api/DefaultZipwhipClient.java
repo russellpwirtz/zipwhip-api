@@ -635,6 +635,22 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public byte[] getFaceImage(String mobileNumber, int size) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+        params.put("size", size);
+        params.put("thumbnail", true);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+
+    @Override
     protected void onDestroy() {
 
     }
