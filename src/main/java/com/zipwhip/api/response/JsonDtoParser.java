@@ -164,9 +164,10 @@ public class JsonDtoParser {
             JSONObject json = array.getJSONObject(i);
             MessageToken token = new MessageToken();
 
-            token.setMessage(json.getString("message"));
+            token.setMessage(json.optString("message"));
             token.setDeviceId(json.optLong("device")); // will be 0 if it is a self message
             token.setContactId(json.optLong("contact")); // will be 0 if it is a self message
+            token.setFingerprint(json.optString("fingerprint"));
 
             result.add(token);
         }
