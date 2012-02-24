@@ -345,7 +345,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 				} catch (Exception e) {
 
-					LOGGER.error(e);
+					LOGGER.error("Exception in connecting..."+ e, e.getCause());
 
 					// Need to make sure we always count down
 					connectLatch.countDown();
