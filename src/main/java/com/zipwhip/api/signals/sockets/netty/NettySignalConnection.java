@@ -1,17 +1,23 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.PingPongCommand;
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
+import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
 
 /**
  * Connects to the SignalServer via Netty over a raw socket
@@ -111,7 +117,7 @@ public class NettySignalConnection extends SignalConnectionBase {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
 
-                        LOGGER.error(e.toString());
+                        LOGGER.error("Caught exception on channel " + e, e.getCause());
 
                         exceptionEvent.notifyObservers(this, e.toString());
                     }
