@@ -62,6 +62,9 @@ public class PresenceUtil implements Parser<JSONArray, List<Presence>>, Serializ
 
 		for  (Presence presence : presenceList) {
 
+			if(presence == null)
+				continue;
+			
 			Map<String, Object> presenceMap = new HashMap<String, Object>();
 
 			presenceMap.put("ip", presence.getIp());
