@@ -233,6 +233,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 				versions.put(version.getKey(), version.getValue());
 			}
 		});
+		
+		onNewClientIdReceived(new Observer<String>() {
+			@Override
+			public void notify(Object sender, String newClientId) {
+				clientId = newClientId;
+				originalClientId = newClientId;
+
+				if (presence != null)
+					presence.setAddress(new ClientAddress(newClientId));
+			}
+		});
 	}
 
 	/*
@@ -437,7 +448,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handleConnectCommand(ConnectCommand command) {
 
-		LOGGER.debug("Handling ConnectCommand");
+		if (LOGGER.isDebugEnabled())
+			LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
 
 		if (command.isSuccessful()) {
 
@@ -449,19 +461,24 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 			clientId = command.getClientId();
 
 			if (!StringUtil.equals(clientId, originalClientId)) {
+
+				if (LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Received a new client id: " + clientId);
+				}
 				// not the same, lets announce
 				// announce on a separate thread
 				newClientIdEvent.notifyObservers(this, clientId);
 			}
 
-            if (versions != null) {
-                // Send a BackfillCommand for each version key - in practice this is a single key/version
-                for (String key : versions.keySet()) {
-                    connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
-                }
-            }
+			if (versions != null) {
+				// Send a BackfillCommand for each version key - in practice
+				// this is a single key/version
+				for (String key : versions.keySet()) {
+					connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
+				}
+			}
 
-            startPings();
+			startPings();
 
 		} else {
 
@@ -469,8 +486,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		}
 
 		if (connectLatch != null) {
-			// we need to countDown the latch, when it hits zero (after this call)
-			// the connect ObservableFuture will complete. This gives the caller a way to block on our connection
+			// we need to countDown the latch, when it hits zero (after this
+			// call)
+			// the connect ObservableFuture will complete. This gives the caller
+			// a way to block on our connection
 			connectLatch.countDown();
 		}
 	}
@@ -522,26 +541,34 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handlePresenceCommand(PresenceCommand command) {
 
-		LOGGER.debug("Handling PresenceCommand");
+		if (LOGGER.isDebugEnabled())
+			LOGGER.debug("Handling PresenceCommand " + command.getPresence());
 
-		List<Presence> presenceList = command.getPresence();
-		if(presenceList == null) {
-			LOGGER.debug("Resending our presence object");
-			connection.send(new PresenceCommand(Collections.singletonList(presence)));
-		}
-		
 		boolean selfPresenceExists = false;
-		for (Presence presence : command.getPresence()) {
-			if(clientId.equals(presence.getAddress().getClientId()))
-				selfPresenceExists = true;
-			if (presence.getCategory().equals(PresenceCategory.Phone)) {
-				presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+		List<Presence> presenceList = command.getPresence();
+		if (presenceList == null) {
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug("Nothing is known about us or our peers");
+			selfPresenceExists = false;
+		} else {
+
+			for (Presence presence : command.getPresence()) {
+				if (clientId.equals(presence.getAddress().getClientId()))
+					selfPresenceExists = true;
+				if (presence.getCategory().equals(PresenceCategory.Phone)) {
+					presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+				}
 			}
 		}
-		
-		if(!selfPresenceExists) {
-			LOGGER.debug("Reidentifying our presence object");
+		if (!selfPresenceExists) {
+			
+			if(presence != null) {
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug("Reidentifying our presence object");
 			connection.send(new PresenceCommand(Collections.singletonList(presence)));
+			} else {
+				LOGGER.debug("Our presence object was empty, so we didn't share it");
+			}
 		}
 	}
 
@@ -552,6 +579,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
 
+		if(LOGGER.isDebugEnabled())
 		LOGGER.debug("Handling SubscriptionCompleteCommand");
 
         if (presence != null) {
