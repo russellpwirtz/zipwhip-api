@@ -11,6 +11,7 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.signals.presence.ProductLine;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 
@@ -207,6 +208,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return sendMessage(Arrays.asList(address), body, fromName, advertisement);
     }
 
+    @Deprecated
     @Override
     public Message getMessage(String uuid) throws Exception {
 
@@ -216,6 +218,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
+    @Override
+    public Message getMessage(Long id) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("id", id);
+
+        return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
+    }
 
     @Override
     public List<Device> listDevices() throws Exception {
@@ -315,6 +325,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
 
+    @Deprecated
     @Override
     public boolean messageRead(List<String> uuids) throws Exception {
 
@@ -329,6 +340,20 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public boolean readMessage(List<Long> ids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(ids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("message", ids);
+
+        return success(executeSync(MESSAGE_READ, params));
+    }
+
+    @Deprecated
+    @Override
     public boolean messageDelete(List<String> uuids) throws Exception {
 
         if (CollectionUtil.isNullOrEmpty(uuids)) {
@@ -342,9 +367,35 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public boolean deleteMessage(List<Long> ids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(ids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("message", ids);
+
+        return success(executeSync(MESSAGE_DELETE, params));
+    }
+
+    @Deprecated
+    @Override
     public MessageStatus getMessageStatus(String uuid) throws Exception {
 
         Message message = getMessage(uuid);
+
+        if (message == null) {
+            return null;
+        }
+
+        return new MessageStatus(message);
+    }
+
+    @Override
+    public MessageStatus getMessageStatus(Long id) throws Exception {
+
+        Message message = getMessage(id);
 
         if (message == null) {
             return null;
@@ -403,6 +454,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // send the 3rd party signal.
 
         executeSync(SIGNAL_SEND, params);
+    }
+
+    @Override
+    public void sendSignalsVerification(String clientId) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("clientId", clientId);
+
+        executeSync(SIGNALS_VERIFY, params);
     }
 
     @Override
@@ -649,6 +709,25 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return binaryResponseFuture.getResult();
     }
 
+    @Override
+    public void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String payload) throws Exception {
+
+        if (product == null || StringUtil.isNullOrEmpty(mobileNumber) || StringUtil.isNullOrEmpty(event)) {
+            throw new Exception("Missing required parameter.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("product", product.toString());
+        params.put("mobileNumber", mobileNumber);
+        params.put("event", event);
+
+        if (StringUtil.exists(payload)) {
+            params.put("payload", payload);
+        }
+
+        executeSync(METRICS_EVENT, params);
+    }
 
     @Override
     protected void onDestroy() {

@@ -63,6 +63,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String SIGNALS_DISCONNECT = "signals/disconnect";
     public static final String SIGNALS_CONNECT = "signals/connect";
+    public static final String SIGNALS_VERIFY = "signal/verify";
     public static final String SIGNAL_SEND = "signal/send";
 
     public static final String USER_ENROLL = "user/enroll";
@@ -89,6 +90,8 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String FACE_IMAGE = "face/image";
     public static final String FACE_NAME = "face/name";
+
+    public static final String METRICS_EVENT = "metrics/event";
 
     /**
      * A runnable for for for executing asynchronous server responses.
