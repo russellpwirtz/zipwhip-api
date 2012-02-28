@@ -133,6 +133,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             LOGGER.debug("ClientId has changed, clearing settings store");
 
             settingsStore.clear();
+            settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
         }
 
         // If the sessionKey has changed we need to invalidate the settings data
