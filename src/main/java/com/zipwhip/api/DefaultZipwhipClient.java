@@ -131,17 +131,18 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // If the clientId has changed we need to invalidate the settings data
         if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
 
-            LOGGER.debug("ClientId has changed, clearing settings store");
+            LOGGER.debug("ClientId has changed, resetting client id in settings store");
 
-            settingsStore.clear();
+            //settingsStore.clear();
+            settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
         }
 
         // If the sessionKey has changed we need to invalidate the settings data
         if (StringUtil.exists(connection.getSessionKey()) && !connection.getSessionKey().equals(settingsStore.get(SettingsStore.Keys.SESSION_KEY))) {
 
-            LOGGER.debug("New or changed sessionKey, clearing settings store");
+            LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
 
-            settingsStore.clear();
+            //settingsStore.clear();
             settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
         }
 
