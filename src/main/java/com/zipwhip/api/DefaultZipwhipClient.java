@@ -282,7 +282,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("contact", Long.toString(contactId));
-        
+
         return success(executeSync(CONTACT_DELETE, params));
     }
 
@@ -550,12 +550,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
 
     @Override
-    public String sessionChallenge(String mobileNumber, String carrier) throws Exception {
+    public String sessionChallenge(String mobileNumber, String portal) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("mobileNumber", mobileNumber);
-        params.put("carrier", carrier);
+        params.put("portal", portal);
 
         ServerResponse response = executeSync(CHALLENGE_REQUEST, params, false);
 

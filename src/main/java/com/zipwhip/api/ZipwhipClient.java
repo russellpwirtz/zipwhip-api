@@ -431,11 +431,11 @@ public interface ZipwhipClient extends Destroyable {
      * 3) Eventually return a valid session key for this device
      *
      * @param mobileNumber: mobile number of the account
-     * @param carrier: carrier for the mobileNumber
+     * @param portal: product that is retrieving a session
      * @return clientId that is used to finish the challenge process
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    String sessionChallenge(String mobileNumber, String carrier) throws Exception;
+    String sessionChallenge(String mobileNumber, String portal) throws Exception;
 
     /**
      * Finishes the challenge process and returns a session key
