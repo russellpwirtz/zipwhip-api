@@ -8,6 +8,7 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.signals.presence.ProductLine;
 
 import java.util.Collection;
 import java.util.List;
@@ -136,11 +137,21 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Returns a Message object
      *
+     * @deprecated Use {@code getMessage(Long id)}
      * @param uuid - message uuid
      * @return A Message DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     Message getMessage(String uuid) throws Exception;
+
+    /**
+     * Returns a Message object
+     *
+     * @param id - message id
+     * @return A Message DTO matching the id.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    Message getMessage(Long id) throws Exception;
 
     /**
      * 
@@ -239,6 +250,7 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Delete messages by their corresponding UUIDs.
      *
+     * @deprecated use {@code readMessage(List id)}
      * @param uuids A list of message uuids to delete.
      * @return True for a successful delete otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
@@ -246,8 +258,18 @@ public interface ZipwhipClient extends Destroyable {
     boolean messageRead(List<String> uuids) throws Exception;
 
     /**
+     * Delete messages by their corresponding IDs.
+     *
+     * @param ids A list of message ids to delete.
+     * @return True for a successful delete otherwise false.
+     * @throws Exception If an error occurred while sending or parsing the response.
+     */
+    boolean readMessage(List<Long> ids) throws Exception;
+
+    /**
      * Read messages by their corresponding UUIDs.
      *
+     * @deprecated use {@code deleteMessage(List ids)}
      * @param uuids A list of message uuids to mark as read.
      * @return True for a successful read otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
@@ -255,13 +277,32 @@ public interface ZipwhipClient extends Destroyable {
     boolean messageDelete(List<String> uuids) throws Exception;
 
     /**
+     * Read messages by their corresponding IDs.
+     *
+     * @param ids A list of message ids to mark as read.
+     * @return True for a successful read otherwise false.
+     * @throws Exception If an error occurred while sending or parsing the response.
+     */
+    boolean deleteMessage(List<Long> ids) throws Exception;
+
+    /**
      * Returns a MessageStatus object
      *
+     * @deprecated use {@code getMessageStatus(Long id)}
      * @param uuid - message uuid
      * @return A MessageStatus DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     MessageStatus getMessageStatus(String uuid) throws Exception;
+
+    /**
+     * Returns a MessageStatus object
+     *
+     * @param id - message id
+     * @return A MessageStatus DTO matching the id.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
+    MessageStatus getMessageStatus(Long id) throws Exception;
 
     /**
      * Returns the contact for the provided contact id.
@@ -301,6 +342,15 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     void sendSignal(String scope, String channel, String event, String payload) throws Exception;
+
+    /**
+     * A debug call to generate a SIGNAL_VERIFICATION command back to the client
+     * associated with the {@param clientId}.
+     *
+     * @param clientId The client ID to send the SIGNAL_VERIFICATION to.
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
+    void sendSignalsVerification(String clientId) throws Exception;
 
     /**
      * Save a new contact for the user or update an existing contact.
@@ -403,11 +453,11 @@ public interface ZipwhipClient extends Destroyable {
      * 3) Eventually return a valid session key for this device
      *
      * @param mobileNumber: mobile number of the account
-     * @param carrier: carrier for the mobileNumber
+     * @param portal: product that is retrieving a session
      * @return clientId that is used to finish the challenge process
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    String sessionChallenge(String mobileNumber, String carrier) throws Exception;
+    String sessionChallenge(String mobileNumber, String portal) throws Exception;
 
     /**
      * Finishes the challenge process and returns a session key
@@ -447,6 +497,27 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
     byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
+
+    /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param size the size of thumnail in pixels
+     * @return A byte[] of the user's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
+     * The API for reporting metrics events on Zipwhip products.
+     *
+     * @param product The product type for which we are recording this event.
+     * @param mobileNumber Cleaned mobile number for this product.
+     * @param event The event which we are recording.
+     * @param payload Optional extra text to record with the event.
+     * @throws Exception if an error occurs communicating with Zipwhip or if required parameters are missing.
+     */
+    void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String payload) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.

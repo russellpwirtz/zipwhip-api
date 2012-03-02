@@ -20,4 +20,9 @@ public class JsonSignal extends Signal implements Serializable {
         return json;
     }
 
+    @Override
+    public String toString() {
+        return json;
+    }
+
 }

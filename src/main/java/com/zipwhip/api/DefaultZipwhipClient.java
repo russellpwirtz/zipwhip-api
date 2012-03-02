@@ -11,6 +11,7 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.signals.presence.ProductLine;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 
@@ -130,17 +131,20 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // If the clientId has changed we need to invalidate the settings data
         if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
 
-            LOGGER.debug("ClientId has changed, clearing settings store");
+            LOGGER.debug("ClientId has changed, resetting client id in settings store");
 
-            settingsStore.clear();
+            //settingsStore.clear();
+            if (signalProvider!=null && signalProvider.getClientId() != null) {
+                settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
+            }
         }
 
         // If the sessionKey has changed we need to invalidate the settings data
         if (StringUtil.exists(connection.getSessionKey()) && !connection.getSessionKey().equals(settingsStore.get(SettingsStore.Keys.SESSION_KEY))) {
 
-            LOGGER.debug("New or changed sessionKey, clearing settings store");
+            LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
 
-            settingsStore.clear();
+            //settingsStore.clear();
             settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
         }
 
@@ -207,6 +211,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return sendMessage(Arrays.asList(address), body, fromName, advertisement);
     }
 
+    @Deprecated
     @Override
     public Message getMessage(String uuid) throws Exception {
 
@@ -216,6 +221,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
+    @Override
+    public Message getMessage(Long id) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("id", id);
+
+        return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
+    }
 
     @Override
     public List<Device> listDevices() throws Exception {
@@ -279,7 +292,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("contact", Long.toString(contactId));
-        
+
         return success(executeSync(CONTACT_DELETE, params));
     }
 
@@ -323,6 +336,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
 
+    @Deprecated
     @Override
     public boolean messageRead(List<String> uuids) throws Exception {
 
@@ -337,6 +351,20 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public boolean readMessage(List<Long> ids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(ids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("message", ids);
+
+        return success(executeSync(MESSAGE_READ, params));
+    }
+
+    @Deprecated
+    @Override
     public boolean messageDelete(List<String> uuids) throws Exception {
 
         if (CollectionUtil.isNullOrEmpty(uuids)) {
@@ -350,9 +378,35 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public boolean deleteMessage(List<Long> ids) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(ids)) {
+            return false;
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("message", ids);
+
+        return success(executeSync(MESSAGE_DELETE, params));
+    }
+
+    @Deprecated
+    @Override
     public MessageStatus getMessageStatus(String uuid) throws Exception {
 
         Message message = getMessage(uuid);
+
+        if (message == null) {
+            return null;
+        }
+
+        return new MessageStatus(message);
+    }
+
+    @Override
+    public MessageStatus getMessageStatus(Long id) throws Exception {
+
+        Message message = getMessage(id);
 
         if (message == null) {
             return null;
@@ -411,6 +465,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // send the 3rd party signal.
 
         executeSync(SIGNAL_SEND, params);
+    }
+
+    @Override
+    public void sendSignalsVerification(String clientId) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("clientId", clientId);
+
+        executeSync(SIGNALS_VERIFY, params);
     }
 
     @Override
@@ -497,12 +560,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
 
     @Override
-    public String sessionChallenge(String mobileNumber, String carrier) throws Exception {
+    public String sessionChallenge(String mobileNumber, String portal) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("mobileNumber", mobileNumber);
-        params.put("carrier", carrier);
+        params.put("portal", portal);
 
         ServerResponse response = executeSync(CHALLENGE_REQUEST, params, false);
 
@@ -665,6 +728,41 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // Block and wait...
         binaryResponseFuture.awaitUninterruptibly();
         return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public byte[] getFaceImage(String mobileNumber, int size) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+        params.put("size", size);
+        params.put("thumbnail", true);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String payload) throws Exception {
+
+        if (product == null || StringUtil.isNullOrEmpty(mobileNumber) || StringUtil.isNullOrEmpty(event)) {
+            throw new Exception("Missing required parameter.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("product", product.toString());
+        params.put("mobileNumber", mobileNumber);
+        params.put("event", event);
+
+        if (StringUtil.exists(payload)) {
+            params.put("payload", payload);
+        }
+
+        executeSync(METRICS_EVENT, params);
     }
 
     @Override

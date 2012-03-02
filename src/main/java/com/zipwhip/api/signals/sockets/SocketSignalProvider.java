@@ -13,8 +13,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.zipwhip.api.signals.commands.*;
-import com.zipwhip.signals.address.ClientAddress;
 import org.apache.log4j.Logger;
 
 import com.zipwhip.api.signals.PingEvent;
@@ -22,11 +20,21 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.commands.BackfillCommand;
+import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.ConnectCommand;
+import com.zipwhip.api.signals.commands.DisconnectCommand;
+import com.zipwhip.api.signals.commands.NoopCommand;
+import com.zipwhip.api.signals.commands.PresenceCommand;
+import com.zipwhip.api.signals.commands.SignalCommand;
+import com.zipwhip.api.signals.commands.SignalVerificationCommand;
+import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
@@ -44,20 +52,20 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
 
-	private ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
-	private ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
-	private ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
-	private ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
-	private ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
-	private ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
-	private ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
-	private ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
-	private ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
-	private ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
+	private final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
+	private final ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+	private final ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
+	private final ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
+	private final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
+	private final ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
+	private final ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
+	private final ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
+	private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
+	private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
 	private CountDownLatch connectLatch;
 	private SignalConnection connection = new NettySignalConnection();
-	private ExecutorService executor = Executors.newSingleThreadExecutor();
+	private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	private String clientId;
 	private String originalClientId; //So we can detect change
@@ -225,6 +233,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 				versions.put(version.getKey(), version.getValue());
 			}
 		});
+		
+		onNewClientIdReceived(new Observer<String>() {
+			@Override
+			public void notify(Object sender, String newClientId) {
+				clientId = newClientId;
+				originalClientId = newClientId;
+
+				if (presence != null)
+					presence.setAddress(new ClientAddress(newClientId));
+			}
+		});
 	}
 
 	/*
@@ -337,7 +356,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 				} catch (Exception e) {
 
-					LOGGER.error(e);
+					LOGGER.error("Exception in connecting..."+ e, e.getCause());
 
 					// Need to make sure we always count down
 					connectLatch.countDown();
@@ -429,7 +448,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handleConnectCommand(ConnectCommand command) {
 
-		LOGGER.debug("Handling ConnectCommand");
+		if (LOGGER.isDebugEnabled())
+			LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
 
 		if (command.isSuccessful()) {
 
@@ -441,19 +461,24 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 			clientId = command.getClientId();
 
 			if (!StringUtil.equals(clientId, originalClientId)) {
+
+				if (LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Received a new client id: " + clientId);
+				}
 				// not the same, lets announce
 				// announce on a separate thread
 				newClientIdEvent.notifyObservers(this, clientId);
 			}
 
-            if (versions != null) {
-                // Send a BackfillCommand for each version key - in practice this is a single key/version
-                for (String key : versions.keySet()) {
-                    connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
-                }
-            }
+			if (versions != null) {
+				// Send a BackfillCommand for each version key - in practice
+				// this is a single key/version
+				for (String key : versions.keySet()) {
+					connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
+				}
+			}
 
-            startPings();
+			startPings();
 
 		} else {
 
@@ -461,8 +486,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		}
 
 		if (connectLatch != null) {
-			// we need to countDown the latch, when it hits zero (after this call)
-			// the connect ObservableFuture will complete. This gives the caller a way to block on our connection
+			// we need to countDown the latch, when it hits zero (after this
+			// call)
+			// the connect ObservableFuture will complete. This gives the caller
+			// a way to block on our connection
 			connectLatch.countDown();
 		}
 	}
@@ -514,11 +541,33 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handlePresenceCommand(PresenceCommand command) {
 
-		LOGGER.debug("Handling PresenceCommand");
+		if (LOGGER.isDebugEnabled())
+			LOGGER.debug("Handling PresenceCommand " + command.getPresence());
 
-		for (Presence presence : command.getPresence()) {
-			if (presence.getCategory().equals(PresenceCategory.Phone)) {
-				presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+		boolean selfPresenceExists = false;
+		List<Presence> presenceList = command.getPresence();
+		if (presenceList == null) {
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug("Nothing is known about us or our peers");
+			selfPresenceExists = false;
+		} else {
+
+			for (Presence presence : command.getPresence()) {
+				if (clientId.equals(presence.getAddress().getClientId()))
+					selfPresenceExists = true;
+				if (presence.getCategory().equals(PresenceCategory.Phone)) {
+					presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+				}
+			}
+		}
+		if (!selfPresenceExists) {
+			
+			if(presence != null) {
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug("Reidentifying our presence object");
+			connection.send(new PresenceCommand(Collections.singletonList(presence)));
+			} else {
+				LOGGER.debug("Our presence object was empty, so we didn't share it");
 			}
 		}
 	}
@@ -530,6 +579,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
 	private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
 
+		if(LOGGER.isDebugEnabled())
 		LOGGER.debug("Handling SubscriptionCompleteCommand");
 
         if (presence != null) {
