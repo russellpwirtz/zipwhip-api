@@ -165,6 +165,14 @@ public interface ZipwhipClient extends Destroyable {
     public List<Conversation> listConversations(int limit) throws Exception;
 
     /**
+     * @param start Where to start list conversations.  (Zero indexed)
+     * @param limit The maximum limit of how many conversations to return.
+     * @return A list of the most recent {@link Conversation}s associated with the user, up to the specified limit.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Conversation> listConversations(int start, int limit) throws Exception;
+
+    /**
      *
      * @return A list of all {@link Contact}s associated with the supplied user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response, or the server returns a failure message.
@@ -317,6 +325,20 @@ public interface ZipwhipClient extends Destroyable {
      */
     void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception;
 
+    /**
+     * Save a new contact for the user or update an existing contact.
+     *
+     * @param address The address of the contact, generally mobile number.
+     * @param firstName Contact's first name.
+     * @param lastName Contact's last name.
+     * @param phoneKey  Contact's phone type.
+     * @param notes Free text.
+     * @param location Contact's location
+     * @param email Contact's e-mail address.                 
+     * @throws Exception if an error occurs communicating with Zipwhip
+     */
+    void saveContact(String address, String firstName, String lastName, String phoneKey, String notes, String location, String email) throws Exception;
+    
     /**
      * Add a member to an existing group.
      *

@@ -22,6 +22,7 @@ public class Contact extends BasicDto {
     long moCount;
     long zoCount;
     String latlong;
+    String loc;
     String notes;
     String carrier;
     String zipcode;
@@ -192,6 +193,14 @@ public class Contact extends BasicDto {
         this.phone = phone;
     }
 
+    public String getLoc() {
+        return loc;
+    }
+
+    public void setLoc(String loc) {
+        this.loc = loc;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> Contact details:");
@@ -208,6 +217,7 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nMO COunt: ").append(moCount);
         toStringBuilder.append("\nZO Count: ").append(zoCount);
         toStringBuilder.append("\nLatLong: ").append(latlong);
+        toStringBuilder.append("\nLoc: ").append(loc);
         toStringBuilder.append("\nNotes: ").append(notes);
         toStringBuilder.append("\nCarrier: ").append(carrier);
         toStringBuilder.append("\nZipcode: ").append(zipcode);

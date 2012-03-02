@@ -235,6 +235,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public List<Conversation> listConversations(int start, int limit) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("start", Integer.toString(start));
+        params.put("limit", Integer.toString(limit));
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, params));
+    }
+
+    @Override
     public List<Contact> listContacts() throws Exception {
         return responseParser.parseContacts(executeSync(CONTACT_LIST, new HashMap<String, Object>()));
     }
@@ -605,6 +613,31 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("phoneKey", phoneKey);
         if (notes != null) {
             params.put("notes", notes);
+        }
+
+        // happens async
+        executeSync(CONTACT_SAVE, params);
+    }
+
+    @Override
+    public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes, String location, String email) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("address", address);
+        params.put("firstName", firstName);
+        params.put("lastName", lastName);
+        params.put("phoneKey", phoneKey);
+        if (notes != null) {
+            params.put("notes", notes);
+        }
+        
+        if (location != null){
+            params.put("loc", location);
+        }
+        
+        if (email != null){
+            params.put("email", email);
         }
 
         // happens async

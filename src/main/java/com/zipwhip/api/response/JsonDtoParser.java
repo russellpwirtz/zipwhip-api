@@ -90,6 +90,7 @@ public class JsonDtoParser {
         contact.setEmail(content.optString("email"));
         contact.setNotes(content.optString("notes"));
         contact.setChannel(content.optString("channel"));
+        contact.setLoc(content.optString("loc"));
 
         return contact;
     }
