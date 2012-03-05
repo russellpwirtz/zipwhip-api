@@ -133,7 +133,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
             LOGGER.debug("ClientId has changed, resetting client id in settings store");
 
-            //settingsStore.clear();
+            settingsStore.clear();
+
             if (signalProvider!=null && signalProvider.getClientId() != null) {
                 settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
             }
@@ -144,7 +145,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
             LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
 
-            //settingsStore.clear();
+            settingsStore.clear();
+
             settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
         }
 
@@ -209,6 +211,18 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     @Override
     public List<MessageToken> sendMessage(String address, String body, String fromName, String advertisement) throws Exception {
         return sendMessage(Arrays.asList(address), body, fromName, advertisement);
+    }
+
+    @Override
+    public List<MessageToken> sendMessage(String address, String body, int fromAddress) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("contacts", address);
+        params.put("body", body);
+        params.put("fromAddress", fromAddress);
+
+        return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
     }
 
     @Deprecated

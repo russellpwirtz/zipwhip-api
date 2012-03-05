@@ -108,6 +108,17 @@ public interface ZipwhipClient extends Destroyable {
     List<MessageToken> sendMessage(String address, String body, String fromName, String advertisement) throws Exception;
 
     /**
+     * Send a message via Zipwhip.
+     *
+     * @param address The address, generally the mobile number, of the message recipient.
+     * @param body The body of the message to be sent.
+     * @param fromAddress The send strategy.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
+    List<MessageToken> sendMessage(String address, String body, int fromAddress) throws Exception;
+
+    /**
      * Create a new group.
      *
      * @param type The type of group, eg. reply-all.
