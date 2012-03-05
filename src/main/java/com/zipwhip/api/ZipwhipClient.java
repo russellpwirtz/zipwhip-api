@@ -12,6 +12,7 @@ import com.zipwhip.signals.presence.ProductLine;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 
 /**
@@ -21,6 +22,9 @@ import java.util.concurrent.Future;
  * @author Michael
  */
 public interface ZipwhipClient extends Destroyable {
+
+
+    public User getUser() throws Exception;
 
     /**
      * Send a message via Zipwhip.
@@ -135,6 +139,19 @@ public interface ZipwhipClient extends Destroyable {
     Contact saveUser(Contact contact) throws Exception;
 
     /**
+     * Saves or updates the user information.  For all values for which null is passed in, that value will remain unchanged, relative to
+     * the website.
+     * to the website.
+     * @param firstName
+     * @param lastName
+     * @param email
+     * @param phoneKey
+     * @param location
+     * @param notes
+     */
+    public void saveUser(String firstName, String lastName, String email, String phoneKey, String location, String notes) throws Exception;
+
+    /**
      * Returns a Message object
      *
      * @deprecated Use {@code getMessage(Long id)}
@@ -231,6 +248,16 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception;
+
+    /**
+     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @param start Where in the list to start. (Zero indexed)
+     * @param limit The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception;
 
     /**
      *

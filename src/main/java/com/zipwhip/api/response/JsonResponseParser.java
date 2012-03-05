@@ -191,8 +191,27 @@ public class JsonResponseParser implements ResponseParser {
         }
     }
 
+
     @Override
-    public Contact parseUser(ServerResponse serverResponse) throws Exception {
+    public User parseUser(ServerResponse serverResponse) throws Exception {
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse cplx = (ObjectServerResponse) serverResponse;
+
+            if (cplx.response.has("user")) {
+                return parser.parseUser(cplx.response.optJSONObject("user"));
+            } else {
+                return null;
+            }
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
+        }
+    }
+
+
+    @Override
+    public Contact parseUserAsContact(ServerResponse serverResponse) throws Exception {
 
         if (serverResponse instanceof ObjectServerResponse) {
 

@@ -282,7 +282,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                 @Override
                 public void run(ParsableServerResponse<Contact> parsableServerResponse) {
                     try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseUser(parsableServerResponse.getServerResponse()));
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseUserAsContact(parsableServerResponse.getServerResponse()));
                     } catch (Exception e) {
                         parsableServerResponse.getFuture().setFailure(e);
                     }

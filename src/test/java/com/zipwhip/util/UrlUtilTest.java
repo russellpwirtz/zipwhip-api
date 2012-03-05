@@ -61,7 +61,7 @@ public class UrlUtilTest {
         String encoded = authenticator.encodeBase64("helloworld".getBytes());
         Assert.assertNotNull(encoded);
         System.out.println(encoded);
-        Assert.assertEquals(encoded, "aGVsbG93b3JsZA==\n");
+        Assert.assertEquals(encoded, "aGVsbG93b3JsZA==");
     }
 
 }

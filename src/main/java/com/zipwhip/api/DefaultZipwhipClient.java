@@ -28,6 +28,13 @@ import java.util.concurrent.*;
  */
 public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements ZipwhipClient {
 
+    @Override
+    public User getUser() throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        return responseParser.parseUser(executeSync(USER_GET, params));
+    }
+
     /**
      * Create a new DefaultZipwhipClient.
      *
@@ -314,10 +321,30 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception {
         if (StringUtil.isNullOrEmpty(fingerprint)){
             throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
+        } else if (limit <= 0) {
+            throw new Exception("Attempting to call listMessagesByFingerprint with a zero or negative limit value.");
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("fingerprint", fingerprint);
+        params.put("limit", Integer.toString(limit));
+
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
+    }
+
+    @Override
+    public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception {
+        if (StringUtil.isNullOrEmpty(fingerprint)){
+            throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
+        } else if (start < 0){
+            throw new Exception("Attempting to call listMessagesByFingerprint with a negative start value.");
+        } else if (limit <= 0) {
+            throw new Exception("Attempting to call listMessagesByFingerprint with a zero or negative limit value.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("fingerprint", fingerprint);
+        params.put("start", Integer.toString(start));
         params.put("limit", Integer.toString(limit));
 
         return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
@@ -332,7 +359,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     public List<Message> listMessages(int limit) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("limit", Integer.toString(limit));
-        
+
         return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
 
@@ -645,6 +672,21 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public void saveUser(String firstName, String lastName, String email, String phoneKey, String location, String notes) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("email", email);
+        params.put("firstName", firstName);
+        params.put("lastName", lastName);
+        params.put("phoneKey", phoneKey);
+        params.put("notes", notes);
+        params.put("loc", location);
+
+        executeSync(USER_SAVE, params);
+    }
+
+    @Override
     public Contact saveGroup(String type, String advertisement) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -694,11 +736,11 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         if (notes != null) {
             params.put("notes", notes);
         }
-        
+
         if (location != null){
             params.put("loc", location);
         }
-        
+
         if (email != null){
             params.put("email", email);
         }

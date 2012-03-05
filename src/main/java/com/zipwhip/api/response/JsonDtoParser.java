@@ -56,6 +56,13 @@ public class JsonDtoParser {
         }
     };
 
+    public final Parser<JSONObject, User> USER_PARSER = new Parser<JSONObject, User>() {
+        @Override
+        public User parse(JSONObject jsonObject) throws Exception {
+            return parseUser(jsonObject);
+        }
+    };
+
     /**
      * Parse a Contact from a JSONObject if the object contains it.
      *
@@ -93,6 +100,45 @@ public class JsonDtoParser {
         contact.setLoc(content.optString("loc"));
 
         return contact;
+    }
+
+    /**
+     * Parse a Contact from a JSONObject if the object contains it.
+     *
+     * @param content JSONObject to be parsed.
+     * @return A Contact object parsed from the JSON content.
+     * @throws JSONException If an error is encountered while parsing
+     */
+    public User parseUser(JSONObject content) throws JSONException {
+
+        if (content == null) {
+            return null;
+        }
+
+        User user = parseBasicDto(new User(), content);
+
+//        user.setDeviceId(content.optLong("deviceId"));
+//        user.setAddress(content.optString("address"));
+        user.setMobileNumber(content.optString("mobileNumber"));
+//        user.setState(content.optString("state"));
+//        user.setCity(content.optString("city"));
+//        user.setId(content.optLong("id"));
+        user.setPhoneKey(content.optString("phoneKey"));
+//        user.setThread(content.optString("thread"));
+//        user.setFwd(content.optString("fwd"));
+        user.setCarrier(content.optString("carrier"));
+        user.setFirstName(content.optString("firstName"));
+        user.setLastName(content.optString("lastName"));
+        user.setMoCount(content.optInt("MOCount"));
+        user.setZoCount(content.optInt("ZOCount"));
+        user.setZipcode(content.optString("zipcode"));
+//        user.setLatlong(content.optString("latlong"));
+        user.setEmail(content.optString("email"));
+        user.setNotes(content.optString("notes"));
+//        user.setChannel(content.optString("channel"));
+        user.setLoc(content.optString("loc"));
+
+        return user;
     }
 
     /**
