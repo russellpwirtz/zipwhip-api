@@ -1,5 +1,7 @@
 *.iml
 .svn
+log
+log/*
 target
 target/*
 /.classpath

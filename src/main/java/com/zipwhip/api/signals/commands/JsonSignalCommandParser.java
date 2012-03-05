@@ -25,8 +25,8 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
 	private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
 
-	private Map<Action, Parser<JSONObject, Command<?>>> parsers;
-	private JsonSignalParser signalContentParser = new JsonSignalParser();
+	private final Map<Action, Parser<JSONObject, Command<?>>> parsers;
+	private final JsonSignalParser signalContentParser = new JsonSignalParser();
 
 	public JsonSignalCommandParser() {
 
@@ -80,6 +80,10 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 		public Command<?> parse(JSONObject object) throws Exception {
 
 			String clientId = object.optString("clientId");
+			if(clientId == null || clientId.length() < 18) {
+				Throwable t = new Throwable();
+				LOGGER.fatal(t);
+			}
 
 			return new ConnectCommand(clientId);
 		}

@@ -29,7 +29,7 @@ public class WebsocketChannelHandler extends ObservableChannelHandler {
 	private static final Logger LOG = Logger.getLogger(WebsocketChannelHandler.class);
 	private boolean handshakeCompleted = false;
 	private String host = "127.0.0.1"; // TODO how to define this?
-	private String path = "/socket.io/websocket";
+	private String path = "/socket.io/1/websocket";
 
 	@Override
 	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
