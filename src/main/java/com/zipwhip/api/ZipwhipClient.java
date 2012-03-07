@@ -457,6 +457,8 @@ public interface ZipwhipClient extends Destroyable {
      */
     void carbonStats(int totalPhoneMessages) throws Exception;
 
+    boolean acceptedTCs() throws Exception;
+
     /**
      * Initiates the signup process to:
      * 1) Enroll a new account if one doesn't exist
