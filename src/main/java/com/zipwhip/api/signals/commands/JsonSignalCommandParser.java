@@ -147,6 +147,8 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
 			SignalCommand signalCommand = new SignalCommand(signalContentParser.parseSignal(object));
 			signalCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
+			signalCommand.setBackfill(object.optBoolean("isBackfill", false));
+			signalCommand.setMaxBackfillVersion(object.optLong("maxBackfillVersion", SignalCommand.NOT_BACKFILL_SIGNAL_VERSION));
 
 			return signalCommand;
 		}
