@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
@@ -135,11 +136,23 @@ public interface SignalProvider extends Destroyable {
     void stopPings();
 
     /**
-     * You can Observe this event to capture things that come through
+     * You can Observe this event to capture signals that come in.
+     *
+     * As signals are always wrapped by SignalCommand this event and {@code onSignalCommandReceived} will fire simultaneously.
      * 
      * @param observer an Observer of type List<Signal> to listen for new signal events.
      */
     void onSignalReceived(Observer<List<Signal>> observer);
+
+    /**
+     * You can Observe this event to capture the higher level object containing the command
+     * and the signal object.
+     *
+     * As signals are always wrapped by SignalCommand this event and {@code onSignalReceived} will fire simultaneously.
+     *
+     * @param observer an Observer of type Map<Long, Signal> to listen for new signal events.
+     */
+    void onSignalCommandReceived(Observer<List<SignalCommand>> observer);
 
     /**
      * Observe the changes in connection. This is when your clientId is used for
