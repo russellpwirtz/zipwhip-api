@@ -24,7 +24,7 @@
     <distributionManagement>
         <repository>
             <id>snapshots</id>
-            <url>https://artifactory.zipwhip.com/libs-snapshot-local</url>
+            <url>http://hudson.zipwhip.com:8081/artifactory/libs-snapshot-local</url>
         </repository>
     </distributionManagement>
 
