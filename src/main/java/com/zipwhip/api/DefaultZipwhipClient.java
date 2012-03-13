@@ -1,12 +1,26 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.dto.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+
+import com.zipwhip.api.dto.Contact;
+import com.zipwhip.api.dto.Conversation;
+import com.zipwhip.api.dto.Device;
+import com.zipwhip.api.dto.Message;
+import com.zipwhip.api.dto.MessageStatus;
+import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
-import com.zipwhip.api.signals.*;
+import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
@@ -14,9 +28,6 @@ import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.signals.presence.ProductLine;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
-
-import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -73,7 +84,10 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                         Map<String, Object> params = new HashMap<String, Object>();
                         params.put("clientId", clientId);
                         params.put("sessions", connection.getSessionKey());
-
+                        Presence presence = signalProvider.getPresence();
+						if (presence != null)
+							params.put("category", presence.getCategory());
+                        		
                         try {
                             executeSync(SIGNALS_DISCONNECT, params);
 
@@ -91,6 +105,9 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                     Map<String, Object> params = new HashMap<String, Object>();
                     params.put("clientId", clientId);
                     params.put("sessions", connection.getSessionKey());
+                    Presence presence = signalProvider.getPresence();
+					if (presence != null)
+						params.put("category", presence.getCategory());
 
                     try {
 
