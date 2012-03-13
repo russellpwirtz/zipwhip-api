@@ -16,7 +16,6 @@ import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.zipwhip.api.signals.JsonSignal;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
@@ -96,18 +95,28 @@ public class SocketSignalProviderTest {
 	@Test
 	public void testOnSignalReceived() throws Exception {
 
-		provider.onSignalReceived(new Observer<List<com.zipwhip.api.signals.Signal>>() {
-			@Override
-			public void notify(Object sender, List<com.zipwhip.api.signals.Signal> item) {
-				System.out.println("testOnSignalReceived - provider.onSignalReceived " + item);
-				assertNotNull(item);
-				assertTrue(item.get(0) instanceof JsonSignal);
-			}
-		});
+		Boolean signalReceived = false;
+		Boolean signalCommandReceived = false;
+		
+		SignalObserver signalObserver = new SignalObserver();
+		provider.onSignalReceived(signalObserver);
 
+		SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
+		provider.onSignalCommandReceived(signalCommandObserver);
+		
 		connection.send(null);
+		Signal signal = new Signal();
+		SignalCommand signalCommand = new SignalCommand(signal);
+		
+		assertFalse(signalObserver.isSignalReceived());
+		assertFalse(signalCommandObserver.isSignalCommandReceived());	
+		
+		connection.mockReceive(signalCommand);
+		
+		assertTrue(signalObserver.isSignalReceived());
+		assertTrue(signalCommandObserver.isSignalCommandReceived());
 	}
-
+	
 	@Test
 	public void testOnConnectionChanged() throws Exception {
 
@@ -349,4 +358,52 @@ public class SocketSignalProviderTest {
 
 	}
 
+	/**
+	 * Custom observer to register that a Signal Command was received
+	 * @author jeremy
+	 *
+	 */
+	private class SignalCommandObserver implements Observer<List<SignalCommand>> {
+		boolean signalCommandReceived = false;
+		
+		@Override
+		public void notify(Object sender, List<SignalCommand> item) {
+			assertNotNull(item);
+			assertTrue(item.get(0) instanceof SignalCommand);
+			signalCommandReceived = true;
+		}
+
+		/**
+		 * @return the signalCommandReceived
+		 */
+		public final boolean isSignalCommandReceived() {
+			return signalCommandReceived;
+		}
+	}
+
+	/**
+	 * Custom observer to register that a Signal was received
+	 * @author jeremy
+	 *
+	 */
+	private class SignalObserver implements Observer<List<com.zipwhip.api.signals.Signal>> {
+
+		boolean signalReceived = false;
+		
+		@Override
+		public void notify(Object sender, List<Signal> item) {
+			System.out.println("testOnSignalReceived - provider.onSignalReceived " + item);
+			assertNotNull(item);
+			assertTrue(item.get(0).getClass().getSimpleName(), item.get(0) instanceof Signal);
+			signalReceived = true;
+		}
+
+		/**
+		 * @return the signalReceived
+		 */
+		public final boolean isSignalReceived() {
+			return signalReceived;
+		}
+		
+	}
 }
