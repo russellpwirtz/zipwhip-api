@@ -624,12 +624,13 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception {
+    public String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("clientId", clientId);
         params.put("securityToken", securityToken);
+        params.put("portal", portal);
         params.put("arguments", arguments);
         params.put("userAgent", userAgent);
 

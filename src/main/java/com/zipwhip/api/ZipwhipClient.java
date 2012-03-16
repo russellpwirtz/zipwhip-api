@@ -477,12 +477,13 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param clientId: clientId returned by the original sessionChallenge call
      * @param securityToken: The random string that is sent in an ".signup verify" sms to the phone
-     * @param arguments: any extra arguments for the cloud to react to (.signup devicecarbonall)
+     * @param portal: product line to customize the user account for
+     * @param arguments: any extra arguments for the cloud to react to (previously this was ".signup devicecarbonall")
      * @param userAgent: Device's user agent
      * @return A session key
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    String sessionChallengeConfirm(String clientId, String securityToken, String arguments, String userAgent) throws Exception;
+    String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception;
 
     /**
      *
