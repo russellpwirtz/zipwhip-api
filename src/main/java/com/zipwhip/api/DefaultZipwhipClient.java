@@ -808,7 +808,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("payload", payload);
         }
 
-        executeSync(METRICS_EVENT, params);
+        executeSync(METRICS_EVENT, params, false);
     }
 
     @Override
