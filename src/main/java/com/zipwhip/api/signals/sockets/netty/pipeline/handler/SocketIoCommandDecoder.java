@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
 
+import com.zipwhip.api.signals.JsonSignalParser;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.JsonSignalCommandParser;
@@ -49,7 +50,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
             String message = (String) o;
 
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("SocketIO message: " + message);
+                LOGGER.debug("SocketIO message: " + JsonSignalParser.hashMessageBody(message));
             }
 
             // We have a Socket.IO JSON message, try to parse it to a command

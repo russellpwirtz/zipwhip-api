@@ -352,7 +352,7 @@ public class Message extends BasicDto {
         toStringBuilder.append("\nDestinationAddress: ").append(destinationAddress);
         toStringBuilder.append("\nSourceAddress: ").append(sourceAddress);
         toStringBuilder.append("\ndirection: ").append(direction);
-        toStringBuilder.append("\nBody: ").append(body);
+        toStringBuilder.append("\nBodyHashCode: ").append(body.hashCode());
         toStringBuilder.append("\nUuid: ").append(uuid);
         toStringBuilder.append("\nFrom: ").append(from);
         toStringBuilder.append("\nFromName: ").append(fromName);

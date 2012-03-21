@@ -59,7 +59,7 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         JSONObject content = node.optJSONObject("content");
 
         if (LOGGER.isDebugEnabled()){
-            LOGGER.debug("SIGNAL>>>" + node.toString());
+            LOGGER.debug("SIGNAL>>>" + JsonSignalParser.hashMessageBody(node.toString()));
         }
 
         Signal signal = new JsonSignal(node.toString());
@@ -87,6 +87,38 @@ public class JsonSignalParser implements SignalParser<JSONObject> {
         }
 
         return signal;
+    }
+
+    /**
+     * FOR DEBUG ONLY! Use this to obfuscate the message body for use in logging.
+     *
+     * @param rawSignal The signal string from which the message body should be replaced with its hash code.
+     * @return The signal string with its body should be replaced with its hash code or the original string if no body is found.
+     */
+    public static String hashMessageBody(String rawSignal) {
+
+        int bodyStart = rawSignal.indexOf("\"body\":\"");
+
+        if (bodyStart >= 0) {
+
+            bodyStart += 8;
+            int bodyEnd = rawSignal.indexOf("\"", bodyStart + 1);
+            String body = rawSignal.substring(bodyStart, bodyEnd);
+            return rawSignal.replace(body, String.valueOf(body.hashCode()));
+
+        } else {
+
+            bodyStart = rawSignal.indexOf("\"lastMessageBody\":\"");
+
+            if (bodyStart >= 0) {
+                bodyStart += 19;
+                int bodyEnd = rawSignal.indexOf("\"", bodyStart + 1);
+                String body = rawSignal.substring(bodyStart, bodyEnd);
+                return rawSignal.replace(body, String.valueOf(body.hashCode()));
+            } else {
+                return rawSignal;
+            }
+        }
     }
 
 }
