@@ -24,9 +24,7 @@ public class CarbonEvent extends BasicDto {
 
     @Override
     public String toString() {
-        StringBuilder toStringBuilder = new StringBuilder("==> CarbonEvent details:");
-        toStringBuilder.append("\nCarbonDescriptor: ").append(carbonDescriptor);
-        return toStringBuilder.toString();
+        return carbonDescriptor;
     }
 
 }

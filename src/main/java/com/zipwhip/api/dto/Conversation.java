@@ -201,7 +201,7 @@ public class Conversation extends BasicDto {
         toStringBuilder.append("\nLastMessageDate: ").append(lastMessageDate);
         toStringBuilder.append("\nLastNonDeletedMessageDate: ").append(lastNonDeletedMessageDate);
         toStringBuilder.append("\nLastContactMobileNumber: ").append(lastContactMobileNumber);
-        toStringBuilder.append("\nLastMessageBody: ").append(lastMessageBody);
+        toStringBuilder.append("\nLastMessageBodyHashCode: ").append(lastMessageBody.hashCode());
 
         return toStringBuilder.toString();
     }

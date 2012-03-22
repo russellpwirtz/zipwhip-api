@@ -69,7 +69,7 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 		}
 
 		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Parsing" + string);
+			LOGGER.debug("Parsing" + JsonSignalParser.hashMessageBody(string));
 		}
 
 		return parser.parse(json);
