@@ -137,6 +137,7 @@ public class JsonDtoParser {
         user.setNotes(content.optString("notes"));
 //        user.setChannel(content.optString("channel"));
         user.setLoc(content.optString("loc"));
+        user.setWebsiteDeviceId(content.optLong("websiteDeviceId"));
 
         return user;
     }

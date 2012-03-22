@@ -1,10 +1,11 @@
 package com.zipwhip.api.signals.commands;
 
-import junit.framework.Assert;
-import org.junit.Test;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import junit.framework.Assert;
+
+import org.junit.Test;
 
 /**
  * Created by IntelliJ IDEA.
@@ -42,6 +43,10 @@ public class ConnectCommandTest {
     @Test
     public void testSerializeClientId() throws Exception {
 
+        command = new ConnectCommand("123456789012345678");
+        serial = command.serialize();
+        Assert.assertEquals("{\"action\":\"CONNECT\",\"clientId\":\"123456789012345678\"}", serial);
+     
         command = new ConnectCommand("123456");
         serial = command.serialize();
         Assert.assertEquals("{\"action\":\"CONNECT\",\"clientId\":\"123456\"}", serial);

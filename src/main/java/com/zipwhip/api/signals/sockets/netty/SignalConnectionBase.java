@@ -30,7 +30,7 @@ import com.zipwhip.lifecycle.CascadingDestroyableBase;
 
 /**
  * @author jdinsel
- *
+ * 
  */
 public abstract class SignalConnectionBase extends CascadingDestroyableBase implements SignalConnection {
 
@@ -38,10 +38,16 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 	public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
-	private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping, inactive seconds
-	private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
+	private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping,
+																// inactive
+																// seconds
+	private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to
+																// disconnect if
+																// a ping was
+																// not ponged by
+																// this time
 
-    private String host = "74.209.177.242";
+	private String host = "74.209.177.242";
 	private int port = 3000;
 
 	private int pingTimeout = DEFAULT_PING_TIMEOUT;
@@ -51,7 +57,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 	private ScheduledFuture<?> pingTimeoutFuture;
 	private ScheduledFuture<?> pongTimeoutFuture;
-	private ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
+	private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
 	protected ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
 	protected ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
@@ -63,7 +69,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 	private Runnable onSocketActivity;
 
 	protected Channel channel;
-	private ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
+	private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
 	protected boolean networkDisconnect;
 	protected boolean doKeepalives;
@@ -96,28 +102,45 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 			((AbstractChannel) channel).setOnSocketActivity(onSocketActivity);
 		}
 
-		final ChannelFuture channelFuture = channel.connect(new InetSocketAddress(host, port));
+		FutureTask<Boolean> task;
+		InetSocketAddress address = new InetSocketAddress(host, port);
+		if (address.isUnresolved()) {
+			task = new FutureTask<Boolean>(new Callable<Boolean>() {
+				@Override
+				public Boolean call() throws Exception {
+					return Boolean.FALSE;
+				}
+			});
+		} else {
+			final ChannelFuture channelFuture = channel.connect(address);
 
-		FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
+			task = new FutureTask<Boolean>(new Callable<Boolean>() {
 
-			@Override
-			public Boolean call() throws Exception {
+				@Override
+				public Boolean call() throws Exception {
 
-				channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+					boolean socketConnected = false;
+					networkDisconnect = true; // Assume a network failure will
+												// occur during connect
 
-				boolean socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
+					if (channelFuture != null) {
+						channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-				networkDisconnect = socketConnected;
+						socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
 
-				return socketConnected;
+						networkDisconnect = socketConnected;
+
+					}
+					return socketConnected;
+
+				}
+			});
+
+			if (executor == null) {
+				executor = Executors.newSingleThreadExecutor();
 			}
-		});
-
-		if (executor == null) {
-			executor = Executors.newSingleThreadExecutor();
+			executor.execute(task);
 		}
-		executor.execute(task);
-
 		return task;
 	}
 
@@ -196,8 +219,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 	@Override
 	public void send(SerializingCommand command) {
-        // send this over the wire.
-        channel.write(command);
+		// send this over the wire.
+		channel.write(command);
 	}
 
 	@Override
@@ -296,13 +319,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		this.onSocketActivity = onSocketActivity;
 	}
 
-    public final String getHost() {
-        return host;
-    }
+	public final String getHost() {
+		return host;
+	}
 
-    public final int getPort() {
-        return port;
-    }
+	public final int getPort() {
+		return port;
+	}
 
 	@Override
 	protected void onDestroy() {
@@ -328,9 +351,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 		}
 	}
 
-    protected abstract ChannelPipeline getPipeline();
+	protected abstract ChannelPipeline getPipeline();
 
-    protected void schedulePing(boolean now) {
+	protected void schedulePing(boolean now) {
 
 		cancelPing();
 
@@ -344,8 +367,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 				LOGGER.debug("Sending a PING");
 				pingEvent.notifyObservers(this, PingEvent.PING_SENT);
 
-				send(PingPongCommand.getShortformInstance());
-
+				// Schedule the timeout first in case there is a problem sending
+				// the ping
 				pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
 					@Override
 					public void run() {
@@ -357,11 +380,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 					}
 				}, pongTimeout, TimeUnit.MILLISECONDS);
 
+				send(PingPongCommand.getShortformInstance());
+
 			}
 		}, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
 	}
 
-    protected void receivePong(PingPongCommand command) {
+	protected void receivePong(PingPongCommand command) {
 
 		if (command.isRequest()) {
 
@@ -413,5 +438,3 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 	}
 
 }
-
-

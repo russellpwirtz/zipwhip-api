@@ -56,6 +56,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 	private final ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
 	private final ObservableHelper<String> newClientIdEvent = new ObservableHelper<String>();
 	private final ObservableHelper<List<Signal>> signalEvent = new ObservableHelper<List<Signal>>();
+    private final ObservableHelper<List<SignalCommand>> signalCommandEvent = new ObservableHelper<List<SignalCommand>>();
 	private final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
 	private final ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
 	private final ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
@@ -94,6 +95,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		this.link(newVersionEvent);
 		this.link(presenceReceivedEvent);
 		this.link(subscriptionCompleteEvent);
+        this.link(signalCommandEvent);
 
 		connection.onMessageReceived(new Observer<Command>() {
 			/**
@@ -396,7 +398,12 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 		signalEvent.addObserver(observer);
 	}
 
-	@Override
+    @Override
+    public void onSignalCommandReceived(Observer<List<SignalCommand>> observer) {
+        signalCommandEvent.addObserver(observer);
+    }
+
+    @Override
 	public void onConnectionChanged(Observer<Boolean> observer) {
 		connectEvent.addObserver(observer);
 	}
@@ -573,8 +580,12 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 	}
 
 	private void handleSignalCommand(SignalCommand command) {
-		LOGGER.debug("Handling SignalCommand");
-		signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
+
+        LOGGER.debug("Handling SignalCommand");
+
+        // Distribute the command and the raw signal to give client's flexibility regarding what data they need
+        signalCommandEvent.notifyObservers(this, Collections.singletonList(command));
+        signalEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
 	}
 
 	private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {

@@ -599,6 +599,20 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         executeSync(CARBON_STATS, params);
     }
 
+    @Override
+    public boolean acceptedTCs() throws Exception {
+        ServerResponse response = executeSync(CARBON_ACCEPTED_TCS, null);
+
+        if (response instanceof BooleanServerResponse) {
+            BooleanServerResponse booleanServerResponse = (BooleanServerResponse) response;
+
+            return booleanServerResponse.getResponse();
+
+        } else {
+            throw new Exception("Unrecognized server response for carbon enabled");
+        }
+    }
+
 
     @Override
     public String sessionChallenge(String mobileNumber, String portal) throws Exception {

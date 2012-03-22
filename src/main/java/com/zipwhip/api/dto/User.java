@@ -27,6 +27,8 @@ public class User extends BasicDto {
     String carrier;
     String zipcode;
     String phoneKey;
+
+    long websiteDeviceId;
 //    String thread;
 //    String fwd;
 //    String channel;
@@ -204,6 +206,14 @@ public class User extends BasicDto {
         this.loc = loc;
     }
 
+    public long getWebsiteDeviceId() {
+        return websiteDeviceId;
+    }
+
+    public void setWebsiteDeviceId(long websiteDeviceId) {
+        this.websiteDeviceId = websiteDeviceId;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> Contact details:");
@@ -226,6 +236,7 @@ public class User extends BasicDto {
         toStringBuilder.append("\nZipcode: ").append(zipcode);
         toStringBuilder.append("\nPhone Key: ").append(phoneKey);
         toStringBuilder.append("\nVersion: ").append(this.getVersion());
+        toStringBuilder.append("\nWebsiteDeviceId: ").append(this.websiteDeviceId);
 //        toStringBuilder.append("\nThread: ").append(thread);
 //        toStringBuilder.append("\nFwd: ").append(fwd);
 //        toStringBuilder.append("\nChannel: ").append(channel);
