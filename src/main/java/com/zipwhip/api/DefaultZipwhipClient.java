@@ -792,9 +792,9 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String payload) throws Exception {
+    public void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String subevent, String payload) throws Exception {
 
-        if (product == null || StringUtil.isNullOrEmpty(mobileNumber) || StringUtil.isNullOrEmpty(event)) {
+        if (product == null || StringUtil.isNullOrEmpty(mobileNumber)) {
             throw new Exception("Missing required parameter.");
         }
 
@@ -802,7 +802,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("product", product.toString());
         params.put("mobileNumber", mobileNumber);
-        params.put("event", event);
+
+        if(StringUtil.exists(event)) {
+            params.put("event", event);
+        }
+
+        if(StringUtil.exists(subevent)) {
+            params.put("subevent", subevent);
+        }
 
         if (StringUtil.exists(payload)) {
             params.put("payload", payload);

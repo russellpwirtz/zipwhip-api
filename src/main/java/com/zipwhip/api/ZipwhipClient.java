@@ -531,7 +531,7 @@ public interface ZipwhipClient extends Destroyable {
      * @param payload Optional extra text to record with the event.
      * @throws Exception if an error occurs communicating with Zipwhip or if required parameters are missing.
      */
-    void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String payload) throws Exception;
+    void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String subevent, String payload) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
