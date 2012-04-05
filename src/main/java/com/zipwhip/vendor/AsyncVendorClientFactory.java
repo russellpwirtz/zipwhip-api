@@ -10,8 +10,9 @@ import com.zipwhip.util.Factory;
 public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
 
     private static final String API_VERSION = "/vendor/v1/";
+    private static final String DEFAULT_HOST = ApiConnection.DEFAULT_HOST;
 
-    private Factory<ApiConnection> connectionFactory;
+    private final Factory<ApiConnection> connectionFactory;
 
     private AsyncVendorClientFactory(ApiConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
@@ -28,8 +29,12 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static AsyncVendorClient createViaApiKey(String apiKey, String secret) throws Exception {
+    	return createViaApiKey(apiKey, secret, DEFAULT_HOST);
+    }
+    
+    public static AsyncVendorClient createViaApiKey(String apiKey, String secret, String host) throws Exception {
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncHttpsInstance().apiKey(apiKey).secret(secret).apiVersion(API_VERSION);
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncHttpsInstance().apiKey(apiKey).secret(secret).apiVersion(API_VERSION).host(host);
 
         AsyncVendorClientFactory asyncVendorClientFactory = new AsyncVendorClientFactory(connectionFactory);
 
