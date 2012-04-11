@@ -286,6 +286,15 @@ public interface ZipwhipClient extends Destroyable {
     public List<Message> listMessages(int limit) throws Exception;
 
     /**
+     * Returns the most recent messages for the user, up to the supplied limit.
+     * @param start Where in the list to start. (Zero indexed)
+     * @param limit The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with this user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    public List<Message> listMessages(int start, int limit) throws Exception;
+
+    /**
      * Delete messages by their corresponding UUIDs.
      *
      * @deprecated use {@code readMessage(List id)}

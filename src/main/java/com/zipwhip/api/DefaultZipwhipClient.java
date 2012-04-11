@@ -7,12 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
-import com.zipwhip.api.dto.Device;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageStatus;
-import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
@@ -390,6 +385,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     public List<Message> listMessages(int limit) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("limit", Integer.toString(limit));
+
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
+    }
+
+    @Override
+    public List<Message> listMessages(int start, int limit) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("limit", Integer.toString(limit));
+        params.put("start", Integer.toString(start));
 
         return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
