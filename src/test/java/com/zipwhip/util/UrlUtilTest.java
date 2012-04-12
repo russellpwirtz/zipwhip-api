@@ -56,12 +56,12 @@ public class UrlUtilTest {
         Assert.assertEquals(sig, "0nLKjJhbFKt0rpm8lrLU1QYJ4dg=");
     }
 
-    @Test
-    public void testEncode() throws Exception {
-        String encoded = authenticator.encodeBase64("helloworld".getBytes());
-        Assert.assertNotNull(encoded);
-        System.out.println(encoded);
-        Assert.assertEquals(encoded, "aGVsbG93b3JsZA==");
-    }
+//    @Test
+//    public void testEncode() throws Exception {
+//        String encoded = authenticator.encodeBase64("helloworld".getBytes());
+//        Assert.assertNotNull(encoded);
+//        System.out.println(encoded);
+//        Assert.assertEquals(encoded, "aGVsbG93b3JsZA==");
+//    }
 
 }
