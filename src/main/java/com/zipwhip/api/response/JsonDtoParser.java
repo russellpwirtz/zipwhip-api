@@ -117,25 +117,16 @@ public class JsonDtoParser {
 
         User user = parseBasicDto(new User(), content);
 
-//        user.setDeviceId(content.optLong("deviceId"));
-//        user.setAddress(content.optString("address"));
         user.setMobileNumber(content.optString("mobileNumber"));
-//        user.setState(content.optString("state"));
-//        user.setCity(content.optString("city"));
-//        user.setId(content.optLong("id"));
         user.setPhoneKey(content.optString("phoneKey"));
-//        user.setThread(content.optString("thread"));
-//        user.setFwd(content.optString("fwd"));
         user.setCarrier(content.optString("carrier"));
         user.setFirstName(content.optString("firstName"));
         user.setLastName(content.optString("lastName"));
         user.setMoCount(content.optInt("MOCount"));
         user.setZoCount(content.optInt("ZOCount"));
         user.setZipcode(content.optString("zipcode"));
-//        user.setLatlong(content.optString("latlong"));
         user.setEmail(content.optString("email"));
         user.setNotes(content.optString("notes"));
-//        user.setChannel(content.optString("channel"));
         user.setLoc(content.optString("loc"));
         user.setWebsiteDeviceId(content.optLong("websiteDeviceId"));
 
@@ -193,6 +184,7 @@ public class JsonDtoParser {
         message.setVersion(response.optLong("version"));
         message.setMessageType(response.optString("type"));
         message.setAdvertisement(response.optString("advertisement"));
+        message.setHasAttachment(response.optBoolean("hasAttachment"));
 
         return message;
     }
@@ -262,6 +254,33 @@ public class JsonDtoParser {
         conversation.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
 
         return conversation;
+    }
+
+    /**
+     * Parse a MessageAttachment from a JSONObject if the object contains it.
+     *
+     * @param content JSONObject to be parsed.
+     * @return A MessageAttachment object parsed from the JSON content.
+     * @throws JSONException If an error is encountered while parsing
+     */
+    public MessageAttachment parseMessageAttachment(JSONObject content) throws JSONException {
+
+        if (content == null) {
+            return null;
+        }
+
+        MessageAttachment attachment = new MessageAttachment();
+
+        attachment.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
+        attachment.setDeviceId(content.optLong("deviceId"));
+        attachment.setId(content.optLong("id"));
+        attachment.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
+        attachment.setMessageId(content.optLong("messageId"));
+        attachment.setNew(content.optBoolean("new"));
+        attachment.setStorageKey(content.optString("storageKey"));
+        attachment.setVersion(content.optLong("version"));
+
+        return attachment;
     }
 
     /**

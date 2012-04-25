@@ -21,6 +21,7 @@ public class JsonDtoParserTest {
     protected final static String CONVERSATION = "{\"id\":\"292476202\",\"content\":{\"lastContactFirstName\":\"Ted\",\"lastContactLastName\":\"Hoffenator\",\"lastContactDeviceId\":0,\"unreadCount\":0,\"bcc\":\"\",\"lastUpdated\":\"2011-09-09T15:04:44-07:00\",\"class\":\"com.zipwhip.website.data.dto.Conversation\",\"deviceAddress\":\"device:/2063758020/0\",\"lastNonDeletedMessageDate\":\"2011-09-09T15:04:44-07:00\",\"deleted\":false,\"lastContactId\":306322502,\"lastMessageDate\":\"2011-09-09T15:04:44-07:00\",\"dtoParentId\":132961202,\"version\":59,\"lastContactMobileNumber\":\"2069308934\",\"id\":292476202,\"fingerprint\":\"2216445311\",\"new\":false,\"lastMessageBody\":\"Hello World\",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-09-08T15:00:21-07:00\",\"cc\":\"\",\"deviceId\":132961202},\"scope\":\"device\",\"reason\":null,\"tag\":null,\"event\":\"change\",\"class\":\"com.zipwhip.signals.Signal\",\"uuid\":\"2147bc3b-9ab4-4f35-98ea-80a3e4ca2d09\",\"type\":\"conversation\",\"uri\":\"/signal/conversation/change\"}";
     protected final static String DEVICE = "{\"id\":\"133533802\",\"content\":{\"cachedContactsCount\":0,\"class\":\"com.zipwhip.website.data.dto.Device\",\"lastUpdated\":\"2011-09-09T15:31:07-07:00\",\"type\":\"Group\",\"version\":1,\"textline\":\"\",\"dtoParentId\":129977302,\"linkedDeviceId\":132961202,\"id\":133533802,\"new\":false,\"phoneKey\":\"\",\"address\":\"device:/2063758020/5\",\"userId\":129977302,\"thread\":\"\",\"dateCreated\":\"2011-09-09T15:31:07-07:00\",\"uuid\":\"5e8cf187-5b51-4b7e-a462-04f88c896ff6\",\"displayName\":\"\",\"channel\":\"\",\"deviceId\":5},\"scope\":\"device\",\"reason\":null,\"tag\":null,\"event\":null,\"class\":\"com.zipwhip.signals.Signal\",\"uuid\":\"2147bc3b-9ab4-4f35-98ea-80a3e4ca2d09\",\"type\":\"device\",\"uri\":\"/signal/device/null\"}";
     protected final static String CARBON = "{\"id\":null,\"content\":{\"carbonDescriptor\":\"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\r\\n<carbonEvents><carbonEvent><action>PROXY<\\/action><direction>OUTGOING<\\/direction><read>READ<\\/read><subject /><body>Hello World<\\/body><timestamp /><to>2069308934<\\/to><from>4252466003<\\/from><cc /><bcc /><userAgent /><handsetId>77b4f<\\/handsetId><sessionKey /><deviceCarbonVersion /><handsetInfo /><errorReason /><resetState /><transactionId /><resources /><contacts /><\\/carbonEvent><\\/carbonEvents>\\r\\n\",\"class\":\"com.zipwhip.incoming.carbon.OutgoingCarbonEvent\"},\"scope\":\"device\",\"reason\":null,\"tag\":null,\"event\":\"proxy\",\"class\":\"com.zipwhip.signals.Signal\",\"uuid\":\"5211ae17-d07f-465a-9cb4-0982d3c91952\",\"type\":\"carbon\",\"uri\":\"/signal/carbon/proxy\"}";
+    protected final static String ATTACHMENT = "{\"class\":\"com.zipwhip.website.data.dto.MessageAttachment\",\"dateCreated\":\"2012-04-24T15:42:25-07:00\",\"deviceId\":128918006,\"id\":160557406,\"lastUpdated\":\"2012-04-24T15:42:25-07:00\",\"messageId\":194919298488344576,\"messageType\":{\"enumType\":\"com.zipwhip.website.data.dto.MessageType\",\"name\":\"MO\"},\"new\":false,\"storageKey\":\"a011eacf-83a5-4b79-8999-81c0858591bd\",\"version\":0}";
 
     @Before
     public void setUp() throws Exception {
@@ -122,6 +123,21 @@ public class JsonDtoParserTest {
         Assert.assertEquals(dto.getLastContactMobileNumber(), "2069308934");
         Assert.assertEquals(dto.getLastMessageBody(), "Hello World");
         Assert.assertEquals(dto.getVersion(), 59);
+    }
+
+    @Test
+    public void testParseMessageAttachment() throws Exception {
+
+        MessageAttachment dto = parser.parseMessageAttachment(new JSONObject(ATTACHMENT));
+        Assert.assertNotNull(dto);
+
+        Assert.assertNotNull(dto.getDateCreated());
+        Assert.assertNotNull(dto.getLastUpdated());
+        Assert.assertEquals(128918006, dto.getDeviceId());
+        Assert.assertEquals(160557406, dto.getId());
+        Assert.assertEquals(0, dto.getVersion());
+        Assert.assertEquals("a011eacf-83a5-4b79-8999-81c0858591bd", dto.getStorageKey());
+        Assert.assertEquals(194919298488344576L, dto.getMessageId());
     }
 
     @Test

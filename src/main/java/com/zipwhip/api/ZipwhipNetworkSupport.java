@@ -94,6 +94,9 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String METRICS_EVENT = "metrics/event";
 
+    public static final String ATTACHMENT_LIST = "messageAttachment/list";
+    public static final String HOSTED_CONTENT_GET = "hostedContent/get";
+
     /**
      * A runnable for for for executing asynchronous server responses.
      */

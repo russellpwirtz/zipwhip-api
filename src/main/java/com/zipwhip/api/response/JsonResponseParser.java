@@ -319,6 +319,24 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public List<MessageAttachment> parseAttachments(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
+        }
+
+        List<MessageAttachment> attachments = new ArrayList<MessageAttachment>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            attachments.add(parser.parseMessageAttachment(array.response.getJSONObject(i)));
+        }
+
+        return attachments;
+    }
+
+    @Override
     public EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception {
 
         EnrollmentResult result = null;

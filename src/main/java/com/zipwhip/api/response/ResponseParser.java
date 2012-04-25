@@ -44,6 +44,8 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     List<Presence> parsePresence(ServerResponse serverResponse) throws Exception;
 
+    List<MessageAttachment> parseAttachments(ServerResponse serverResponse) throws Exception;
+
     EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception;
 
     String parseFaceName(ServerResponse serverResponse) throws Exception;

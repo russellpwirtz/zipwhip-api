@@ -76,6 +76,7 @@ public class Message extends BasicDto {
     boolean errorState;
     long contactDeviceId;
     String fingerprint;
+    boolean hasAttachment;
 
     public String getFingerprint() {
         return fingerprint;
@@ -341,6 +342,14 @@ public class Message extends BasicDto {
         this.contactDeviceId = contactDeviceId;
     }
 
+    public boolean isHasAttachment() {
+        return hasAttachment;
+    }
+
+    public void setHasAttachment(boolean hasAttachment) {
+        this.hasAttachment = hasAttachment;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> Message details:");
@@ -379,6 +388,7 @@ public class Message extends BasicDto {
         toStringBuilder.append("\nErrorState: ").append(errorState);
         toStringBuilder.append("\nContactDeviceId: ").append(contactDeviceId);
         toStringBuilder.append("\nFingerprint: ").append(fingerprint);
+        toStringBuilder.append("\nhasAttachment: ").append(hasAttachment);
         return toStringBuilder.toString();
     }
 

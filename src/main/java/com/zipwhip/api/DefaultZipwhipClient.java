@@ -865,6 +865,36 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public List<MessageAttachment> listAttachments(String messageId) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(messageId)) {
+            throw new Exception("Missing required parameter: messageId.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("messageId", messageId);
+
+        return responseParser.parseAttachments(executeSync(ATTACHMENT_LIST, params));
+    }
+
+    @Override
+    public byte[] getHostedContent(String storageKey) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(storageKey)) {
+            throw new Exception("Missing required parameter: storageKey.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("storageKey", storageKey);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(HOSTED_CONTENT_GET, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
     protected void onDestroy() {
 
     }

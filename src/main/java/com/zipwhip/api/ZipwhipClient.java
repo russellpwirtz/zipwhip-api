@@ -570,6 +570,24 @@ public interface ZipwhipClient extends Destroyable {
     void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String subevent, String payload) throws Exception;
 
     /**
+     * Query for a message's MMS attachment descriptors.
+     *
+     * @param messageId The id of the message to query for attachments.
+     * @return A list of attachment descriptors or an empty list if no attachments are found,
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    List<MessageAttachment> listAttachments(String messageId) throws Exception;
+
+    /**
+     * Get a single piece of hosted using its storage key. The key is retrieved by calling {@code listAttachments}.
+     *
+     * @param storageKey The storage key of the content to query. Retrieved by calling {@code listAttachments}
+     * @return A byte[] containing the requested content.
+     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
+     */
+    byte[] getHostedContent(String storageKey) throws Exception;
+
+    /**
      * Connect to Zipwhip Signals if setup.
      *
      * @param presence a Presence object to pass to the SignalServer
