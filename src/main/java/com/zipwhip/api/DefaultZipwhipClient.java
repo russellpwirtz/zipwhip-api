@@ -865,9 +865,9 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public List<MessageAttachment> listAttachments(String messageId) throws Exception {
+    public List<MessageAttachment> listAttachments(Long messageId) throws Exception {
 
-        if (StringUtil.isNullOrEmpty(messageId)) {
+        if (messageId == null || messageId <= 0) {
             throw new Exception("Missing required parameter: messageId.");
         }
 

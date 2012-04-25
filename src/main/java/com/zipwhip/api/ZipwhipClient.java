@@ -576,7 +576,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return A list of attachment descriptors or an empty list if no attachments are found,
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    List<MessageAttachment> listAttachments(String messageId) throws Exception;
+    List<MessageAttachment> listAttachments(Long messageId) throws Exception;
 
     /**
      * Get a single piece of hosted using its storage key. The key is retrieved by calling {@code listAttachments}.
