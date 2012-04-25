@@ -129,6 +129,11 @@ public class JsonResponseParser implements ResponseParser {
             if (cplx.response.has("messages")) {
                 List<Message> messages = new ArrayList<Message>();
                 JSONArray json = cplx.response.optJSONArray("messages");
+
+                if (json == null){
+                    return messages;
+                }
+
                 for (int i=0; i<json.length(); i++){
                     messages.add(parser.parseMessage(json.getJSONObject(i)));
                 }
