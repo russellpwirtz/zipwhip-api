@@ -219,6 +219,14 @@ public interface ZipwhipClient extends Destroyable {
     public List<Contact> listContacts() throws Exception;
 
     /**
+     * @param start Where to start list contacts.  (Zero indexed)
+     * @param limit The maximum limit of how many contacts to return.
+     * @return A list of all {@link Contact}s associated with the supplied user.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response, or the server returns a failure message.
+     */
+    public List<Contact> listContacts(int start, int limit) throws Exception;
+    
+    /**
      * 
      * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
      * @return A boolean which represents whether or not the operation completed successfully.

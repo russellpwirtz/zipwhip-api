@@ -294,6 +294,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public List<Contact> listContacts(int start, int limit) throws Exception {
+        HashMap<String, Object> params = new HashMap<String, Object>();
+        params.put("start", Integer.toString(start));
+        params.put("limit", Integer.toString(limit));
+        return responseParser.parseContacts(executeSync(CONTACT_LIST, params));
+    }
+
+    @Override
     public boolean readConversation(String fingerprint) throws Exception {
         if (StringUtil.isNullOrEmpty(fingerprint)) {
             return false;
