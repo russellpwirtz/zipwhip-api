@@ -18,6 +18,7 @@ public class MessageAttachment implements Serializable {
     private long id;
     private Date lastUpdated;
     private long messageId;
+    private String mimeType;
     private boolean isNew;
     private String storageKey;
     private long version;
@@ -60,6 +61,14 @@ public class MessageAttachment implements Serializable {
 
     public void setMessageId(long messageId) {
         this.messageId = messageId;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
     }
 
     public boolean isNew() {

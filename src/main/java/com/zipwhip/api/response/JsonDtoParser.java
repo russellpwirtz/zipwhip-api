@@ -276,6 +276,7 @@ public class JsonDtoParser {
         attachment.setId(content.optLong("id"));
         attachment.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
         attachment.setMessageId(content.optLong("messageId"));
+        attachment.setMimeType(content.optString("mimeType"));
         attachment.setNew(content.optBoolean("new"));
         attachment.setStorageKey(content.optString("storageKey"));
         attachment.setVersion(content.optLong("version"));
