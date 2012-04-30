@@ -116,7 +116,7 @@ public class JsonResponseParserTest {
         Assert.assertEquals(128918006L, dto2.getDeviceId());
         Assert.assertEquals(160557406L, dto2.getId());
         Assert.assertEquals(0L, dto2.getVersion());
-        Assert.assertEquals("a011eacf-83a5-4b79--81c0858591bd", dto2.getStorageKey());
+        Assert.assertEquals("a011eacf-83a5-4b79-8999-81c0858591bd", dto2.getStorageKey());
         Assert.assertEquals(194919298488344576L, dto2.getMessageId());
     }
 
