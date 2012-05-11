@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import junit.framework.Assert;
@@ -76,5 +77,16 @@ public class JsonSignalParserTest {
 		assertNotNull(s);
 		assertNotNull(s.getContent());
 		assertTrue(s.getContent() instanceof Device);
+	}
+
+	@Test
+	public void testParseSignalFromSignalServerDate() throws Exception {
+		String json = "{\"content\":{\"cachedContactsCount\":0,\"type\":\"Website\",\"version\":0,\"textline\":\"\",\"linkedDeviceId\":0,\"id\":0,\"phoneKey\":\"\",\"address\":\"\",\"userId\":0,\"thread\":\"\",\"dateCreated\":\"1970-01-01T00:00:00Z\",\"uuid\":\"2363ff64-58ad-46f5-9dcc-eb19b99dd6be\",\"displayName\":\"Website\",\"channel\":\"\",\"deviceId\":0},\"scope\":\"device\",\"reason\":\"something happened\",\"uuid\":\"0c2c7dc1-4082-4d10-a926-d43321b4bde5\",\"type\":\"device\"}";
+
+		Signal s = parser.parseSignal(new JSONObject(json));
+		assertNotNull(s);
+		assertNotNull(s.getContent());
+		assertTrue(s.getContent() instanceof Device);
+		assertEquals("Wed Dec 31 16:00:00 PST 1969", ((Device) s.getContent()).getDateCreated().toString());
 	}
 }
