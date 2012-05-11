@@ -567,17 +567,6 @@ public interface ZipwhipClient extends Destroyable {
     byte[] getFaceImage(String mobileNumber, int size) throws Exception;
 
     /**
-     * The API for reporting metrics events on Zipwhip products.
-     *
-     * @param product The product type for which we are recording this event.
-     * @param mobileNumber Cleaned mobile number for this product.
-     * @param event The event which we are recording.
-     * @param payload Optional extra text to record with the event.
-     * @throws Exception if an error occurs communicating with Zipwhip or if required parameters are missing.
-     */
-    void recordMetricsEvent(ProductLine product, String mobileNumber, String event, String subevent, String payload) throws Exception;
-
-    /**
      * Query for a message's MMS attachment descriptors.
      *
      * @param messageId The id of the message to query for attachments.

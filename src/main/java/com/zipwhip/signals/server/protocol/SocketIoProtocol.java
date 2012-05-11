@@ -172,7 +172,7 @@ public class SocketIoProtocol {
 	}
 
     private static boolean isSocketIoPrefix(String message) {
-        return message.charAt(1) == ':';
+        return message.length() >= 2 && message.charAt(1) == ':';
     }
 
 	/**
