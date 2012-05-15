@@ -118,42 +118,22 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>1.5</version>
+                <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <artifactSet>
-                        <includes>
-                            <include>**</include>
-                        </includes>
-                    </artifactSet>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <descriptors>
+                        <descriptor>src/assemble/android.xml</descriptor>
+                    </descriptors>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
                 </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
-            <!--<plugin>-->
-                <!--<artifactId>maven-assembly-plugin</artifactId>-->
-                <!--<configuration>-->
-                    <!--<descriptorRefs>-->
-                        <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
-                    <!--</descriptorRefs>-->
-                    <!--<descriptors>-->
-                        <!--<descriptor>src/assemble/android.xml</descriptor>-->
-                    <!--</descriptors>-->
-                    <!--<archive>-->
-                        <!--<manifest>-->
-                            <!--<addDefaultImplementationEntries>true</addDefaultImplementationEntries>-->
-                            <!--<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>-->
-                        <!--</manifest>-->
-                    <!--</archive>-->
-                <!--</configuration>-->
-            <!--</plugin>-->
         </plugins>
     </build>
 </project>
