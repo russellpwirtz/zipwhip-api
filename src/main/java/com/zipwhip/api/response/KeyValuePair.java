@@ -2,7 +2,9 @@ package com.zipwhip.api.response;
 
 /**
  * @author Michael
+ * @Deprecated use com.zipwhip.util.KeyValuePair
  */
+@Deprecated
 public class KeyValuePair<T0, T1> {
 
     public T0 key;
