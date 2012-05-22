@@ -214,7 +214,6 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                 try {
                     checkAndThrowError(serverResponse);
                 } catch (Exception e) {
-                    LOGGER.fatal("Server said failure", e);
                     // this will execute in the "callbackExecutor"
                     result.setFailure(e);
                     return;
