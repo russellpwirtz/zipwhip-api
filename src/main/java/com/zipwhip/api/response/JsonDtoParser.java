@@ -153,7 +153,7 @@ public class JsonDtoParser {
             message.setTransmissionState(TransmissionState.parse(transmissionStateJson.optString("name")));
         }
 
-        message.setId(response.optLong("id"));
+        message.setId(Long.parseLong(response.optString("id")));
         message.setUuid(response.optString("uuid"));
         message.setDeviceId(response.optLong("deviceId"));
         message.setContactId(response.optLong("contactId"));

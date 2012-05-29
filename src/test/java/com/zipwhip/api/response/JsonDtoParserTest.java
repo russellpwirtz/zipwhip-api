@@ -154,4 +154,19 @@ public class JsonDtoParserTest {
         Assert.assertEquals(dto.getCarbonDescriptor(), new JSONObject(CARBON).optJSONObject("content").optString("carbonDescriptor"));
     }
 
+    @Test
+    public void testParseLongVsString() throws Exception {
+
+        String raw = "{\"id\":\"207533136530509825\",\"version\":0,\"dateCreated\":\"May 29, 2012 11:05:14 AM\",\"deviceId\":128918006,\"contactId\":220587806,\"creatorId\":318144706,\"metaDataId\":0,\"smartForwardingCandidate\":false,\"smartForwarded\":false,\"uuid\":\"207533136530509825\",\"errorState\":false,\"parentId\":0,\"isParent\":false,\"visible\":true,\"contactDeviceId\":128918006,\"openMarketMessageId\":\"\",\"isRead\":false,\"DCSId\":\"\",\"UDH\":\"\",\"messageConsoleLog\":\"\",\"body\":\"-1315812521\",\"bodySize\":99,\"type\":\"MO\",\"sourceAddress\":\"20000001\",\"destAddress\":\"2069308934\",\"expectDeliveryReceipt\":false,\"deleted\":false,\"statusCode\":4,\"carbonedMessageId\":-1,\"isInFinalState\":false,\"encoded\":false,\"thread\":\"\",\"channel\":\"\",\"fwd\":\"\",\"mobileNumber\":\"20000001\",\"address\":\"ptn:/20000001\",\"phoneKey\":\"\",\"firstName\":\"\",\"lastName\":\"\",\"carrier\":\"Unknown\",\"isSelf\":false,\"latlong\":\"\",\"loc\":\"\",\"subject\":\"\",\"fingerprint\":\"3705583301\",\"hasAttachment\":false,\"transmissionState\":\"DELIVERED\",\"contact\":{\"id\":220587806,\"version\":110,\"lastUpdated\":\"May 25, 2012 12:06:48 PM\",\"dateCreated\":\"Mar 27, 2012 3:08:59 PM\",\"deviceId\":128918006,\"loc\":\"\",\"latlong\":\"\",\"firstName\":\"\",\"lastName\":\"\",\"email\":\"\",\"mobileNumber\":\"20000001\",\"address\":\"ptn:/20000001\",\"phoneId\":0,\"phoneKey\":\"\",\"city\":\"\",\"state\":\"\",\"zipcode\":\"\",\"isZwUser\":false,\"deleted\":false,\"carrier\":\"Unknown\",\"targetGroupDevice\":-1,\"keywords\":\"\",\"thread\":\"\",\"channel\":\"\",\"fwd\":\"\",\"vector\":\"\",\"ZOCount\":0,\"MOCount\":0,\"notes\":\"\"}},\"event\":\"receive\",\"scope\":\"device\",\"uri\":\"/signal/message/receive\",\"type\":\"message\",\"uuid\":\"d081cac9-ff61-404d-9d42-f9c2e74f9c32\"}";
+        JSONObject response = new JSONObject(raw);
+
+        // The old code did this...
+        Assert.assertNotSame(207533136530509825L, response.optLong("id"));
+
+        Assert.assertEquals(207533136530509825L, Long.parseLong("207533136530509825"));
+        Assert.assertEquals(207533136530509825L, Long.parseLong(response.optString("id")));
+        Assert.assertEquals("207533136530509825", response.optString("uuid"));
+
+    }
+
 }
