@@ -112,6 +112,16 @@ public interface AsyncVendorClient {
     ObservableFuture<List<Message>> listMessages(String deviceAddress);
 
     /**
+     *  List the messages for a given user.
+     *
+     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param start Index start from the beginning of the message list, zero based.
+     * @param limit Page size, maximum number of messages that will be returned.
+     * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
+     */
+    ObservableFuture<List<Message>> listMessages(String deviceAddress, int start, int limit);
+
+    /**
      * Save details for an existing user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
@@ -122,22 +132,22 @@ public interface AsyncVendorClient {
     ObservableFuture<Contact> saveUser(String deviceAddress, Contact user);
 
     /**
-     * Mark a set of messages, identified by their UUIDs, for a given user as read.
+     * Mark a set of messages, identified by their IDs, for a given user as read.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param uuids         A list of message uuids for the messages to be marked as read.
+     * @param ids         A list of message ids for the messages to be marked as read.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
-    ObservableFuture<Void> readMessages(String deviceAddress, Set<String> uuids);
+    ObservableFuture<Void> readMessages(String deviceAddress, Set<String> ids);
 
     /**
-     * Delete a set of messages, identified by their UUIDs, for a given user.
+     * Delete a set of messages, identified by their IDs, for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param uuids         A list of message uuids for the messages to be deleted.
+     * @param ids         A list of message ids for the messages to be deleted.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
-    ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids);
+    ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> ids);
 
     /**
      * Mark a conversation identified by its fingerprint as read, for a given user.
@@ -149,7 +159,7 @@ public interface AsyncVendorClient {
     ObservableFuture<Void> readConversation(String deviceAddress, String fingerprint);
 
     /**
-     * Mark a set of messages, identified by their UUIDs, for a given user as read.
+     * Mark a set of messages, identified by their fingerprint, for a given user as read.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param fingerprint  The fingerprint of the conversation to be deleted.

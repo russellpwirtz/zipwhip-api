@@ -2,10 +2,7 @@ package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.ZipwhipNetworkSupport;
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
-import com.zipwhip.api.dto.EnrollmentResult;
-import com.zipwhip.api.dto.MessageToken;
+import com.zipwhip.api.dto.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -41,6 +38,7 @@ public class DefaultAsyncVendorClientTest {
     public final static String USER_SAVE_RESULT = "{\"response\":{\"user\":{\"firstName\":\"Im\",\"lastName\":\"Cool\",\"mobileNumber\":\"2063758020\",\"fullName\":\"Im Cool\",\"phoneKey\":\"\",\"email\":\"\",\"notes\":\"\",\"birthday\":\"\",\"carrier\":\"Tmo\",\"loc\":\"\",\"dateCreated\":\"2011-10-14T14:57:35-07:00\",\"lastUpdated\":\"2011-10-17T13:40:01-07:00\"}},\"sessions\":null,\"success\":true}";
     public final static String MESSAGE_SEND_RESULT = "{\"response\":{\"fingerprint\":\"3969778241\",\"root\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"tokens\":[{\"message\":\"7373193f-cb64-4e37-9ed6-a79d57fab524\",\"fingerprint\":\"3969778241\",\"device\":270315,\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":-1}],\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\"},\"sessions\":null,\"success\":true}";
     public final static String CONTACT_GET_RESPONSE = "{\"response\":{\"birthday\":null,\"state\":\"\",\"version\":4,\"dtoParentId\":270315,\"city\":\"\",\"id\":408050,\"phoneKey\":\"\",\"isZwUser\":false,\"vector\":\"\",\"thread\":\"20000002\",\"phoneId\":0,\"carrier\":\"Tmo\",\"firstName\":\"\",\"deviceId\":270315,\"lastName\":\"\",\"MOCount\":0,\"keywords\":\"\",\"zipcode\":\"\",\"ZOCount\":0,\"class\":\"com.zipwhip.website.data.dto.Contact\",\"lastUpdated\":\"2011-10-14T14:59:51-07:00\",\"loc\":\"\",\"targetGroupDevice\":-1,\"fwd\":\"20000102\",\"deleted\":false,\"latlong\":\"\",\"new\":false,\"email\":\"\",\"address\":\"ptn:/2069308934\",\"dateCreated\":\"2011-10-14T14:58:54-07:00\",\"mobileNumber\":\"2063758020\",\"notes\":\"\",\"channel\":\"2\"},\"sessions\":null,\"success\":true}";
+    public final static String MESSAGE_LIST_RESULT = "{\"total\":1,\"response\":[],\"sessions\":null,\"page\":1,\"pages\":1,\"success\":true}";
 
     @Before
     public void setUp() throws Exception {
@@ -225,6 +223,14 @@ public class DefaultAsyncVendorClientTest {
         Assert.assertEquals(result.getResult().getMobileNumber(), contactMobileNumber);
     }
 
+    @Test
+    public void testListMessages() throws Exception {
+        ObservableFuture<List<Message>> result = client.listMessages(deviceAddress, 0, 1);
+        Assert.assertNotNull(result);
+        result.await();
+        Assert.assertTrue(result.isSuccess());
+    }
+
     public class MockApiConnection extends DestroyableBase implements ApiConnection {
 
         @Override
@@ -298,6 +304,10 @@ public class DefaultAsyncVendorClientTest {
             }
             if (ZipwhipNetworkSupport.CONTACT_GET.equalsIgnoreCase(method)) {
                 result.setSuccess(CONTACT_GET_RESPONSE);
+                return result;
+            }
+            if (ZipwhipNetworkSupport.MESSAGE_LIST.equalsIgnoreCase(method)) {
+                result.setSuccess(MESSAGE_LIST_RESULT);
                 return result;
             }
 

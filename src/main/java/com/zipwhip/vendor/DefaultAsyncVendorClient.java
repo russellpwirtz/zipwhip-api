@@ -254,6 +254,34 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
+    public ObservableFuture<List<Message>> listMessages(String deviceAddress, int start, int limit) {
+
+        if (StringUtil.isNullOrEmpty(deviceAddress)) {
+            return invalidArgumentFailureFuture("Device address is a required argument");
+        }
+
+        Map<String, Object> params = new HashMap<String, Object> ();
+        params.put("deviceAddress", getDeviceAddress(deviceAddress));
+        params.put("start", Integer.toString(start));
+        params.put("limit", Integer.toString(limit));
+
+        try {
+            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Message>>> () {
+                @Override
+                public void run(ParsableServerResponse<List<Message>> parsableServerResponse) {
+                    try {
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessages(parsableServerResponse.getServerResponse()));
+                    } catch (Exception e) {
+                        parsableServerResponse.getFuture().setFailure(e);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            return failureFuture(e);
+        }
+    }
+
+    @Override
     public ObservableFuture<Contact> saveUser(String deviceAddress, Contact user) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
