@@ -20,7 +20,6 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.signals.presence.ProductLine;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 
@@ -59,57 +58,72 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         signalProvider.onNewClientIdReceived(new Observer<String>() {
             @Override
-            public void notify(Object sender, String clientId) {
+            public void notify(Object sender, String newClientId) {
 
-                if (StringUtil.isNullOrEmpty(clientId)) {
+                if (StringUtil.isNullOrEmpty(newClientId)) {
                     LOGGER.warn("Received CONNECT without clientId");
                     return;
                 }
 
                 if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
                     return;
                 }
 
-                String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+                String oldClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
 
-                if (StringUtil.exists(managedClientId)) {
+                if (StringUtil.exists(oldClientId)) {
 
                     // clientId changed, unsubscribe the old one, and sub the new one
-                    if (!managedClientId.equals(clientId)) {
+                    if (!oldClientId.equals(newClientId)) {
 
                         settingsStore.clear();
 
-                        settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                        settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
 
                         // Do a disconnect then connect
-                        Map<String, Object> params = new HashMap<String, Object>();
-                        params.put("clientId", clientId);
-                        params.put("sessions", connection.getSessionKey());
-                        Presence presence = signalProvider.getPresence();
-						if (presence != null)
-							params.put("category", presence.getCategory());
-                        		
-                        try {
-                            executeSync(SIGNALS_DISCONNECT, params);
+                        Map<String, Object> disconnectParams = new HashMap<String, Object>();
+                        disconnectParams.put("clientId", oldClientId);
+                        disconnectParams.put("sessions", connection.getSessionKey());
 
-                            executeSync(SIGNALS_CONNECT, params);
+
+                        Map<String, Object> connectParams = new HashMap<String, Object>();
+                        connectParams.put("clientId", newClientId);
+                        connectParams.put("sessions", connection.getSessionKey());
+
+                        Presence presence = signalProvider.getPresence();
+
+                        if (presence != null) {
+                            connectParams.put("category", presence.getCategory());
+                            disconnectParams.put("category", presence.getCategory());
+                        }
+
+                        try {
+                            // Old clientId
+                            executeSync(SIGNALS_DISCONNECT, disconnectParams);
+
+                            // New clientId
+                            executeSync(SIGNALS_CONNECT, connectParams);
 
                         } catch (Exception e) {
                             LOGGER.error("Error calling signals/connect", e);
                         }
                     }
+
                 } else {
 
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, clientId);
+                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
 
                     // lets do a signals connect!
                     Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("clientId", clientId);
+                    params.put("clientId", newClientId);
                     params.put("sessions", connection.getSessionKey());
+
                     Presence presence = signalProvider.getPresence();
-					if (presence != null)
-						params.put("category", presence.getCategory());
+
+                    if (presence != null) {
+                        params.put("category", presence.getCategory());
+                    }
 
                     try {
 
@@ -154,7 +168,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
             settingsStore.clear();
 
-            if (signalProvider!=null && signalProvider.getClientId() != null) {
+            if (signalProvider != null && signalProvider.getClientId() != null) {
                 settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
             }
         }
@@ -327,7 +341,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public boolean deleteContact(long contactId) throws Exception {
-        if (contactId <= 0){
+        if (contactId <= 0) {
             return false;
         }
 
@@ -340,7 +354,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint) throws Exception {
 
-        if (StringUtil.isNullOrEmpty(fingerprint)){
+        if (StringUtil.isNullOrEmpty(fingerprint)) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
         }
 
@@ -353,7 +367,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception {
-        if (StringUtil.isNullOrEmpty(fingerprint)){
+        if (StringUtil.isNullOrEmpty(fingerprint)) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
         } else if (limit <= 0) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a zero or negative limit value.");
@@ -368,9 +382,9 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception {
-        if (StringUtil.isNullOrEmpty(fingerprint)){
+        if (StringUtil.isNullOrEmpty(fingerprint)) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a null or empty fingerprint.");
-        } else if (start < 0){
+        } else if (start < 0) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a negative start value.");
         } else if (limit <= 0) {
             throw new Exception("Attempting to call listMessagesByFingerprint with a zero or negative limit value.");
@@ -506,7 +520,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
 
-
     @Override
     public List<Presence> getPresence(PresenceCategory category) throws Exception {
 
@@ -575,7 +588,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("enabled", enabled);
 
-        if(versionCode != null) {
+        if (versionCode != null) {
             params.put("version", versionCode.toString());
         }
 
@@ -590,7 +603,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("enabled", enabled);
 
-        if(versionCode != null) {
+        if (versionCode != null) {
             params.put("version", versionCode.toString());
         }
 
@@ -611,7 +624,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     public Boolean carbonRegister(String registrationId) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
-        if(!StringUtil.isNullOrEmpty(registrationId)) {
+        if (!StringUtil.isNullOrEmpty(registrationId)) {
             params.put("registrationId", registrationId);
         }
 
@@ -795,11 +808,11 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("notes", notes);
         }
 
-        if (location != null){
+        if (location != null) {
             params.put("loc", location);
         }
 
-        if (email != null){
+        if (email != null) {
             params.put("email", email);
         }
 

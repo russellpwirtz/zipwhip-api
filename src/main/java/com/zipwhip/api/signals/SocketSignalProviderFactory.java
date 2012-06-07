@@ -7,7 +7,7 @@ import com.zipwhip.util.Factory;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/12/11 Time: 6:54 PM
- * 
+ * <p/>
  * Create signalProviders that connect via Sockets
  */
 public class SocketSignalProviderFactory implements Factory<SignalProvider> {
@@ -31,7 +31,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
             nettySignalConnection.setReconnectStrategy(reconnectStrategy);
         }
 
-        if(onSocketActivity != null) {
+        if (onSocketActivity != null) {
             nettySignalConnection.setOnSocketActivity(onSocketActivity);
         }
 
@@ -43,6 +43,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         return this;
     }
 
+    @Deprecated
     public SocketSignalProviderFactory onSocketActivity(Runnable onSocketActivity) {
         this.onSocketActivity = onSocketActivity;
         return this;

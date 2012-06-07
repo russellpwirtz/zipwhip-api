@@ -121,6 +121,31 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public MessageListResult parseMessagesListResult(ServerResponse serverResponse) throws Exception {
+
+        if (!(serverResponse instanceof ArrayServerResponse)) {
+            throw new Exception("ServerResponse must be an ArrayServerResponse");
+        }
+
+        List<Message> messages = new ArrayList<Message>();
+
+        ArrayServerResponse array = (ArrayServerResponse) serverResponse;
+
+        for (int i = 0; i < array.response.length(); i++) {
+            messages.add(parser.parseMessage(array.response.getJSONObject(i)));
+        }
+
+        MessageListResult result = new MessageListResult();
+        result.setMessages(messages);
+
+        JSONObject rawObject = new JSONObject(serverResponse.getRaw());
+        int total = rawObject.optInt("total", 0);
+        result.setTotal(total);
+
+        return result;
+    }
+
+    @Override
     public List<Message> parseMessagesFromConversation(ServerResponse serverResponse) throws Exception {
 
         if (serverResponse instanceof ObjectServerResponse) {
@@ -130,11 +155,11 @@ public class JsonResponseParser implements ResponseParser {
                 List<Message> messages = new ArrayList<Message>();
                 JSONArray json = cplx.response.optJSONArray("messages");
 
-                if (json == null){
+                if (json == null) {
                     return messages;
                 }
 
-                for (int i=0; i<json.length(); i++){
+                for (int i = 0; i < json.length(); i++) {
                     messages.add(parser.parseMessage(json.getJSONObject(i)));
                 }
                 return messages;

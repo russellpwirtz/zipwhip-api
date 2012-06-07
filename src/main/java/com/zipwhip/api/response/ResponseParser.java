@@ -16,6 +16,8 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     Message parseMessage(ServerResponse serverResponse) throws Exception;
 
+    MessageListResult parseMessagesListResult(ServerResponse serverResponse) throws Exception;
+
     List<Message> parseMessages(ServerResponse serverResponse) throws Exception;
 
     List<Message> parseMessagesFromConversation(ServerResponse serverResponse) throws Exception;
@@ -23,7 +25,7 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
     Device parseDevice(ServerResponse serverResponse) throws Exception;
 
     List<Device> parseDevices(ServerResponse serverResponse) throws Exception;
-    
+
     String parseString(ServerResponse serverResponse) throws Exception;
 
     Contact parseContact(ServerResponse serverResponse) throws Exception;

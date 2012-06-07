@@ -3,6 +3,7 @@ package com.zipwhip.vendor;
 import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
+import com.zipwhip.api.response.MessageListResult;
 import com.zipwhip.concurrent.ObservableFuture;
 
 import java.util.*;
@@ -85,9 +86,9 @@ public interface AsyncVendorClient {
      * Send a message via the Zipwhip network. The message is from the user represented by the {@code deviceAddress}.
      * The details of the message including the recipient is contained in the {@code Message} object.
      *
-     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param deviceAddress   The device address (device:/5555555555/0) of the user.
      * @param friendAddresses A list of mobile numbers of the recipients of the message.
-     * @param body The text of the message to be sent.
+     * @param body            The text of the message to be sent.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> friendAddresses, String body);
@@ -98,34 +99,34 @@ public interface AsyncVendorClient {
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @param friendAddress A mobile number of the recipients of the message.
-     * @param body The text of the message to be sent.
+     * @param body          The text of the message to be sent.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, String friendAddress, String body);
 
     /**
-     *  List the messages for a given user.
+     * List the messages for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
-    ObservableFuture<List<Message>> listMessages(String deviceAddress);
+    ObservableFuture<MessageListResult> listMessages(String deviceAddress);
 
     /**
-     *  List the messages for a given user.
+     * List the messages for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param start Index start from the beginning of the message list, zero based.
-     * @param limit Page size, maximum number of messages that will be returned.
+     * @param start         Index start from the beginning of the message list, zero based.
+     * @param limit         Page size, maximum number of messages that will be returned.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
-    ObservableFuture<List<Message>> listMessages(String deviceAddress, int start, int limit);
+    ObservableFuture<MessageListResult> listMessages(String deviceAddress, int start, int limit);
 
     /**
      * Save details for an existing user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param user The user to save or update.
+     * @param user          The user to save or update.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      *         The result is the saved user.
      */
@@ -135,7 +136,7 @@ public interface AsyncVendorClient {
      * Mark a set of messages, identified by their IDs, for a given user as read.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param ids         A list of message ids for the messages to be marked as read.
+     * @param ids           A list of message ids for the messages to be marked as read.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> readMessages(String deviceAddress, Set<String> ids);
@@ -144,7 +145,7 @@ public interface AsyncVendorClient {
      * Delete a set of messages, identified by their IDs, for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param ids         A list of message ids for the messages to be deleted.
+     * @param ids           A list of message ids for the messages to be deleted.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> ids);
@@ -153,7 +154,7 @@ public interface AsyncVendorClient {
      * Mark a conversation identified by its fingerprint as read, for a given user.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param fingerprint  The fingerprint of the conversation to be marked as read.
+     * @param fingerprint   The fingerprint of the conversation to be marked as read.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> readConversation(String deviceAddress, String fingerprint);
@@ -162,7 +163,7 @@ public interface AsyncVendorClient {
      * Mark a set of messages, identified by their fingerprint, for a given user as read.
      *
      * @param deviceAddress The device address (device:/5555555555/0) of the user.
-     * @param fingerprint  The fingerprint of the conversation to be deleted.
+     * @param fingerprint   The fingerprint of the conversation to be deleted.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Void> deleteConversation(String deviceAddress, String fingerprint);
@@ -187,7 +188,7 @@ public interface AsyncVendorClient {
     /**
      * Delete the details of a set of contacts for a given user.
      *
-     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param deviceAddress        The device address (device:/5555555555/0) of the user.
      * @param contactMobileNumbers A list of mobile numbers for the contacts to be deleted.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
@@ -204,14 +205,13 @@ public interface AsyncVendorClient {
     /**
      * Query a user's contact list for the specified contact.
      *
-     * @param deviceAddress The device address (device:/5555555555/0) of the user.
+     * @param deviceAddress       The device address (device:/5555555555/0) of the user.
      * @param contactMobileNumber The mobile number of the contact to be queried.
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      */
     ObservableFuture<Contact> getContact(String deviceAddress, String contactMobileNumber);
 
     /**
-     *
      * @param phoneNumber
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      * @throws Exception
@@ -219,7 +219,6 @@ public interface AsyncVendorClient {
     ObservableFuture<Void> textlineProvision(String phoneNumber) throws Exception;
 
     /**
-     *
      * @param phoneNumber
      * @param email
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
@@ -228,7 +227,6 @@ public interface AsyncVendorClient {
     ObservableFuture<Void> textlineEnroll(String phoneNumber, String email) throws Exception;
 
     /**
-     *
      * @param phoneNumber
      * @return A {@code ObservableFuture} that will asynchronously report the result of the call.
      * @throws Exception

@@ -6,6 +6,7 @@ import com.zipwhip.api.ZipwhipNetworkSupport;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.BooleanServerResponse;
+import com.zipwhip.api.response.MessageListResult;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.CollectionUtil;
@@ -39,7 +40,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
@@ -65,7 +66,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
@@ -87,7 +88,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("mobileNumber", Address.stripToMobileNumber(deviceAddress));
 
@@ -99,7 +100,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                     if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
                         parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
                     } else {
-                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
                     }
                 }
             });
@@ -115,7 +116,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
@@ -137,7 +138,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
@@ -148,7 +149,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                     if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
                         parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
                     } else {
-                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
                     }
                 }
             });
@@ -164,7 +165,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
@@ -175,7 +176,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
                     if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
                         parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
                     } else {
-                         parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
                     }
                 }
             });
@@ -206,13 +207,13 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             contactAddresses.add(getAddress(mobileNumber));
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("contacts", contactAddresses);
         params.put("body", body);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_SEND, params, true, new InputRunnable<ParsableServerResponse<List<MessageToken>>> () {
+            return executeAsync(ZipwhipNetworkSupport.MESSAGE_SEND, params, true, new InputRunnable<ParsableServerResponse<List<MessageToken>>>() {
                 @Override
                 public void run(ParsableServerResponse<List<MessageToken>> parsableServerResponse) {
                     try {
@@ -228,21 +229,21 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public ObservableFuture<List<Message>> listMessages(String deviceAddress) {
+    public ObservableFuture<MessageListResult> listMessages(String deviceAddress) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Message>>> () {
+            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<MessageListResult>>() {
                 @Override
-                public void run(ParsableServerResponse<List<Message>> parsableServerResponse) {
+                public void run(ParsableServerResponse<MessageListResult> parsableServerResponse) {
                     try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessages(parsableServerResponse.getServerResponse()));
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessagesListResult(parsableServerResponse.getServerResponse()));
                     } catch (Exception e) {
                         parsableServerResponse.getFuture().setFailure(e);
                     }
@@ -254,23 +255,25 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public ObservableFuture<List<Message>> listMessages(String deviceAddress, int start, int limit) {
+    public ObservableFuture<MessageListResult> listMessages(String deviceAddress, final int start, final int limit) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("start", Integer.toString(start));
         params.put("limit", Integer.toString(limit));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Message>>> () {
+            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<MessageListResult>>() {
                 @Override
-                public void run(ParsableServerResponse<List<Message>> parsableServerResponse) {
+                public void run(ParsableServerResponse<MessageListResult> parsableServerResponse) {
                     try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessages(parsableServerResponse.getServerResponse()));
+                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessagesListResult(parsableServerResponse.getServerResponse()));
+                        parsableServerResponse.getFuture().getResult().setStart(start);
+                        parsableServerResponse.getFuture().getResult().setLimit(limit);
                     } catch (Exception e) {
                         parsableServerResponse.getFuture().setFailure(e);
                     }
@@ -292,7 +295,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("User is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         if (StringUtil.exists(user.getFirstName())) {
@@ -306,7 +309,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.USER_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>> () {
+            return executeAsync(ZipwhipNetworkSupport.USER_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
                 @Override
                 public void run(ParsableServerResponse<Contact> parsableServerResponse) {
                     try {
@@ -322,15 +325,15 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public ObservableFuture<Void> readMessages(String deviceAddress, Set<String> uuids) {
+    public ObservableFuture<Void> readMessages(String deviceAddress, Set<String> ids) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
-        params.put("uuid", uuids);
+        params.put("message", ids);
 
         try {
             return executeAsync(ZipwhipNetworkSupport.MESSAGE_READ, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
@@ -345,15 +348,15 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     @Override
-    public ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> uuids) {
+    public ObservableFuture<Void> deleteMessages(String deviceAddress, Set<String> ids) {
 
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
-        params.put("uuids", uuids);
+        params.put("message", ids);
 
         try {
             return executeAsync(ZipwhipNetworkSupport.MESSAGE_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
@@ -374,7 +377,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("fingerprint", fingerprint);
 
@@ -397,7 +400,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("fingerprint", fingerprint);
 
@@ -420,11 +423,11 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>>() {
                 @Override
                 public void run(ParsableServerResponse<List<Conversation>> parsableServerResponse) {
                     try {
@@ -454,7 +457,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Contact.address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         if (StringUtil.exists(contact.getFirstName())) {
@@ -471,7 +474,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONTACT_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
                 @Override
                 public void run(ParsableServerResponse<Contact> parsableServerResponse) {
                     try {
@@ -493,7 +496,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         Set<String> contactAddresses = new HashSet<String>();
@@ -505,7 +508,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("contact", contactAddresses);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONTACT_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
                 @Override
                 public void run(ParsableServerResponse<Void> parsableServerResponse) {
                     parsableServerResponse.getFuture().setSuccess(null);
@@ -523,11 +526,11 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Contact>>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Contact>>>() {
                 @Override
                 public void run(ParsableServerResponse<List<Contact>> parsableServerResponse) {
                     try {
@@ -552,12 +555,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
             return invalidArgumentFailureFuture("Contact mobileNumber is a required argument");
         }
 
-        Map<String, Object> params = new HashMap<String, Object> ();
+        Map<String, Object> params = new HashMap<String, Object>();
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("address", getAddress(contactMobileNumber));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_GET, params, true, new InputRunnable<ParsableServerResponse<Contact>> () {
+            return executeAsync(ZipwhipNetworkSupport.CONTACT_GET, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
                 @Override
                 public void run(ParsableServerResponse<Contact> parsableServerResponse) {
                     try {
@@ -583,7 +586,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("phoneNumber", phoneNumber);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_PROVISION, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_PROVISION, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
                 @Override
                 public void run(ParsableServerResponse<Void> parsableServerResponse) {
                     parsableServerResponse.getFuture().setSuccess(null);
@@ -610,7 +613,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("email", email);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_ENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_ENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
                 @Override
                 public void run(ParsableServerResponse<Void> parsableServerResponse) {
                     parsableServerResponse.getFuture().setSuccess(null);
@@ -633,7 +636,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("phoneNumber", phoneNumber);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_UNENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>> () {
+            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_UNENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
                 @Override
                 public void run(ParsableServerResponse<Void> parsableServerResponse) {
                     parsableServerResponse.getFuture().setSuccess(null);
@@ -650,7 +653,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     }
 
     private <T> ObservableFuture<T> failureFuture(Exception e) {
-        ObservableFuture<T> future = new DefaultObservableFuture<T> (this);
+        ObservableFuture<T> future = new DefaultObservableFuture<T>(this);
         future.setFailure(e);
         return future;
     }
