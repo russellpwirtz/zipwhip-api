@@ -234,6 +234,7 @@ public class DefaultAsyncVendorClientTest {
         result.await();
         Assert.assertTrue(result.isSuccess());
         Assert.assertEquals(10, result.getResult().getTotal());
+        Assert.assertEquals(2845, result.getResult().getSize());
     }
 
     public class MockApiConnection extends DestroyableBase implements ApiConnection {

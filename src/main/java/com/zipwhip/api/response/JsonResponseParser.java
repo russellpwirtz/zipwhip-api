@@ -139,8 +139,8 @@ public class JsonResponseParser implements ResponseParser {
         result.setMessages(messages);
 
         JSONObject rawObject = new JSONObject(serverResponse.getRaw());
-        int total = rawObject.optInt("total", 0);
-        result.setTotal(total);
+        result.setTotal(rawObject.optInt("total", 0));
+        result.setSize(rawObject.optInt("size", 0));
 
         return result;
     }

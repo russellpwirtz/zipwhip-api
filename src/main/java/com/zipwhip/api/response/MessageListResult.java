@@ -16,6 +16,7 @@ public class MessageListResult {
     private int start;
     private int limit;
     private int total;
+    private int size;
 
     public List<Message> getMessages() {
         return messages;
@@ -47,6 +48,14 @@ public class MessageListResult {
 
     public void setTotal(int total) {
         this.total = total;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
 }
