@@ -88,12 +88,12 @@ public class JsonDtoParser {
 
 		Contact contact = parseBasicDto(new Contact(), content);
 
-		contact.setDeviceId(Long.parseLong(content.optString("deviceId")));
+		contact.setDeviceId(parseLong(content.optString("deviceId")));
 		contact.setAddress(content.optString("address"));
 		contact.setMobileNumber(content.optString("mobileNumber"));
 		contact.setState(content.optString("state"));
 		contact.setCity(content.optString("city"));
-		contact.setId(Long.parseLong(content.optString("id")));
+		contact.setId(parseLong(content.optString("id")));
 		contact.setPhoneKey(content.optString("phoneKey"));
 		contact.setThread(content.optString("thread"));
 		contact.setFwd(content.optString("fwd"));
@@ -138,7 +138,7 @@ public class JsonDtoParser {
 		user.setEmail(content.optString("email"));
 		user.setNotes(content.optString("notes"));
 		user.setLoc(content.optString("loc"));
-		user.setWebsiteDeviceId(Long.parseLong(content.optString("websiteDeviceId")));
+		user.setWebsiteDeviceId(parseLong(content.optString("websiteDeviceId")));
 
 		return user;
 	}
@@ -165,9 +165,9 @@ public class JsonDtoParser {
 
 		message.setId(Long.parseLong(response.optString("id")));
 		message.setUuid(response.optString("uuid"));
-		message.setDeviceId(Long.parseLong(response.optString("deviceId")));
-		message.setContactId(Long.parseLong(response.optString("contactId")));
-		message.setContactDeviceId(Long.parseLong(response.optString("contactDeviceId")));
+		message.setDeviceId(parseLong(response.optString("deviceId")));
+		message.setContactId(parseLong(response.optString("contactId")));
+		message.setContactDeviceId(parseLong(response.optString("contactDeviceId")));
 		message.setAddress(response.optString("address"));
 		message.setRead(response.optBoolean("isRead"));
 		message.setDeleted(response.optBoolean("deleted"));
@@ -216,8 +216,8 @@ public class JsonDtoParser {
 			MessageToken token = new MessageToken();
 
 			token.setMessage(json.optString("message"));
-			token.setDeviceId(Long.parseLong(json.optString("device"))); // will be 0 if it is a self message
-			token.setContactId(Long.parseLong(json.optString("contact"))); // will be 0 if it is a self message
+			token.setDeviceId(parseLong(json.optString("device"))); // will be 0 if it is a self message
+			token.setContactId(parseLong(json.optString("contact"))); // will be 0 if it is a self message
 			token.setFingerprint(json.optString("fingerprint"));
 
 			result.add(token);
@@ -242,18 +242,18 @@ public class JsonDtoParser {
 		Conversation conversation = new Conversation();
 
 		conversation.setId(Long.parseLong(content.optString("id")));
-		conversation.setDeviceId(Long.parseLong(content.optString("deviceId")));
+		conversation.setDeviceId(parseLong(content.optString("deviceId")));
 		conversation.setDeviceAddress(content.optString("deviceAddress"));
 		conversation.setFingerprint(content.optString("fingerprint"));
 		conversation.setAddress(content.optString("address"));
 		conversation.setCc(content.optString("cc"));
 		conversation.setBcc(content.optString("bcc"));
 		conversation.setUnreadCount(content.optInt("unreadCount"));
-		conversation.setLastContactId(Long.parseLong(content.optString("lastContactId")));
+		conversation.setLastContactId(parseLong(content.optString("lastContactId")));
 		conversation.setNew(content.optBoolean("new"));
 		conversation.setDeleted(content.optBoolean("deleted"));
 		conversation.setVersion(content.optInt("version"));
-		conversation.setLastContactDeviceId(Long.parseLong(content.optString("lastContactDeviceId")));
+		conversation.setLastContactDeviceId(parseLong(content.optString("lastContactDeviceId")));
 		conversation.setLastMessageBody(StringUtil.stripStringNull(content.optString("lastMessageBody")));
 		conversation.setLastContactFirstName(StringUtil.stripStringNull(content.optString("lastContactFirstName")));
 		conversation.setLastContactLastName(StringUtil.stripStringNull(content.optString("lastContactLastName")));
@@ -282,10 +282,10 @@ public class JsonDtoParser {
 		MessageAttachment attachment = new MessageAttachment();
 
 		attachment.setDateCreated(JsonDateUtil.getDate(content.optString("dateCreated")));
-		attachment.setDeviceId(Long.parseLong(content.optString("deviceId")));
+		attachment.setDeviceId(parseLong(content.optString("deviceId")));
 		attachment.setId(Long.parseLong(content.optString("id")));
 		attachment.setLastUpdated(JsonDateUtil.getDate(content.optString("lastUpdated")));
-		attachment.setMessageId(Long.parseLong(content.optString("messageId")));
+		attachment.setMessageId(parseLong(content.optString("messageId")));
 		attachment.setMimeType(content.optString("mimeType"));
 		attachment.setNew(content.optBoolean("new"));
 		attachment.setStorageKey(content.optString("storageKey"));
@@ -316,7 +316,7 @@ public class JsonDtoParser {
 		device.setVersion(response.optInt("version"));
 		device.setLastUpdated(JsonDateUtil.getDate(response.optString("lastUpdated")));
 		device.setDateCreated(JsonDateUtil.getDate(response.optString("dateCreated")));
-		device.setUserId(Long.parseLong(response.optString("userId")));
+		device.setUserId(parseLong(response.optString("userId")));
 		device.setChannel(response.optString("channel"));
 		device.setTextline(response.optString("textline"));
 		device.setDisplayName(response.optString("displayName"));
@@ -343,5 +343,15 @@ public class JsonDtoParser {
 		dto.setVersion(content.optLong("version"));
 
 		return dto;
+	}
+
+	private long parseLong(String opt) {
+		if((opt == null) || "".equals(opt)) {
+			return 0l;
+		} else {
+			try {
+				return Long.parseLong(opt);
+			} catch(NumberFormatException e) { return 0l; }
+		}
 	}
 }
