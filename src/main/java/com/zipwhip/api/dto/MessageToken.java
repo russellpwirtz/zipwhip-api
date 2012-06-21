@@ -19,6 +19,13 @@ public class MessageToken implements Serializable {
     long deviceId;
     long contactId;
     String fingerprint;
+    /**
+     * The message ID of the root message associated with this message token.  In situations
+     * where the message token is the root message, the rootMessage and message will be the same.
+     * In situations where a sendMessage call returns more than one MessageToken, the rootMessage will
+     * be the same across all MessageTokens.
+     */
+    String rootMessage;
 
     public String getMessage() {
         return message;
@@ -52,10 +59,19 @@ public class MessageToken implements Serializable {
         this.fingerprint = fingerprint;
     }
 
+    public String getRootMessage() {
+        return rootMessage;
+    }
+
+    public void setRootMessage(String rootMessage) {
+        this.rootMessage = rootMessage;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> MessageToken details:");
         toStringBuilder.append("\nMessage: ").append(message);
+        toStringBuilder.append("\nRoot Message: ").append(rootMessage);
         toStringBuilder.append("\nDeviceId: ").append(deviceId);
         toStringBuilder.append("\nContactId: ").append(contactId);
         toStringBuilder.append("\nFingerprint: ").append(fingerprint);

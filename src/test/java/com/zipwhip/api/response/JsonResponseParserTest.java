@@ -296,15 +296,44 @@ public class JsonResponseParserTest {
         Assert.assertEquals("Craig Erickson", name);
         
     }
-    
-   
 
+    @Test
+    public void testMessageSendResponseParsing() throws Exception {
+        //Test for situations in which we receive a response containing one MessageToken.
+        String responseStringSingularToken = "{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\",\"fingerprint\":\"228782999\",\"root\":\"215924819606511616\",\"tokens\":[{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":1167259903,\"device\":119021003,\"fingerprint\":\"228782999\",\"message\":\"215924819606511616\"}]}";
+        JSONObject o = new JSONObject(responseStringSingularToken);
+        response = new ObjectServerResponse(responseStringSingularToken, true, o, null);
+        List<MessageToken> tokens = parser.parseMessageTokens(response);
 
+        Assert.assertEquals(tokens.size(), 1);
 
-    
-    
-    
-    
+        Assert.assertEquals(tokens.get(0).getMessage(), "215924819606511616");
+        Assert.assertEquals(tokens.get(0).getFingerprint(), "228782999");
+        Assert.assertEquals(tokens.get(0).getContactId(), (long)1167259903);
+        Assert.assertEquals(tokens.get(0).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(0).getRootMessage(), "215924819606511616");
+        
+        
+        //Test for situations in which we receive a response containing multiple MessageTokens.
+        String resposneStringMultipleTokens = "{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\",\"fingerprint\":null,\"root\":\"215923266879361026\",\"tokens\":[{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":1260602403,\"device\":119021003,\"fingerprint\":\"1206227859\",\"message\":\"215923266879361024\"},{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":1260602503,\"device\":119021003,\"fingerprint\":\"4284805295\",\"message\":\"215923266879361025\"}]}";
+        o = new JSONObject(resposneStringMultipleTokens);
+        response = new ObjectServerResponse(resposneStringMultipleTokens, true, o, null);
+        tokens = parser.parseMessageTokens(response);
 
+        //I'm making the assumption that the tokens will always be returned in the same order.
+        Assert.assertEquals(tokens.size(), 2);
 
+        Assert.assertEquals(tokens.get(0).getMessage(), "215923266879361024");
+        Assert.assertEquals(tokens.get(0).getFingerprint(), "1206227859");
+        Assert.assertEquals(tokens.get(0).getContactId(), (long)1260602403);
+        Assert.assertEquals(tokens.get(0).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(0).getRootMessage(), "215923266879361026");
+
+        Assert.assertEquals(tokens.get(1).getMessage(), "215923266879361025");
+        Assert.assertEquals(tokens.get(1).getFingerprint(), "4284805295");
+        Assert.assertEquals(tokens.get(1).getContactId(), (long)1260602503);
+        Assert.assertEquals(tokens.get(1).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(1).getRootMessage(), "215923266879361026");
+        
+    }
 }

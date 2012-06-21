@@ -206,9 +206,10 @@ public class JsonDtoParser {
 	 * @return A CList<MessageToken>ontact object parsed from the JSON content.
 	 * @throws JSONException If an error is encountered while parsing
 	 */
-	public List<MessageToken> parseMessageTokens(JSONArray array) throws JSONException {
+	public List<MessageToken> parseMessageTokens(JSONObject baseResponse, JSONArray array) throws JSONException {
 
 		List<MessageToken> result = new ArrayList<MessageToken>();
+        String rootMessageID = baseResponse.optString("root");
 		int len = array.length();
 		for (int i = 0; i < len; i++) {
 
@@ -219,6 +220,7 @@ public class JsonDtoParser {
 			token.setDeviceId(parseLong(json.optString("device"))); // will be 0 if it is a self message
 			token.setContactId(parseLong(json.optString("contact"))); // will be 0 if it is a self message
 			token.setFingerprint(json.optString("fingerprint"));
+            token.setRootMessage(rootMessageID);
 
 			result.add(token);
 		}

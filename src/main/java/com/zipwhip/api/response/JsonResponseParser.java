@@ -81,11 +81,13 @@ public class JsonResponseParser implements ResponseParser {
             ObjectServerResponse r = (ObjectServerResponse) serverResponse;
             JSONArray array = r.response.getJSONArray("tokens");
 
-            result = parser.parseMessageTokens(array);
-        } else if (serverResponse instanceof ArrayServerResponse) {
-            ArrayServerResponse cplx = (ArrayServerResponse) serverResponse;
-
-            result = parser.parseMessageTokens(cplx.response);
+            result = parser.parseMessageTokens(r.response, array);
+//        } else if (serverResponse instanceof ArrayServerResponse) {
+//            ArrayServerResponse cplx = (ArrayServerResponse) serverResponse;
+//
+//            result = parser.parseMessageTokens(cplx.response);
+        } else {
+            throw new Exception("ServerResponse must be an ObjectServerResponse");
         }
 
         return result;
