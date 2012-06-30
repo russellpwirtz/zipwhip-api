@@ -58,21 +58,9 @@ public class SettingsVersionStore implements VersionStore {
         logger.debug("Setting version " + versionKey + " : " + newVersion);
 
         Long previousVersion = memoryVersions.put(versionKey, newVersion);
+        settingsStore.put(SettingsStore.Keys.VERSIONS, new JSONObject(memoryVersions).toString());
 
-        if (previousVersion != null && previousVersion > newVersion) {
-
-            memoryVersions.put(versionKey, previousVersion);
-
-            return false;
-
-        } else {
-
-            logger.debug("Appending version to disk");
-
-            settingsStore.put(SettingsStore.Keys.VERSIONS, new JSONObject(memoryVersions).toString());
-
-            return true;
-        }
+        return previousVersion == null || previousVersion < newVersion;
     }
 
     @Override

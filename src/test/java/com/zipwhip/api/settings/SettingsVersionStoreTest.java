@@ -80,7 +80,10 @@ public class SettingsVersionStoreTest {
         Assert.assertFalse(store.set("e", 2L));
 
         Map<String, Long> memMap = new HashMap<String, Long>();
-        memMap.put("e", 3L);
+
+        // The SettingsVersionStore no longer enforces that lower versions not be saved.
+        // http://angela.zipwhip.com/issues/6883
+        memMap.put("e", 2L);
 
         Assert.assertEquals(store.get(), memMap);
     }
