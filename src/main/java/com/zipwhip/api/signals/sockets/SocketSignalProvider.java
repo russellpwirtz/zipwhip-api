@@ -98,6 +98,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         this.link(presenceReceivedEvent);
         this.link(subscriptionCompleteEvent);
         this.link(signalCommandEvent);
+        this.link(commandReceivedEvent);
 
         connection.onMessageReceived(new Observer<Command>() {
             /**
