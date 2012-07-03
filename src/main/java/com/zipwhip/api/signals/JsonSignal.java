@@ -25,4 +25,21 @@ public class JsonSignal extends Signal implements Serializable {
         return json;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof JsonSignal)) return false;
+
+        JsonSignal that = (JsonSignal) o;
+
+        if (json != null ? !json.equals(that.json) : that.json != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return json != null ? json.hashCode() : 0;
+    }
+
 }

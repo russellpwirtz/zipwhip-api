@@ -392,4 +392,89 @@ public class Message extends BasicDto {
         return toStringBuilder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Message)) return false;
+        if (!super.equals(o)) return false;
+
+        Message message = (Message) o;
+
+        if (contactDeviceId != message.contactDeviceId) return false;
+        if (contactId != message.contactId) return false;
+        if (deleted != message.deleted) return false;
+        if (deviceId != message.deviceId) return false;
+        if (errorState != message.errorState) return false;
+        if (hasAttachment != message.hasAttachment) return false;
+        if (id != message.id) return false;
+        if (read != message.read) return false;
+        if (statusCode != message.statusCode) return false;
+        if (address != null ? !address.equals(message.address) : message.address != null) return false;
+        if (advertisement != null ? !advertisement.equals(message.advertisement) : message.advertisement != null) return false;
+        if (bcc != null ? !bcc.equals(message.bcc) : message.bcc != null) return false;
+        if (body != null ? !body.equals(message.body) : message.body != null) return false;
+        if (carrier != null ? !carrier.equals(message.carrier) : message.carrier != null) return false;
+        if (cc != null ? !cc.equals(message.cc) : message.cc != null) return false;
+        if (channel != null ? !channel.equals(message.channel) : message.channel != null) return false;
+        if (destinationAddress != null ? !destinationAddress.equals(message.destinationAddress) : message.destinationAddress != null) return false;
+        if (direction != null ? !direction.equals(message.direction) : message.direction != null) return false;
+        if (errorDesc != null ? !errorDesc.equals(message.errorDesc) : message.errorDesc != null) return false;
+        if (fingerprint != null ? !fingerprint.equals(message.fingerprint) : message.fingerprint != null) return false;
+        if (firstName != null ? !firstName.equals(message.firstName) : message.firstName != null) return false;
+        if (from != null ? !from.equals(message.from) : message.from != null) return false;
+        if (fromName != null ? !fromName.equals(message.fromName) : message.fromName != null) return false;
+        if (fwd != null ? !fwd.equals(message.fwd) : message.fwd != null) return false;
+        if (lastName != null ? !lastName.equals(message.lastName) : message.lastName != null) return false;
+        if (messageType != null ? !messageType.equals(message.messageType) : message.messageType != null) return false;
+        if (mobileNumber != null ? !mobileNumber.equals(message.mobileNumber) : message.mobileNumber != null) return false;
+        if (sourceAddress != null ? !sourceAddress.equals(message.sourceAddress) : message.sourceAddress != null) return false;
+        if (statusDesc != null ? !statusDesc.equals(message.statusDesc) : message.statusDesc != null) return false;
+        if (subject != null ? !subject.equals(message.subject) : message.subject != null) return false;
+        if (thread != null ? !thread.equals(message.thread) : message.thread != null) return false;
+        if (to != null ? !to.equals(message.to) : message.to != null) return false;
+        if (transmissionState != message.transmissionState) return false;
+        if (uuid != null ? !uuid.equals(message.uuid) : message.uuid != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + (int) (contactId ^ (contactId >>> 32));
+        result = 31 * result + (int) (deviceId ^ (deviceId >>> 32));
+        result = 31 * result + (transmissionState != null ? transmissionState.hashCode() : 0);
+        result = 31 * result + (mobileNumber != null ? mobileNumber.hashCode() : 0);
+        result = 31 * result + (address != null ? address.hashCode() : 0);
+        result = 31 * result + (destinationAddress != null ? destinationAddress.hashCode() : 0);
+        result = 31 * result + (sourceAddress != null ? sourceAddress.hashCode() : 0);
+        result = 31 * result + (direction != null ? direction.hashCode() : 0);
+        result = 31 * result + (body != null ? body.hashCode() : 0);
+        result = 31 * result + (uuid != null ? uuid.hashCode() : 0);
+        result = 31 * result + (from != null ? from.hashCode() : 0);
+        result = 31 * result + (fromName != null ? fromName.hashCode() : 0);
+        result = 31 * result + (advertisement != null ? advertisement.hashCode() : 0);
+        result = 31 * result + (read ? 1 : 0);
+        result = 31 * result + statusCode;
+        result = 31 * result + (statusDesc != null ? statusDesc.hashCode() : 0);
+        result = 31 * result + (messageType != null ? messageType.hashCode() : 0);
+        result = 31 * result + (cc != null ? cc.hashCode() : 0);
+        result = 31 * result + (bcc != null ? bcc.hashCode() : 0);
+        result = 31 * result + (fwd != null ? fwd.hashCode() : 0);
+        result = 31 * result + (thread != null ? thread.hashCode() : 0);
+        result = 31 * result + (channel != null ? channel.hashCode() : 0);
+        result = 31 * result + (to != null ? to.hashCode() : 0);
+        result = 31 * result + (carrier != null ? carrier.hashCode() : 0);
+        result = 31 * result + (subject != null ? subject.hashCode() : 0);
+        result = 31 * result + (firstName != null ? firstName.hashCode() : 0);
+        result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
+        result = 31 * result + (deleted ? 1 : 0);
+        result = 31 * result + (errorDesc != null ? errorDesc.hashCode() : 0);
+        result = 31 * result + (errorState ? 1 : 0);
+        result = 31 * result + (int) (contactDeviceId ^ (contactDeviceId >>> 32));
+        result = 31 * result + (fingerprint != null ? fingerprint.hashCode() : 0);
+        result = 31 * result + (hasAttachment ? 1 : 0);
+        return result;
+    }
 }

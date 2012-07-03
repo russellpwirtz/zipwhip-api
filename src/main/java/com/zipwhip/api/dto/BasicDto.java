@@ -38,4 +38,26 @@ public class BasicDto implements Serializable {
         this.version = version;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BasicDto)) return false;
+
+        BasicDto basicDto = (BasicDto) o;
+
+        if (version != basicDto.version) return false;
+        if (!dateCreated.equals(basicDto.dateCreated)) return false;
+        if (!lastUpdated.equals(basicDto.lastUpdated)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = dateCreated.hashCode();
+        result = 31 * result + lastUpdated.hashCode();
+        result = 31 * result + (int) (version ^ (version >>> 32));
+        return result;
+    }
+
 }

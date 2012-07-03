@@ -47,4 +47,25 @@ public class EnrollmentResult implements Serializable {
         return toStringBuilder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof EnrollmentResult)) return false;
+
+        EnrollmentResult that = (EnrollmentResult) o;
+
+        if (deviceNumber != that.deviceNumber) return false;
+        if (isCarbonEnabled != that.isCarbonEnabled) return false;
+        if (isCarbonInstalled != that.isCarbonInstalled) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (isCarbonInstalled ? 1 : 0);
+        result = 31 * result + (isCarbonEnabled ? 1 : 0);
+        result = 31 * result + deviceNumber;
+        return result;
+    }
 }

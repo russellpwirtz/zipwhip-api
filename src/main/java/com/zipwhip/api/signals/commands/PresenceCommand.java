@@ -18,50 +18,67 @@ import com.zipwhip.signals.presence.Presence;
  */
 public class PresenceCommand extends SerializingCommand {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public static final Action ACTION = Action.PRESENCE; // "presence";
+    public static final Action ACTION = Action.PRESENCE; // "presence";
 
-	private static Logger logger = Logger.getLogger(PresenceCommand.class);
+    private static Logger logger = Logger.getLogger(PresenceCommand.class);
 
-	private List<Presence> presence;
+    private List<Presence> presence;
 
-	/**
-	 * Create a new PresenceCommand
-	 *
-	 * @param presence JSONObject representing the signal
-	 */
-	public PresenceCommand(List<Presence> presence) {
-		this.presence = presence;
-	}
+    /**
+     * Create a new PresenceCommand
+     *
+     * @param presence JSONObject representing the signal
+     */
+    public PresenceCommand(List<Presence> presence) {
+        this.presence = presence;
+    }
 
-	public List<Presence> getPresence() {
-		return presence;
-	}
+    public List<Presence> getPresence() {
+        return presence;
+    }
 
-	@Override
-	public String serialize() {
+    @Override
+    public String serialize() {
 
-		JSONObject json = new JSONObject();
+        JSONObject json = new JSONObject();
 
-		try {
+        try {
             json.put("class", PresenceCommand.class.getName());
             json.put("action", ACTION.name());
             json.put(ACTION.name(), PresenceUtil.getInstance().serialize(presence));
-		} catch (JSONException e) {
-			logger.error("Error serializing PresenceCommand", e);
-		}
+        } catch (JSONException e) {
+            logger.error("Error serializing PresenceCommand", e);
+        }
 
-		return json.toString();
-	}
+        return json.toString();
+    }
 
-	@Override
-	public String toString() {
-		return serialize();
-	}
+    @Override
+    public String toString() {
+        return serialize();
+    }
 
-	@Override
-	public Action getAction() {
-		return ACTION;
-	}
+    @Override
+    public Action getAction() {
+        return ACTION;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PresenceCommand)) return false;
+
+        PresenceCommand that = (PresenceCommand) o;
+
+        if (presence != null ? !presence.equals(that.presence) : that.presence != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return presence != null ? presence.hashCode() : 0;
+    }
 }

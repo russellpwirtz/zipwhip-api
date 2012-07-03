@@ -120,4 +120,41 @@ public class Device extends BasicDto {
         return toStringBuilder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Device)) return false;
+        if (!super.equals(o)) return false;
+
+        Device device = (Device) o;
+
+        if (deviceNumber != device.deviceNumber) return false;
+        if (id != device.id) return false;
+        if (memberCount != device.memberCount) return false;
+        if (userId != device.userId) return false;
+        if (address != null ? !address.equals(device.address) : device.address != null) return false;
+        if (channel != null ? !channel.equals(device.channel) : device.channel != null) return false;
+        if (displayName != null ? !displayName.equals(device.displayName) : device.displayName != null) return false;
+        if (textline != null ? !textline.equals(device.textline) : device.textline != null) return false;
+        if (thread != null ? !thread.equals(device.thread) : device.thread != null) return false;
+        if (uuid != null ? !uuid.equals(device.uuid) : device.uuid != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + (uuid != null ? uuid.hashCode() : 0);
+        result = 31 * result + (channel != null ? channel.hashCode() : 0);
+        result = 31 * result + (textline != null ? textline.hashCode() : 0);
+        result = 31 * result + (int) (userId ^ (userId >>> 32));
+        result = 31 * result + (displayName != null ? displayName.hashCode() : 0);
+        result = 31 * result + (address != null ? address.hashCode() : 0);
+        result = 31 * result + (int) (deviceNumber ^ (deviceNumber >>> 32));
+        result = 31 * result + (int) (memberCount ^ (memberCount >>> 32));
+        result = 31 * result + (thread != null ? thread.hashCode() : 0);
+        return result;
+    }
 }

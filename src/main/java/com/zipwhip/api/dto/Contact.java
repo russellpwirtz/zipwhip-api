@@ -232,4 +232,63 @@ public class Contact extends BasicDto {
         return toStringBuilder.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Contact)) return false;
+        if (!super.equals(o)) return false;
+
+        Contact contact = (Contact) o;
+
+        if (deviceId != contact.deviceId) return false;
+        if (id != contact.id) return false;
+        if (moCount != contact.moCount) return false;
+        if (zoCount != contact.zoCount) return false;
+        if (address != null ? !address.equals(contact.address) : contact.address != null) return false;
+        if (carrier != null ? !carrier.equals(contact.carrier) : contact.carrier != null) return false;
+        if (channel != null ? !channel.equals(contact.channel) : contact.channel != null) return false;
+        if (city != null ? !city.equals(contact.city) : contact.city != null) return false;
+        if (email != null ? !email.equals(contact.email) : contact.email != null) return false;
+        if (firstName != null ? !firstName.equals(contact.firstName) : contact.firstName != null) return false;
+        if (fwd != null ? !fwd.equals(contact.fwd) : contact.fwd != null) return false;
+        if (lastName != null ? !lastName.equals(contact.lastName) : contact.lastName != null) return false;
+        if (latlong != null ? !latlong.equals(contact.latlong) : contact.latlong != null) return false;
+        if (loc != null ? !loc.equals(contact.loc) : contact.loc != null) return false;
+        if (mobileNumber != null ? !mobileNumber.equals(contact.mobileNumber) : contact.mobileNumber != null) return false;
+        if (notes != null ? !notes.equals(contact.notes) : contact.notes != null) return false;
+        if (phone != null ? !phone.equals(contact.phone) : contact.phone != null) return false;
+        if (phoneKey != null ? !phoneKey.equals(contact.phoneKey) : contact.phoneKey != null) return false;
+        if (state != null ? !state.equals(contact.state) : contact.state != null) return false;
+        if (thread != null ? !thread.equals(contact.thread) : contact.thread != null) return false;
+        if (zipcode != null ? !zipcode.equals(contact.zipcode) : contact.zipcode != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + (address != null ? address.hashCode() : 0);
+        result = 31 * result + (mobileNumber != null ? mobileNumber.hashCode() : 0);
+        result = 31 * result + (firstName != null ? firstName.hashCode() : 0);
+        result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
+        result = 31 * result + (phone != null ? phone.hashCode() : 0);
+        result = 31 * result + (email != null ? email.hashCode() : 0);
+        result = 31 * result + (int) (deviceId ^ (deviceId >>> 32));
+        result = 31 * result + (int) (moCount ^ (moCount >>> 32));
+        result = 31 * result + (int) (zoCount ^ (zoCount >>> 32));
+        result = 31 * result + (latlong != null ? latlong.hashCode() : 0);
+        result = 31 * result + (loc != null ? loc.hashCode() : 0);
+        result = 31 * result + (notes != null ? notes.hashCode() : 0);
+        result = 31 * result + (carrier != null ? carrier.hashCode() : 0);
+        result = 31 * result + (zipcode != null ? zipcode.hashCode() : 0);
+        result = 31 * result + (phoneKey != null ? phoneKey.hashCode() : 0);
+        result = 31 * result + (thread != null ? thread.hashCode() : 0);
+        result = 31 * result + (fwd != null ? fwd.hashCode() : 0);
+        result = 31 * result + (channel != null ? channel.hashCode() : 0);
+        result = 31 * result + (city != null ? city.hashCode() : 0);
+        result = 31 * result + (state != null ? state.hashCode() : 0);
+        return result;
+    }
 }

@@ -1,7 +1,5 @@
 package com.zipwhip.api.dto;
 
-import java.io.Serializable;
-
 /**
  * Created by IntelliJ IDEA.
  * User: Austin
@@ -25,6 +23,26 @@ public class CarbonEvent extends BasicDto {
     @Override
     public String toString() {
         return carbonDescriptor;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CarbonEvent)) return false;
+        if (!super.equals(o)) return false;
+
+        CarbonEvent that = (CarbonEvent) o;
+
+        if (!carbonDescriptor.equals(that.carbonDescriptor)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + carbonDescriptor.hashCode();
+        return result;
     }
 
 }
