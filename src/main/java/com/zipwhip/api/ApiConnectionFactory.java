@@ -88,7 +88,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
                 future.awaitUninterruptibly();
 
-                if (!future.isSuccess()){
+                if (!future.isSuccess()) {
                     throw new RuntimeException("Cannot create connection, login rejected");
                 }
 
@@ -147,6 +147,78 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public ApiConnectionFactory apiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
         return this;
+    }
+
+    public ResponseParser getResponseParser() {
+        return responseParser;
+    }
+
+    public void setResponseParser(ResponseParser responseParser) {
+        this.responseParser = responseParser;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public String getApiVersion() {
+        return apiVersion;
+    }
+
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getApiKey() {
+        return apiKey;
+    }
+
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public String getSessionKey() {
+        return sessionKey;
+    }
+
+    public void setSessionKey(String sessionKey) {
+        this.sessionKey = sessionKey;
+    }
+
+    public ApiConnection getConnection() {
+        return connection;
+    }
+
+    public void setConnection(ApiConnection connection) {
+        this.connection = connection;
     }
 
 }
