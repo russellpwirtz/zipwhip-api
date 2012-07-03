@@ -140,6 +140,7 @@
                     </archive>
                 </configuration>
             </plugin>
+            <!-- Uncomment the block below if you want to build the main artifact 'zipwhip-api*-SNAPSHOT.jar' with dependencies included. -->
             <!--<plugin>-->
             <!--<groupId>org.apache.maven.plugins</groupId>-->
             <!--<artifactId>maven-shade-plugin</artifactId>-->
