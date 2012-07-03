@@ -26,13 +26,17 @@ public class SlidingWindow<P> extends DestroyableBase {
         UNKNOWN_RESULT
     }
 
-    protected static final int DEFAULT_WINDOW_SIZE = 10;
+    protected static final int DEFAULT_WINDOW_SIZE = 100;
+    protected static final long DEFAULT_MINIMUM_EVICTION_AGE = 5 * 60 * 1000;
 
     // Backing data structure holding an ordered map
-    protected final FlexibleEvictingQueue<Long, P> window = new FlexibleEvictingQueue<Long, P>();
+    protected FlexibleTimedEvictionMap<Long, P> window;
 
     // This is used to fire notifications if a hole was not filled inside the timeout window
     private final ObservableHelper<HoleRange> holeTimeoutEvent = new ObservableHelper<HoleRange>();
+
+    // This is used to fire notifications that a timeout moved the window and released some packets
+    private final ObservableHelper<List<P>> packetsReleasedEvent = new ObservableHelper<List<P>>();
 
     // This timer schedules our hole timeout waits
     private final HashedWheelTimer timer = new HashedWheelTimer();
@@ -43,30 +47,28 @@ public class SlidingWindow<P> extends DestroyableBase {
     // A way to identify the channel we have a window on
     private String key;
 
-    // The ideal size of the window. The window can grow larger within a given time period.
-    private int size = DEFAULT_WINDOW_SIZE;
-
     // The default step between sequence numbers
     private int step = 1;
 
     // How long to wait for holes to fill in
-    private int timeoutMillis = 500;
+    private int holeTimeoutMillis = 500;
 
     /**
-     * Construct a SlidingWindow with a default window size.
+     * Construct a SlidingWindow with a default window size and eviction time.
      */
     public SlidingWindow(String key) {
-        this(key, DEFAULT_WINDOW_SIZE);
+        this(key, DEFAULT_WINDOW_SIZE, DEFAULT_MINIMUM_EVICTION_AGE);
     }
 
     /**
      * Construct a SlidingWindow,
      *
-     * @param size The size of the sliding window.
+     * @param idealSize The ideal size of the sliding window.
+     * @param minimumEvictionSizeMillis The time in milliseconds that a packet will be kept in the window.
      */
-    public SlidingWindow(String key, int size) {
+    public SlidingWindow(String key, int idealSize, long minimumEvictionSizeMillis) {
         this.key = key;
-        this.size = size;
+        window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionSizeMillis);
     }
 
     public long getIndexSequence() {
@@ -86,11 +88,19 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     public int getSize() {
-        return size;
+        return window.getIdealSize();
     }
 
     public void setSize(int size) {
-        this.size = size;
+        window.setIdealSize(size);
+    }
+
+    public long getMinimumEvictionAgeMillis() {
+        return window.getMinimumEvictionAgeMillis();
+    }
+
+    public void setMinimumEvictionAgeMillis(long minimumEvictionAgeMillis) {
+        window.setMinimumEvictionAgeMillis(minimumEvictionAgeMillis);
     }
 
     public int getStep() {
@@ -101,16 +111,20 @@ public class SlidingWindow<P> extends DestroyableBase {
         this.step = step;
     }
 
-    public int getTimeoutMillis() {
-        return timeoutMillis;
+    public int getHoleTimeoutMillis() {
+        return holeTimeoutMillis;
     }
 
-    public void setTimeoutMillis(int timeoutMillis) {
-        this.timeoutMillis = timeoutMillis;
+    public void setHoleTimeoutMillis(int holeTimeoutMillis) {
+        this.holeTimeoutMillis = holeTimeoutMillis;
     }
 
     public void onHoleTimeout(Observer<HoleRange> observable) {
         holeTimeoutEvent.addObserver(observable);
+    }
+
+    public void onPacketsReleased(Observer<List<P>> observable) {
+        packetsReleasedEvent.addObserver(observable);
     }
 
     /**
@@ -160,11 +174,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
             indexSequence = sequence;
             window.put(sequence, value);
-
-            // Slide the window if it is full
-            if (window.size() > size) {
-                window.pollFirstEntry();
-            }
+            window.shrink();
 
             return ReceiveResult.EXPECTED_SEQUENCE;
         }
@@ -176,28 +186,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
             // We only want to add the results if the filled hole was the first hole
             if (!hasHoles(window.headMap(sequence).keySet())) {
-
-                NavigableMap<Long, P> tail = window.tailMap(sequence, true);
-                long previous = sequence;
-
-                for (Long key : tail.keySet()) {
-                    if (key != previous && key != previous + step) {
-                        // This case indicates that we found a hole higher in the sequence
-                        break;
-                    }
-                    results.add(tail.get(key));
-                    previous = key;
-                    indexSequence = key;
-                }
-
-                for (P p : results) {
-                    // Slide the window if it is full
-                    if (window.size() > size) {
-                        window.pollFirstEntry();
-                    } else {
-                        break;
-                    }
-                }
+                results.addAll(getResultsFromIndexSequenceForward(sequence));
             }
             return ReceiveResult.HOLE_FILLED;
         }
@@ -275,18 +264,38 @@ public class SlidingWindow<P> extends DestroyableBase {
         TimerTask waitAndNotifyTask = new TimerTask() {
             @Override
             public void run(Timeout timeout) throws Exception {
+
                 for (HoleRange h : getHoles(window.keySet())) {
+
                     if (hole.equals(h)) {
+
                         holeTimeoutEvent.notifyObservers(this, hole);
-                        // TODO 1. Set another event and wait 2x for the hole to be back filled.
-                        // TODO 2. If it is not filled at that timeout slide the window to [endInclusive + step].
-                        // TODO 3.
+
+                        // Set another event and wait 2x for the hole to be back filled.
+                        TimerTask waitAndCheckTask = new TimerTask() {
+                            @Override
+                            public void run(Timeout timeout) throws Exception {
+
+                                for (HoleRange h : getHoles(window.keySet())) {
+
+                                    if (hole.equals(h)) {
+                                        // If it is not filled at this timeout then slide the window to endInclusive.
+                                        indexSequence = hole.endInclusive;
+                                        List<P> results = getResultsFromIndexSequenceForward(indexSequence);
+
+                                        if (!results.isEmpty()) {
+                                            packetsReleasedEvent.notifyObservers(this, results);
+                                        }
+                                    }
+                                }
+                            }
+                        };
+                        timer.newTimeout(waitAndCheckTask, holeTimeoutMillis * 2, TimeUnit.MILLISECONDS);
                     }
                 }
             }
         };
-
-        timer.newTimeout(waitAndNotifyTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        timer.newTimeout(waitAndNotifyTask, holeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -297,7 +306,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     protected long getEndOfWindow() {
-        return window.firstKey() + size - 1;
+        return window.firstKey() + window.getIdealSize() - 1;
     }
 
     /**
@@ -338,6 +347,37 @@ public class SlidingWindow<P> extends DestroyableBase {
             previous = sequence;
         }
         return holes;
+    }
+
+    /**
+     * Get the results from the {@code sequence} forward up to the end of the list
+     * unless a hole is found going forward. If a hole is found then the results are
+     * {@code sequence} + {@code step} to the next hole.
+     *
+     * @param sequence The starting sequence to find results from.
+     * @return A list of the results or an empty list if there are non.
+     */
+    protected List<P> getResultsFromIndexSequenceForward(long sequence) {
+
+        List<P> results = new ArrayList<P>();
+
+        NavigableMap<Long, P> tail = window.tailMap(sequence, true);
+        long previous = sequence;
+
+        for (Long key : tail.keySet()) {
+            if (key != previous && key != previous + step) {
+                // This case indicates that we found a hole higher in the sequence
+                break;
+            }
+            results.add(tail.get(key));
+            previous = key;
+            indexSequence = key;
+        }
+
+        // Attempt to resize the map
+        window.shrink(results.size());
+
+        return results;
     }
 
     protected static class HoleRange {

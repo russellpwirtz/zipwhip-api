@@ -116,6 +116,56 @@ public class SocketSignalProviderTest {
     }
 
     @Test
+    public void testOnSignalReceivedOutOfOrder() throws Exception {
+
+        SignalObserver signalObserver = new SignalObserver();
+        provider.onSignalReceived(signalObserver);
+
+        SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
+        provider.onSignalCommandReceived(signalCommandObserver);
+
+        connection.send(null);
+        Signal signal = new Signal();
+        SignalCommand signalCommand = new SignalCommand(signal);
+        VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
+        signalCommand.setVersion(versionMapEntry);
+
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+
+        connection.mockReceive(signalCommand);
+
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        signal = new Signal();
+        signalCommand = new SignalCommand(signal);
+        versionMapEntry = new VersionMapEntry("key", 3l);
+        signalCommand.setVersion(versionMapEntry);
+        signalObserver.signalReceived = false;
+        signalCommandObserver.signalCommandReceived = false;
+        connection.mockReceive(signalCommand);
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        signal = new Signal();
+        signalCommand = new SignalCommand(signal);
+        versionMapEntry = new VersionMapEntry("key", 2l);
+        signalCommand.setVersion(versionMapEntry);
+        signalObserver.signalReceived = false;
+        signalCommandObserver.signalCommandReceived = false;
+        connection.mockReceive(signalCommand);
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(3, signalObserver.signalReceivedCount);
+        assertEquals(3, signalCommandObserver.signalCommandReceivedCount);
+    }
+
+    @Test
     public void testOnConnectionChanged() throws Exception {
 
         provider.onConnectionChanged(new Observer<Boolean>() {
@@ -365,12 +415,14 @@ public class SocketSignalProviderTest {
      */
     private class SignalCommandObserver implements Observer<List<SignalCommand>> {
         boolean signalCommandReceived = false;
+        int signalCommandReceivedCount;
 
         @Override
         public void notify(Object sender, List<SignalCommand> item) {
             assertNotNull(item);
             assertTrue(item.get(0) instanceof SignalCommand);
             signalCommandReceived = true;
+            signalCommandReceivedCount++;
         }
 
         /**
@@ -389,6 +441,7 @@ public class SocketSignalProviderTest {
     private class SignalObserver implements Observer<List<com.zipwhip.api.signals.Signal>> {
 
         boolean signalReceived = false;
+        int signalReceivedCount;
 
         @Override
         public void notify(Object sender, List<Signal> item) {
@@ -396,6 +449,7 @@ public class SocketSignalProviderTest {
             assertNotNull(item);
             assertTrue(item.get(0).getClass().getSimpleName(), item.get(0) instanceof Signal);
             signalReceived = true;
+            signalReceivedCount++;
         }
 
         /**

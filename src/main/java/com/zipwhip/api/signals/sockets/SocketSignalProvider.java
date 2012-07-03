@@ -121,6 +121,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                         SlidingWindow<Command> newWindow = new SlidingWindow<Command>(versionKey);
                         newWindow.onHoleTimeout(signalHoleObserver);
+                        newWindow.onPacketsReleased(packetReleasedObserver);
 
                         if (versions != null && versions.get(versionKey) != null) {
                             newWindow.setIndexSequence(versions.get(versionKey));
@@ -680,6 +681,13 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         @Override
         public void notify(Object sender, SlidingWindow.HoleRange hole) {
             connection.send(new BackfillCommand(hole.getRange(), hole.key));
+        }
+    };
+
+    private Observer<List<Command>> packetReleasedObserver = new Observer<List<Command>>() {
+        @Override
+        public void notify(Object sender, List<Command> commands) {
+            handleCommands(commands);
         }
     };
 

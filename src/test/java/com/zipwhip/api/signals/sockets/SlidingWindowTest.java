@@ -20,10 +20,12 @@ public class SlidingWindowTest {
     SlidingWindow<Long> window;
     String key = "channel:/1234-5678-9012";
 
+    static final int DEFAULT_WINDOW_SIZE = 2;
+    static final long DEFAULT_MIN_EXPIRATION = 100;
+
     @Before
     public void setUp() throws Exception {
-        window = new SlidingWindow<Long>(key);
-        window.setSize(2);
+        window = new SlidingWindow<Long>(key, DEFAULT_WINDOW_SIZE, DEFAULT_MIN_EXPIRATION);
     }
 
     @Test
@@ -73,14 +75,14 @@ public class SlidingWindowTest {
 
     @Test
     public void testGetTimeoutMillis() throws Exception {
-        window.setTimeoutMillis(50);
-        Assert.assertEquals(50, window.getTimeoutMillis());
+        window.setHoleTimeoutMillis(50);
+        Assert.assertEquals(50, window.getHoleTimeoutMillis());
     }
 
     @Test
     public void testSetTimeoutMillis() throws Exception {
-        window.setTimeoutMillis(100);
-        Assert.assertEquals(100, window.getTimeoutMillis());
+        window.setHoleTimeoutMillis(100);
+        Assert.assertEquals(100, window.getHoleTimeoutMillis());
     }
 
     @Test
@@ -144,6 +146,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(new Long(1), results.get(0));
         results.clear();
 
+        Thread.sleep(DEFAULT_MIN_EXPIRATION + 1);
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(2l, 2l, results));
         Assert.assertEquals(2, window.window.size());
         Assert.assertEquals(new Long(1), window.getValueAtLowestSequence());
@@ -164,6 +167,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(new Long(3), results.get(0));
         results.clear();
 
+        Thread.sleep(DEFAULT_MIN_EXPIRATION + 1);
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(4l, 4l, results));
         Assert.assertEquals(2, window.window.size());
         Assert.assertEquals(new Long(3), window.getValueAtLowestSequence());
@@ -219,7 +223,7 @@ public class SlidingWindowTest {
     public void testReceive_HOLE_FILLED_Multiple() throws Exception {
 
         window.reset();
-        window.setTimeoutMillis(10);
+        window.setHoleTimeoutMillis(10);
         List<Long> results = new ArrayList<Long>();
 
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
@@ -291,10 +295,9 @@ public class SlidingWindowTest {
         Assert.assertEquals(new Long(3), results.get(0));
         results.clear();
 
-        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 1l, results));
+        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 10l, results));
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(1l, window.getIndexSequence());
-        Assert.assertEquals(1, window.window.size());
         Assert.assertEquals(1, window.window.size());
     }
 
@@ -306,7 +309,8 @@ public class SlidingWindowTest {
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(0l, 0l, results));
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(2l, 2l, results));
-        Assert.assertEquals(new Long(1), window.getValueAtLowestSequence());
+        Assert.assertEquals(new Long(0), window.getValueAtLowestSequence()); // Since we didn't expire the window the queue has grown to size 3
+        Assert.assertEquals(3, window.window.size());
     }
 
     @Test
