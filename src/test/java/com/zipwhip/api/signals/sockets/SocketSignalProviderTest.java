@@ -166,6 +166,70 @@ public class SocketSignalProviderTest {
     }
 
     @Test
+    public void testOnSignalReceivedHoleTimeout() throws Exception {
+
+        SignalObserver signalObserver = new SignalObserver();
+        provider.onSignalReceived(signalObserver);
+
+        SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
+        provider.onSignalCommandReceived(signalCommandObserver);
+
+        VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
+        provider.onVersionChanged(versionChangedObserver);
+
+        connection.send(null);
+        Signal signal = new Signal();
+        SignalCommand signalCommand = new SignalCommand(signal);
+        VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
+        signalCommand.setVersion(versionMapEntry);
+
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+
+        connection.mockReceive(signalCommand);
+
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        signal = new Signal();
+        signalCommand = new SignalCommand(signal);
+        versionMapEntry = new VersionMapEntry("key", 3l);
+        signalCommand.setVersion(versionMapEntry);
+        signalObserver.signalReceived = false;
+        signalCommandObserver.signalCommandReceived = false;
+        connection.mockReceive(signalCommand);
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        signal = new Signal();
+        signalCommand = new SignalCommand(signal);
+        versionMapEntry = new VersionMapEntry("key", 4l);
+        signalCommand.setVersion(versionMapEntry);
+        signalObserver.signalReceived = false;
+        signalCommandObserver.signalCommandReceived = false;
+        connection.mockReceive(signalCommand);
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(3, signalObserver.signalReceivedCount);
+        assertEquals(3, signalCommandObserver.signalCommandReceivedCount);
+
+        assertEquals(3, versionChangedObserver.versions.size());
+        assertEquals(1l, versionChangedObserver.versions.get(0));
+        assertEquals(3l, versionChangedObserver.versions.get(1));
+        assertEquals(4l, versionChangedObserver.versions.get(2));
+    }
+
+    @Test
     public void testOnConnectionChanged() throws Exception {
 
         provider.onConnectionChanged(new Observer<Boolean>() {
@@ -423,6 +487,7 @@ public class SocketSignalProviderTest {
             assertTrue(item.get(0) instanceof SignalCommand);
             signalCommandReceived = true;
             signalCommandReceivedCount++;
+            System.out.println("Received signal version " + item.get(0).getVersion().getValue());
         }
 
         /**
@@ -460,4 +525,25 @@ public class SocketSignalProviderTest {
         }
 
     }
+
+    /**
+     * Custom observer to register that a version changed
+     *
+     * @author jed
+     */
+    private class VersionChangedObserver implements Observer<VersionMapEntry> {
+
+        int versionChangedCount;
+        List<Long> versions = new ArrayList<Long>();
+
+        @Override
+        public void notify(Object sender, VersionMapEntry item) {
+            System.out.println("testOnVersionChanged - provider.onSignalReceived " + item);
+            assertNotNull(item);
+            versionChangedCount++;
+            versions.add(item.getValue());
+        }
+
+    }
+
 }
