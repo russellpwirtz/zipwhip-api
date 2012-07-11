@@ -63,7 +63,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     /**
      * Construct a SlidingWindow,
      *
-     * @param idealSize The ideal size of the sliding window.
+     * @param idealSize                 The ideal size of the sliding window.
      * @param minimumEvictionSizeMillis The time in milliseconds that a packet will be kept in the window.
      */
     public SlidingWindow(String key, int idealSize, long minimumEvictionSizeMillis) {
@@ -167,7 +167,7 @@ public class SlidingWindow<P> extends DestroyableBase {
         }
 
         // EXPECTED_SEQUENCE
-        if (indexSequence <= 0 || (sequence == indexSequence + step && !hasHoles(window.keySet()))) {
+        if (indexSequence <= 0 || (sequence.equals(indexSequence + step) && !hasHoles(window.keySet()))) {
 
             // Add a single result
             results.add(value);
@@ -199,7 +199,7 @@ public class SlidingWindow<P> extends DestroyableBase {
             List<HoleRange> holes = getHoles(window.keySet());
 
             for (HoleRange hole : holes) {
-                if (hole.endInclusive == sequence) {
+                if (sequence.equals(hole.endInclusive + step)) {
                     waitForHole(hole);
                 }
             }
@@ -215,7 +215,7 @@ public class SlidingWindow<P> extends DestroyableBase {
             results.add(value);
 
             indexSequence = sequence;
-            window.clear(); // TODO Michael claims that this is not necessary but I don't see it yet...
+            window.clear();
             window.put(sequence, value);
 
             return ReceiveResult.NEGATIVE_HOLE;
@@ -341,7 +341,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         for (Long sequence : keys) {
             if (previous != -1 && previous + step != sequence) {
-                HoleRange range = new HoleRange(key, previous, sequence);
+                HoleRange range = new HoleRange(key, previous, sequence - step);
                 holes.add(range);
             }
             previous = sequence;

@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.events.Observer;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -263,7 +264,14 @@ public class SlidingWindowTest {
 
     @Test
     public void testReceive_POSITIVE_HOLE() throws Exception {
+
+        HoleTimeoutObserver holeTimeoutObserver = new HoleTimeoutObserver();
+        PacketsReleasedObserver packetsReleasedObserver = new PacketsReleasedObserver();
+
         window.setSize(4);
+        window.onHoleTimeout(holeTimeoutObserver);
+        window.onPacketsReleased(packetsReleasedObserver);
+
         List<Long> results = new ArrayList<Long>();
 
         Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
@@ -273,6 +281,16 @@ public class SlidingWindowTest {
 
         Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(4l, 4l, results));
         Assert.assertEquals(0, results.size());
+
+        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+
+        Assert.assertNotNull(holeTimeoutObserver.hole);
+        Assert.assertEquals(1l, holeTimeoutObserver.hole.startExclusive);
+        Assert.assertEquals(3l, holeTimeoutObserver.hole.endInclusive);
+
+        Assert.assertNotNull(packetsReleasedObserver.packets);
+        Assert.assertEquals(1, packetsReleasedObserver.packets.size());
+        Assert.assertEquals(new Long(4), packetsReleasedObserver.packets.get(0));
     }
 
     @Test
@@ -361,17 +379,37 @@ public class SlidingWindowTest {
         List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
         Assert.assertEquals(1, holes.size());
         Assert.assertEquals(2L, holes.get(0).startExclusive);
-        Assert.assertEquals(4L, holes.get(0).endInclusive);
+        Assert.assertEquals(3L, holes.get(0).endInclusive);
 
         keys.add(6l);
         holes = window.getHoles(keys);
         Assert.assertEquals(2, holes.size());
 
         Assert.assertEquals(2L, holes.get(0).startExclusive);
-        Assert.assertEquals(4L, holes.get(0).endInclusive);
+        Assert.assertEquals(3L, holes.get(0).endInclusive);
 
         Assert.assertEquals(4L, holes.get(1).startExclusive);
-        Assert.assertEquals(6L, holes.get(1).endInclusive);
+        Assert.assertEquals(5L, holes.get(1).endInclusive);
+    }
+
+    private class HoleTimeoutObserver implements Observer<SlidingWindow.HoleRange> {
+
+        protected SlidingWindow.HoleRange hole;
+
+        @Override
+        public void notify(Object sender, SlidingWindow.HoleRange item) {
+            hole = item;
+        }
+    }
+
+    private class PacketsReleasedObserver implements Observer<List<Long>> {
+
+        protected List<Long> packets;
+
+        @Override
+        public void notify(Object sender, List<Long> items) {
+            packets = items;
+        }
     }
 
 }
