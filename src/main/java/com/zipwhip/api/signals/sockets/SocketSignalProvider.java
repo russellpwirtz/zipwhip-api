@@ -106,10 +106,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             @Override
             public void notify(Object sender, Command command) {
 
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Received a response from the server: " + command);
-                }
-
                 // Check if this command has a valid version number associated with it...
                 if (command.getVersion() != null && command.getVersion().getValue() > 0) {
 
@@ -132,6 +128,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                     // This list will be populated with the sequential packets that should be released
                     List<Command> commandResults = new ArrayList<Command>();
+
+                    LOGGER.debug("Signal version " + command.getVersion().getValue());
 
                     SlidingWindow.ReceiveResult result = slidingWindows.get(versionKey).receive(command.getVersion().getValue(), command, commandResults);
 
@@ -680,6 +678,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Observer<SlidingWindow.HoleRange> signalHoleObserver = new Observer<SlidingWindow.HoleRange>() {
         @Override
         public void notify(Object sender, SlidingWindow.HoleRange hole) {
+            LOGGER.debug("Signal hole detected, requesting backfill for  " + hole.toString());
             connection.send(new BackfillCommand(hole.getRange(), hole.key));
         }
     };
@@ -687,6 +686,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Observer<List<Command>> packetReleasedObserver = new Observer<List<Command>>() {
         @Override
         public void notify(Object sender, List<Command> commands) {
+            LOGGER.warn(commands.size() + " packets released due to timeout, leaving a hole.");
             handleCommands(commands);
         }
     };

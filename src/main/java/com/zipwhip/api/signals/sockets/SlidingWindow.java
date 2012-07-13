@@ -64,11 +64,11 @@ public class SlidingWindow<P> extends DestroyableBase {
      * Construct a SlidingWindow,
      *
      * @param idealSize                 The ideal size of the sliding window.
-     * @param minimumEvictionSizeMillis The time in milliseconds that a packet will be kept in the window.
+     * @param minimumEvictionTimeMillis The time in milliseconds that a packet will be kept in the window.
      */
-    public SlidingWindow(String key, int idealSize, long minimumEvictionSizeMillis) {
+    public SlidingWindow(String key, int idealSize, long minimumEvictionTimeMillis) {
         this.key = key;
-        window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionSizeMillis);
+        this.window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionTimeMillis);
     }
 
     public long getIndexSequence() {
@@ -199,7 +199,7 @@ public class SlidingWindow<P> extends DestroyableBase {
             List<HoleRange> holes = getHoles(window.keySet());
 
             for (HoleRange hole : holes) {
-                if (sequence.equals(hole.endInclusive + step)) {
+                if (sequence.equals(hole.end + step)) {
                     waitForHole(hole);
                 }
             }
@@ -279,8 +279,8 @@ public class SlidingWindow<P> extends DestroyableBase {
                                 for (HoleRange h : getHoles(window.keySet())) {
 
                                     if (hole.equals(h)) {
-                                        // If it is not filled at this timeout then slide the window to endInclusive.
-                                        indexSequence = hole.endInclusive;
+                                        // If it is not filled at this timeout then slide the window to end.
+                                        indexSequence = hole.end;
                                         List<P> results = getResultsFromIndexSequenceForward(indexSequence);
 
                                         if (!results.isEmpty()) {
@@ -326,8 +326,8 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     protected boolean fillsAHole(long sequence) {
-        Set<Long> keysBefore = new HashSet<Long>(window.keySet());
-        Set<Long> keysAfter = new HashSet<Long>(window.keySet());
+        Set<Long> keysBefore = new TreeSet<Long>(window.keySet());
+        Set<Long> keysAfter = new TreeSet<Long>(window.keySet());
         keysAfter.add(sequence);
 
         return getHoles(keysBefore).size() > getHoles(keysAfter).size();
@@ -341,7 +341,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         for (Long sequence : keys) {
             if (previous != -1 && previous + step != sequence) {
-                HoleRange range = new HoleRange(key, previous, sequence - step);
+                HoleRange range = new HoleRange(key, previous + step, sequence - step);
                 holes.add(range);
             }
             previous = sequence;
@@ -383,19 +383,19 @@ public class SlidingWindow<P> extends DestroyableBase {
     protected static class HoleRange {
 
         protected String key;
-        protected long startExclusive;
-        protected long endInclusive;
+        protected long start;
+        protected long end;
 
-        public HoleRange(String key, long startExclusive, long endInclusive) {
+        public HoleRange(String key, long start, long end) {
             this.key = key;
-            this.startExclusive = startExclusive;
-            this.endInclusive = endInclusive;
+            this.start = start;
+            this.end = end;
         }
 
         public List<Long> getRange() {
             List<Long> range = new ArrayList<Long>();
-            range.add(startExclusive);
-            range.add(endInclusive);
+            range.add(start);
+            range.add(end);
             return range;
         }
 
@@ -403,12 +403,12 @@ public class SlidingWindow<P> extends DestroyableBase {
         public boolean equals(Object obj) {
             if (obj == null || !(obj instanceof HoleRange)) return false;
             HoleRange o = (HoleRange) obj;
-            return o.startExclusive == startExclusive && o.endInclusive == endInclusive;
+            return o.start == start && o.end == end;
         }
 
         @Override
         public String toString() {
-            return "[" + startExclusive + "," + endInclusive + "]";
+            return "[" + start + "," + end + "]";
         }
     }
 

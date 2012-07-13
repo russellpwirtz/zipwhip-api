@@ -285,8 +285,8 @@ public class SlidingWindowTest {
         Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
 
         Assert.assertNotNull(holeTimeoutObserver.hole);
-        Assert.assertEquals(1l, holeTimeoutObserver.hole.startExclusive);
-        Assert.assertEquals(3l, holeTimeoutObserver.hole.endInclusive);
+        Assert.assertEquals(2l, holeTimeoutObserver.hole.start);
+        Assert.assertEquals(3l, holeTimeoutObserver.hole.end);
 
         Assert.assertNotNull(packetsReleasedObserver.packets);
         Assert.assertEquals(1, packetsReleasedObserver.packets.size());
@@ -354,6 +354,8 @@ public class SlidingWindowTest {
         Assert.assertFalse(window.hasHoles(window.window.keySet()));
         window.receive(4l, 4l, results);
         Assert.assertTrue(window.hasHoles(window.window.keySet()));
+        window.receive(3l, 3l, results);
+        Assert.assertFalse(window.hasHoles(window.window.keySet()));
     }
 
     @Test
@@ -378,18 +380,18 @@ public class SlidingWindowTest {
         keys.add(4l);
         List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
         Assert.assertEquals(1, holes.size());
-        Assert.assertEquals(2L, holes.get(0).startExclusive);
-        Assert.assertEquals(3L, holes.get(0).endInclusive);
+        Assert.assertEquals(3L, holes.get(0).start);
+        Assert.assertEquals(3L, holes.get(0).end);
 
         keys.add(6l);
         holes = window.getHoles(keys);
         Assert.assertEquals(2, holes.size());
 
-        Assert.assertEquals(2L, holes.get(0).startExclusive);
-        Assert.assertEquals(3L, holes.get(0).endInclusive);
+        Assert.assertEquals(3L, holes.get(0).start);
+        Assert.assertEquals(3L, holes.get(0).end);
 
-        Assert.assertEquals(4L, holes.get(1).startExclusive);
-        Assert.assertEquals(5L, holes.get(1).endInclusive);
+        Assert.assertEquals(5L, holes.get(1).start);
+        Assert.assertEquals(5L, holes.get(1).end);
     }
 
     private class HoleTimeoutObserver implements Observer<SlidingWindow.HoleRange> {
