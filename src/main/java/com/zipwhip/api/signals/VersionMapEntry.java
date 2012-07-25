@@ -66,4 +66,21 @@ public class VersionMapEntry implements Serializable {
 		return result;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("VersionMapEntry [");
+		if (key != null) {
+			builder.append("key=");
+			builder.append(key);
+			builder.append(", ");
+		}
+		if (value != null) {
+			builder.append("value=");
+			builder.append(value);
+		}
+		builder.append("]");
+		return builder.toString();
+	}
+
 }
