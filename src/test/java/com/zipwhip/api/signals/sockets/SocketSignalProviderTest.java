@@ -1,11 +1,13 @@
 package com.zipwhip.api.signals.sockets;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
@@ -227,6 +229,99 @@ public class SocketSignalProviderTest {
         assertEquals(1l, versionChangedObserver.versions.get(0));
         assertEquals(3l, versionChangedObserver.versions.get(1));
         assertEquals(4l, versionChangedObserver.versions.get(2));
+    }
+
+    @Test
+    public void testOnMuchHigherVersionReceived() throws Exception {
+
+        BasicConfigurator.configure();
+
+        SignalObserver signalObserver = new SignalObserver();
+        provider.onSignalReceived(signalObserver);
+
+        SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
+        provider.onSignalCommandReceived(signalCommandObserver);
+
+        VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
+        provider.onVersionChanged(versionChangedObserver);
+
+        connection.send(null);
+        Signal signal = new Signal();
+        SignalCommand signalCommand = new SignalCommand(signal);
+        VersionMapEntry versionMapEntry = new VersionMapEntry("key", 200001l);
+        signalCommand.setVersion(versionMapEntry);
+
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+
+        connection.mockReceive(signalCommand);
+
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        signal = new Signal();
+        signalCommand = new SignalCommand(signal);
+        versionMapEntry = new VersionMapEntry("key", 300000l);
+        signalCommand.setVersion(versionMapEntry);
+        signalObserver.signalReceived = false;
+        signalCommandObserver.signalCommandReceived = false;
+        connection.mockReceive(signalCommand);
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        assertTrue(signalObserver.isSignalReceived());
+        assertTrue(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(2, signalObserver.signalReceivedCount);
+        assertEquals(2, signalCommandObserver.signalCommandReceivedCount);
+
+        assertEquals(2, versionChangedObserver.versions.size());
+        assertEquals(200001l, versionChangedObserver.versions.get(0));
+        assertEquals(300000l, versionChangedObserver.versions.get(1));
+    }
+
+    @Test
+    public void testOnMuchHigherVersionReceivedAfterInit() throws Exception {
+
+        BasicConfigurator.configure();
+
+        Map<String, Long> versions = new HashMap<String, Long>();
+        versions.put("key", 200001l);
+        provider.setVersions(versions);
+        SignalObserver signalObserver = new SignalObserver();
+        provider.onSignalReceived(signalObserver);
+
+        SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
+        provider.onSignalCommandReceived(signalCommandObserver);
+
+        VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
+        provider.onVersionChanged(versionChangedObserver);
+
+        Signal signal = new Signal();
+        SignalCommand signalCommand = new SignalCommand(signal);
+        VersionMapEntry versionMapEntry = new VersionMapEntry("key", 300000l);
+        signalCommand.setVersion(versionMapEntry);
+
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+
+        connection.mockReceive(signalCommand);
+
+        assertFalse(signalObserver.isSignalReceived());
+        assertFalse(signalCommandObserver.isSignalCommandReceived());
+        assertEquals(0, signalObserver.signalReceivedCount);
+        assertEquals(0, signalCommandObserver.signalCommandReceivedCount);
+
+        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        assertEquals(1, signalObserver.signalReceivedCount);
+        assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
+
+        assertEquals(1, versionChangedObserver.versions.size());
+        assertEquals(300000l, versionChangedObserver.versions.get(0));
     }
 
     @Test

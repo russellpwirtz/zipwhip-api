@@ -2,6 +2,7 @@ package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.events.Observer;
 import junit.framework.Assert;
+import org.apache.log4j.BasicConfigurator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -320,6 +321,23 @@ public class SlidingWindowTest {
     }
 
     @Test
+    public void testReceive_NEGATIVE_HOLE_OnInit() throws Exception {
+
+        BasicConfigurator.configure();
+
+        List<Long> results = new ArrayList<Long>();
+        window.setIndexSequence(200000l);
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 1l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(1), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(1l, window.getIndexSequence());
+        Assert.assertEquals(1, window.window.size());
+    }
+
+    @Test
     public void testGetValueAtLowestSequence() throws Exception {
 
         List<Long> results = new ArrayList<Long>();
@@ -392,6 +410,35 @@ public class SlidingWindowTest {
 
         Assert.assertEquals(5L, holes.get(1).start);
         Assert.assertEquals(5L, holes.get(1).end);
+    }
+
+    @Test
+    public void testGetHolesAfterInit() throws Exception {
+
+        window.setIndexSequence(2L);
+
+        Set<Long> keys = new HashSet<Long>();
+        Assert.assertEquals(0, window.getHoles(keys).size());
+
+
+        keys.add(5l);
+        List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
+        Assert.assertEquals(1, holes.size());
+        Assert.assertEquals(3L, holes.get(0).start);
+        Assert.assertEquals(4L, holes.get(0).end);
+    }
+
+    @Test
+    public void testGetHolesAfterIntoAtZero() throws Exception {
+
+        Set<Long> keys = new HashSet<Long>();
+        Assert.assertEquals(0, window.getHoles(keys).size());
+
+        keys.add(5l);
+        List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
+        Assert.assertEquals(1, holes.size());
+        Assert.assertEquals(1L, holes.get(0).start);
+        Assert.assertEquals(4L, holes.get(0).end);
     }
 
     private class HoleTimeoutObserver implements Observer<SlidingWindow.HoleRange> {

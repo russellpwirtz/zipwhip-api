@@ -132,33 +132,30 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                     LOGGER.debug("Signal version " + command.getVersion().getValue());
 
-                    handleCommand(command);
+                    SlidingWindow.ReceiveResult result = slidingWindows.get(versionKey).receive(command.getVersion().getValue(), command, commandResults);
 
-                    // We're pulling SlidingWindow because we've seen some edge case issues that are not handled correctly.
-//                    SlidingWindow.ReceiveResult result = slidingWindows.get(versionKey).receive(command.getVersion().getValue(), command, commandResults);
-//
-//                    switch (result) {
-//                        case EXPECTED_SEQUENCE:
-//                            LOGGER.debug("EXPECTED_SEQUENCE");
-//                            handleCommands(commandResults);
-//                            break;
-//                        case HOLE_FILLED:
-//                            LOGGER.debug("HOLE_FILLED");
-//                            handleCommands(commandResults);
-//                            break;
-//                        case DUPLICATE_SEQUENCE:
-//                            LOGGER.warn("DUPLICATE_SEQUENCE");
-//                            break;
-//                        case POSITIVE_HOLE:
-//                            LOGGER.warn("POSITIVE_HOLE");
-//                            break;
-//                        case NEGATIVE_HOLE:
-//                            LOGGER.debug("NEGATIVE_HOLE");
-//                            handleCommands(commandResults);
-//                            break;
-//                        default:
-//                            LOGGER.warn("UNKNOWN_RESULT");
-//                    }
+                    switch (result) {
+                        case EXPECTED_SEQUENCE:
+                            LOGGER.debug("EXPECTED_SEQUENCE");
+                            handleCommands(commandResults);
+                            break;
+                        case HOLE_FILLED:
+                            LOGGER.debug("HOLE_FILLED");
+                            handleCommands(commandResults);
+                            break;
+                        case DUPLICATE_SEQUENCE:
+                            LOGGER.warn("DUPLICATE_SEQUENCE");
+                            break;
+                        case POSITIVE_HOLE:
+                            LOGGER.warn("POSITIVE_HOLE");
+                            break;
+                        case NEGATIVE_HOLE:
+                            LOGGER.debug("NEGATIVE_HOLE");
+                            handleCommands(commandResults);
+                            break;
+                        default:
+                            LOGGER.warn("UNKNOWN_RESULT");
+                    }
                 } else {
                     // Non versioned command, not windowed
                     handleCommand(command);

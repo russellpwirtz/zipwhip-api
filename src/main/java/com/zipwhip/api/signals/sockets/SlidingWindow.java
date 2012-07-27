@@ -337,10 +337,10 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         List<HoleRange> holes = new ArrayList<HoleRange>();
 
-        long previous = -1;
+        long previous = indexSequence;
 
         for (Long sequence : keys) {
-            if (previous != -1 && previous + step != sequence) {
+            if (previous >= 0 && previous + step != sequence) {
                 HoleRange range = new HoleRange(key, previous + step, sequence - step);
                 holes.add(range);
             }
