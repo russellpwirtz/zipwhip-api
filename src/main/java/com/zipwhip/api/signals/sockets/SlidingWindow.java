@@ -166,19 +166,6 @@ public class SlidingWindow<P> extends DestroyableBase {
             return ReceiveResult.DUPLICATE_SEQUENCE;
         }
 
-        // EXPECTED_SEQUENCE
-        if (indexSequence <= 0 || (sequence.equals(indexSequence + step) && !hasHoles(window.keySet()))) {
-
-            // Add a single result
-            results.add(value);
-
-            indexSequence = sequence;
-            window.put(sequence, value);
-            window.shrink();
-
-            return ReceiveResult.EXPECTED_SEQUENCE;
-        }
-
         // HOLE_FILLED
         if (hasHoles(window.keySet()) && fillsAHole(sequence)) {
 
@@ -189,6 +176,19 @@ public class SlidingWindow<P> extends DestroyableBase {
                 results.addAll(getResultsFromIndexSequenceForward(sequence));
             }
             return ReceiveResult.HOLE_FILLED;
+        }
+
+        // EXPECTED_SEQUENCE
+        if (indexSequence <= 0 || sequence.equals(indexSequence + step)) {
+
+            // Add a single result
+            results.add(value);
+
+            indexSequence = sequence;
+            window.put(sequence, value);
+            window.shrink();
+
+            return ReceiveResult.EXPECTED_SEQUENCE;
         }
 
         // POSITIVE_HOLE
@@ -211,11 +211,13 @@ public class SlidingWindow<P> extends DestroyableBase {
         // NEGATIVE_HOLE
         if (sequence < indexSequence + step) {
 
-            // Add a single result
-            results.add(value);
+            // This sequence is much lower, must be a reset
+            if (indexSequence + step - sequence > window.getIdealSize()) {
+                results.add(value);
+                indexSequence = sequence;
+                window.clear();
+            }
 
-            indexSequence = sequence;
-            window.clear();
             window.put(sequence, value);
 
             return ReceiveResult.NEGATIVE_HOLE;

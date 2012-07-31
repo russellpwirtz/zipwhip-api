@@ -283,7 +283,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(4l, 4l, results));
         Assert.assertEquals(0, results.size());
 
-        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(2000); // Wait so that we will stop trying to fill the hole
 
         Assert.assertNotNull(holeTimeoutObserver.hole);
         Assert.assertEquals(2l, holeTimeoutObserver.hole.start);
@@ -316,8 +316,103 @@ public class SlidingWindowTest {
 
         Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 10l, results));
         Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(10), results.get(0));
         Assert.assertEquals(1l, window.getIndexSequence());
         Assert.assertEquals(1, window.window.size());
+    }
+
+    @Test
+    public void testReceive_NEGATIVE_HOLE_InsideWindow() throws Exception {
+
+        HoleTimeoutObserver holeTimeoutObserver = new HoleTimeoutObserver();
+        PacketsReleasedObserver packetsReleasedObserver = new PacketsReleasedObserver();
+
+        window.setSize(10);
+        window.onHoleTimeout(holeTimeoutObserver);
+        window.onPacketsReleased(packetsReleasedObserver);
+
+        List<Long> results = new ArrayList<Long>();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(1), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(2l, 2l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(2), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(5l, 5l, results));
+        Assert.assertEquals(0, results.size());
+        results.clear();
+
+        Thread.sleep(2000); // Wait so that we will stop trying to fill the hole
+
+        Assert.assertNotNull(holeTimeoutObserver.hole);
+        Assert.assertEquals(3l, holeTimeoutObserver.hole.start);
+        Assert.assertEquals(4l, holeTimeoutObserver.hole.end);
+
+        Assert.assertNotNull(packetsReleasedObserver.packets);
+        Assert.assertEquals(1, packetsReleasedObserver.packets.size());
+        Assert.assertEquals(new Long(5), packetsReleasedObserver.packets.get(0));
+
+        Assert.assertEquals(5l, window.getIndexSequence());
+
+        // Since this negative hole was inside the window it gets dropped now that we moved on
+        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(3l, 3l, results));
+        Assert.assertEquals(0, results.size());
+        Assert.assertEquals(5l, window.getIndexSequence());
+    }
+
+    @Test
+    public void testReceive_NEGATIVE_HOLE_OutsideWindow() throws Exception {
+
+        HoleTimeoutObserver holeTimeoutObserver = new HoleTimeoutObserver();
+        PacketsReleasedObserver packetsReleasedObserver = new PacketsReleasedObserver();
+
+        window.setSize(5);
+        window.onHoleTimeout(holeTimeoutObserver);
+        window.onPacketsReleased(packetsReleasedObserver);
+
+        List<Long> results = new ArrayList<Long>();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(1), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(5l, 5l, results));
+        Assert.assertEquals(0, results.size());
+        results.clear();
+
+        Thread.sleep(2000); // Wait so that we will stop trying to fill the hole
+
+        Assert.assertNotNull(holeTimeoutObserver.hole);
+        Assert.assertEquals(2l, holeTimeoutObserver.hole.start);
+        Assert.assertEquals(4l, holeTimeoutObserver.hole.end);
+
+        Assert.assertNotNull(packetsReleasedObserver.packets);
+        Assert.assertEquals(1, packetsReleasedObserver.packets.size());
+        Assert.assertEquals(new Long(5), packetsReleasedObserver.packets.get(0));
+
+        Assert.assertEquals(5l, window.getIndexSequence());
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(6l, 6l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(6), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(7l, 7l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(7), results.get(0));
+        results.clear();
+
+        // Since this negative hole was outside the window it gets dropped now that we moved on
+        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(2l, 2l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(2), results.get(0));
+        Assert.assertEquals(2l, window.getIndexSequence());
     }
 
     @Test
