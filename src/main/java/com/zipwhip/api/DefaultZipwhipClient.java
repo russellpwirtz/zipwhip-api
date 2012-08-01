@@ -33,11 +33,13 @@ import com.zipwhip.util.StringUtil;
  */
 public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements ZipwhipClient {
 
-    @Override
-    public User getUser() throws Exception {
-        final Map<String, Object> params = new HashMap<String, Object>();
-
-        return responseParser.parseUser(executeSync(USER_GET, params));
+    /**
+     * Create a new DefaultZipwhipClient with out a {@code SignalProvider}
+     *
+     * @param connection The connection to Zipwhip API
+     */
+    public DefaultZipwhipClient(ApiConnection connection) {
+        super(connection, null);
     }
 
     /**
@@ -755,6 +757,13 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("loc", location);
 
         executeSync(USER_SAVE, params);
+    }
+
+    @Override
+    public User getUser() throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        return responseParser.parseUser(executeSync(USER_GET, params));
     }
 
     @Override

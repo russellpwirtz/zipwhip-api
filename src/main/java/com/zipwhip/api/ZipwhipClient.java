@@ -8,11 +8,9 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.signals.presence.ProductLine;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Future;
 
 /**
@@ -22,9 +20,6 @@ import java.util.concurrent.Future;
  * @author Michael
  */
 public interface ZipwhipClient extends Destroyable {
-
-
-    public User getUser() throws Exception;
 
     /**
      * Send a message via Zipwhip.
@@ -39,7 +34,7 @@ public interface ZipwhipClient extends Destroyable {
      * Send a message via Zipwhip.
      *
      * @param address Zipwhip {@link Address} scheme.
-     * @param body The body of the message to be sent.
+     * @param body    The body of the message to be sent.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
      */
@@ -48,8 +43,8 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Send a message via Zipwhip.
      *
-     * @param address Zipwhip {@link Address} scheme.
-     * @param body The body of the message to be sent.
+     * @param address  Zipwhip {@link Address} scheme.
+     * @param body     The body of the message to be sent.
      * @param fromName The name of the sender of the message.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
@@ -60,7 +55,7 @@ public interface ZipwhipClient extends Destroyable {
      * Send a message via Zipwhip.
      *
      * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
+     * @param body    The body of the message to be sent.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
      */
@@ -70,7 +65,7 @@ public interface ZipwhipClient extends Destroyable {
      * Send a message via Zipwhip.
      *
      * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
+     * @param body    The body of the message to be sent.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
      */
@@ -79,8 +74,8 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Send a message via Zipwhip.
      *
-     * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
+     * @param address  The address, generally the mobile number, of the message recipient.
+     * @param body     The body of the message to be sent.
      * @param fromName The name of the sender of the message.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
@@ -90,9 +85,9 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Send a message via Zipwhip.
      *
-     * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
-     * @param fromName The name of the sender of the message.
+     * @param address       The address, generally the mobile number, of the message recipient.
+     * @param body          The body of the message to be sent.
+     * @param fromName      The name of the sender of the message.
      * @param advertisement A code indicating to Zipwhip what should be appended to the message.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
@@ -102,9 +97,9 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Send a message via Zipwhip.
      *
-     * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
-     * @param fromName The name of the sender of the message.
+     * @param address       The address, generally the mobile number, of the message recipient.
+     * @param body          The body of the message to be sent.
+     * @param fromName      The name of the sender of the message.
      * @param advertisement A code indicating to Zipwhip what should be appended to the message.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
@@ -114,8 +109,8 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Send a message via Zipwhip.
      *
-     * @param address The address, generally the mobile number, of the message recipient.
-     * @param body The body of the message to be sent.
+     * @param address     The address, generally the mobile number, of the message recipient.
+     * @param body        The body of the message to be sent.
      * @param fromAddress The send strategy.
      * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
      * @throws Exception If an error occurred while sending the message or parsing the response.
@@ -125,7 +120,7 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Create a new group.
      *
-     * @param type The type of group, eg. reply-all.
+     * @param type          The type of group, eg. reply-all.
      * @param advertisement A code indicating to Zipwhip what should be appended to the message.
      * @return A {@link Contact} representing the new group.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
@@ -150,25 +145,34 @@ public interface ZipwhipClient extends Destroyable {
     Contact saveUser(Contact contact) throws Exception;
 
     /**
-     * Saves or updates the user information.  For all values for which null is passed in, that value will remain unchanged, relative to
-     * the website.
-     * to the website.
-     * @param firstName
-     * @param lastName
-     * @param email
-     * @param phoneKey
-     * @param location
-     * @param notes
+     * Saves or updates the user information.  For all values for which null is passed in, that value will remain unchanged,
+     * relative to the website.
+     *
+     * @param firstName The first name of the user.
+     * @param lastName  The last name of the user.
+     * @param email     The email of the user.
+     * @param phoneKey  Indicates the user's phone type.
+     * @param location  The user's location.
+     * @param notes     Free text.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public void saveUser(String firstName, String lastName, String email, String phoneKey, String location, String notes) throws Exception;
+    void saveUser(String firstName, String lastName, String email, String phoneKey, String location, String notes) throws Exception;
+
+    /**
+     * Get the user associated with the currently authenticated sessionKey for this client.
+     *
+     * @return The the user associated with the currently authenticated sessionKey for this client.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    User getUser() throws Exception;
 
     /**
      * Returns a Message object
      *
-     * @deprecated Use {@code getMessage(Long id)}
      * @param uuid - message uuid
      * @return A Message DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     * @deprecated Use {@code getMessage(Long id)}
      */
     Message getMessage(String uuid) throws Exception;
 
@@ -182,26 +186,23 @@ public interface ZipwhipClient extends Destroyable {
     Message getMessage(Long id) throws Exception;
 
     /**
-     * 
      * @return A list of all {@link Device}s associated with the user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Device> listDevices() throws Exception;
+    List<Device> listDevices() throws Exception;
 
     /**
-     * 
      * @return A list of the most recent {@link Conversation}s associated with the user, up to the server's predefined limit.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Conversation> listConversations() throws Exception;
+    List<Conversation> listConversations() throws Exception;
 
     /**
-     *
      * @param limit The maximum limit of how many conversations to return.
      * @return A list of the most recent {@link Conversation}s associated with the user, up to the specified limit.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Conversation> listConversations(int limit) throws Exception;
+    List<Conversation> listConversations(int limit) throws Exception;
 
     /**
      * @param start Where to start list conversations.  (Zero indexed)
@@ -209,14 +210,13 @@ public interface ZipwhipClient extends Destroyable {
      * @return A list of the most recent {@link Conversation}s associated with the user, up to the specified limit.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Conversation> listConversations(int start, int limit) throws Exception;
+    List<Conversation> listConversations(int start, int limit) throws Exception;
 
     /**
-     *
      * @return A list of all {@link Contact}s associated with the supplied user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response, or the server returns a failure message.
      */
-    public List<Contact> listContacts() throws Exception;
+    List<Contact> listContacts() throws Exception;
 
     /**
      * @param start Where to start list contacts.  (Zero indexed)
@@ -224,23 +224,21 @@ public interface ZipwhipClient extends Destroyable {
      * @return A list of all {@link Contact}s associated with the supplied user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response, or the server returns a failure message.
      */
-    public List<Contact> listContacts(int start, int limit) throws Exception;
-    
-    /**
-     * 
-     * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
-     * @return A boolean which represents whether or not the operation completed successfully.
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-     */
-    public boolean readConversation(String fingerprint) throws Exception;
+    List<Contact> listContacts(int start, int limit) throws Exception;
 
     /**
-     *
      * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
      * @return A boolean which represents whether or not the operation completed successfully.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public boolean deleteConversation(String fingerprint) throws Exception;
+    boolean readConversation(String fingerprint) throws Exception;
+
+    /**
+     * @param fingerprint The fingerprint of the conversation that you wish to mark as read.
+     * @return A boolean which represents whether or not the operation completed successfully.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    boolean deleteConversation(String fingerprint) throws Exception;
 
     /**
      * Returns the contact for the provided contact id.
@@ -249,66 +247,70 @@ public interface ZipwhipClient extends Destroyable {
      * @return A boolean which represents whether or not the operation completed successfully.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
-    public boolean deleteContact(long contactId) throws Exception;
+    boolean deleteContact(long contactId) throws Exception;
 
     /**
      * Returns the most recent messages for the user, up to a limit maintained by the zipwhip server.
-     * @param fingerprint The fingerprint for which you wish to load messages.
-     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-     */
-    public List<Message> listMessagesByFingerprint(String fingerprint) throws Exception;
-
-    /**
-     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
-     * @param fingerprint The fingerprint for which you wish to load messages.
-     * @param limit The maximum number of messages that this call will return.
-     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-     */
-    public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception;
-
-    /**
-     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
-     * @param fingerprint The fingerprint for which you wish to load messages.
-     * @param start Where in the list to start. (Zero indexed)
-     * @param limit The maximum number of messages that this call will return.
-     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-     */
-    public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception;
-
-    /**
      *
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    List<Message> listMessagesByFingerprint(String fingerprint) throws Exception;
+
+    /**
+     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
+     *
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @param limit       The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception;
+
+    /**
+     * Returns the most recent messages for the supplied conversation, up to a the supplied limit.
+     *
+     * @param fingerprint The fingerprint for which you wish to load messages.
+     * @param start       Where in the list to start. (Zero indexed)
+     * @param limit       The maximum number of messages that this call will return.
+     * @return A list consisting of the most recent messages associated with the supplied fingerprint.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception;
+
+    /**
      * @return A list consisting of the most recent messages associated with the user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Message> listMessages() throws Exception;
+    List<Message> listMessages() throws Exception;
 
     /**
      * Returns the most recent messages for the user, up to the supplied limit.
+     *
      * @param limit The maximum number of messages that this call will return.
      * @return A list consisting of the most recent messages associated with this user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Message> listMessages(int limit) throws Exception;
+    List<Message> listMessages(int limit) throws Exception;
 
     /**
      * Returns the most recent messages for the user, up to the supplied limit.
+     *
      * @param start Where in the list to start. (Zero indexed)
      * @param limit The maximum number of messages that this call will return.
      * @return A list consisting of the most recent messages associated with this user.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    public List<Message> listMessages(int start, int limit) throws Exception;
+    List<Message> listMessages(int start, int limit) throws Exception;
 
     /**
      * Delete messages by their corresponding UUIDs.
      *
-     * @deprecated use {@code readMessage(List id)}
      * @param uuids A list of message uuids to delete.
      * @return True for a successful delete otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
+     * @deprecated use {@code readMessage(List id)}
      */
     boolean messageRead(List<String> uuids) throws Exception;
 
@@ -324,10 +326,10 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Read messages by their corresponding UUIDs.
      *
-     * @deprecated use {@code deleteMessage(List ids)}
      * @param uuids A list of message uuids to mark as read.
      * @return True for a successful read otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
+     * @deprecated use {@code deleteMessage(List ids)}
      */
     boolean messageDelete(List<String> uuids) throws Exception;
 
@@ -343,10 +345,10 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Returns a MessageStatus object
      *
-     * @deprecated use {@code getMessageStatus(Long id)}
      * @param uuid - message uuid
      * @return A MessageStatus DTO matching the uuid.
      * @throws Exception if an error occurs communicating with Zipwhip
+     * @deprecated use {@code getMessageStatus(Long id)}
      */
     MessageStatus getMessageStatus(String uuid) throws Exception;
 
@@ -390,9 +392,9 @@ public interface ZipwhipClient extends Destroyable {
      * Send a signal via Zipwhip SignalServer.
      * Generally this is for debug since the SignalServer protocol is proprietary.
      *
-     * @param scope The scope of the signal, ie device.
+     * @param scope   The scope of the signal, ie device.
      * @param channel The channel the signal is on.
-     * @param event The event of the signal.
+     * @param event   The event of the signal.
      * @param payload The content of the signal.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
@@ -410,9 +412,9 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Save a new contact for the user or update an existing contact.
      *
-     * @param address The address of the contact, generally mobile number.
+     * @param address   The address of the contact, generally mobile number.
      * @param firstName Contact's first name.
-     * @param lastName Contact's last name.
+     * @param lastName  Contact's last name.
      * @param phoneKey  Contact's phone type.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
@@ -421,11 +423,11 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Save a new contact for the user or update an existing contact.
      *
-     * @param address The address of the contact, generally mobile number.
+     * @param address   The address of the contact, generally mobile number.
      * @param firstName Contact's first name.
-     * @param lastName Contact's last name.
+     * @param lastName  Contact's last name.
      * @param phoneKey  Contact's phone type.
-     * @param notes Free text.
+     * @param notes     Free text.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception;
@@ -433,21 +435,21 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Save a new contact for the user or update an existing contact.
      *
-     * @param address The address of the contact, generally mobile number.
+     * @param address   The address of the contact, generally mobile number.
      * @param firstName Contact's first name.
-     * @param lastName Contact's last name.
+     * @param lastName  Contact's last name.
      * @param phoneKey  Contact's phone type.
-     * @param notes Free text.
-     * @param location Contact's location
-     * @param email Contact's e-mail address.                 
+     * @param notes     Free text.
+     * @param location  Contact's location
+     * @param email     Contact's e-mail address.
      * @throws Exception if an error occurs communicating with Zipwhip
      */
     void saveContact(String address, String firstName, String lastName, String phoneKey, String notes, String location, String email) throws Exception;
-    
+
     /**
      * Add a member to an existing group.
      *
-     * @param groupAddress The address of the group to add a new member to.
+     * @param groupAddress   The address of the group to add a new member to.
      * @param contactAddress The address, mobile number, of the new contact.
      * @return A {@link Contact} representing the new group member.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
@@ -457,12 +459,12 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Add a member to an existing group.
      *
-     * @param groupAddress The address of the group to add a new member to.
+     * @param groupAddress   The address of the group to add a new member to.
      * @param contactAddress The address, mobile number, of the new contact.
-     * @param firstName Contact's first name.
-     * @param lastName Contact's last name.
-     * @param phoneKey  Contact's phone type.
-     * @param notes Free text.
+     * @param firstName      Contact's first name.
+     * @param lastName       Contact's last name.
+     * @param phoneKey       Contact's phone type.
+     * @param notes          Free text.
      * @return A {@link Contact} representing the new group member.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
@@ -472,7 +474,7 @@ public interface ZipwhipClient extends Destroyable {
      * Toggles the on/off value of Device Carbon in the cloud. The cloud holds the master value that Device Carbon uses
      * to override any other value it has.
      *
-     * @param enabled: turn Device Carbon on/off in the cloud
+     * @param enabled:     turn Device Carbon on/off in the cloud
      * @param versionCode: What version of Device Carbon is being used?
      * @throws Exception if an error occurs communicating with Zipwhip.
      */
@@ -489,6 +491,7 @@ public interface ZipwhipClient extends Destroyable {
 
     /**
      * Register Device Carbon for Push Notifications from Google
+     *
      * @param registrationId - Google provided registrationId to send push notifications too
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
@@ -496,6 +499,7 @@ public interface ZipwhipClient extends Destroyable {
 
     /**
      * Informs Zipwhip of Device Carbon usage statistics
+     *
      * @param totalPhoneMessages - total messages sent/receive on the device
      * @throws Exception
      */
@@ -510,7 +514,7 @@ public interface ZipwhipClient extends Destroyable {
      * 3) Eventually return a valid session key for this device
      *
      * @param mobileNumber: mobile number of the account
-     * @param portal: product that is retrieving a session
+     * @param portal:       product that is retrieving a session
      * @return clientId that is used to finish the challenge process
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
@@ -519,18 +523,17 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Finishes the challenge process and returns a session key
      *
-     * @param clientId: clientId returned by the original sessionChallenge call
+     * @param clientId:      clientId returned by the original sessionChallenge call
      * @param securityToken: The random string that is sent in an ".signup verify" sms to the phone
-     * @param portal: product line to customize the user account for
-     * @param arguments: any extra arguments for the cloud to react to (previously this was ".signup devicecarbonall")
-     * @param userAgent: Device's user agent
+     * @param portal:        product line to customize the user account for
+     * @param arguments:     any extra arguments for the cloud to react to (previously this was ".signup devicecarbonall")
+     * @param userAgent:     Device's user agent
      * @return A session key
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception;
 
     /**
-     *
      * @param packageName
      * @return
      * @throws Exception
@@ -550,7 +553,7 @@ public interface ZipwhipClient extends Destroyable {
      * Query Zipwhip Face Ecosystem for a user's preferred profile image.
      *
      * @param mobileNumber The mobile number of the user you wish to query.
-     * @param thumbnail true if you want a thumbnail, false for the full image
+     * @param thumbnail    true if you want a thumbnail, false for the full image
      * @return A byte[] of the user's image.
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
@@ -560,7 +563,7 @@ public interface ZipwhipClient extends Destroyable {
      * Query Zipwhip Face Ecosystem for a user's preferred profile image.
      *
      * @param mobileNumber The mobile number of the user you wish to query.
-     * @param size the size of thumnail in pixels
+     * @param size         the size of thumnail in pixels
      * @return A byte[] of the user's image.
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
@@ -588,16 +591,16 @@ public interface ZipwhipClient extends Destroyable {
      * Connect to Zipwhip Signals if setup.
      *
      * @param presence a Presence object to pass to the SignalServer
-     * @throws Exception any connection problem
      * @return so you can wait until login succeeds
+     * @throws Exception any connection problem
      */
     Future<Boolean> connect(Presence presence) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
      *
-     * @throws Exception any connection problem
      * @return so you can wait until login succeeds
+     * @throws Exception any connection problem
      */
     Future<Boolean> connect() throws Exception;
 
@@ -618,7 +621,7 @@ public interface ZipwhipClient extends Destroyable {
 
     /**
      * Listen for connection changes. This is a convenience method
-     *
+     * <p/>
      * This observer will be called if:
      * We lose our TCP/IP connection to the SignalServer
      *
@@ -634,7 +637,6 @@ public interface ZipwhipClient extends Destroyable {
     ApiConnection getConnection();
 
     /**
-     *
      * @param connection the connection to use
      */
     void setConnection(ApiConnection connection);
