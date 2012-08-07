@@ -99,7 +99,7 @@ public abstract class ObservableChannelHandler extends SimpleChannelUpstreamHand
 	@Override
 	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
 
-		LOG.debug("channelConnected");
+		LOG.debug("channelConnected " + this);
 
 		reconnectStrategy.start();
 		connectEvent.notifyObservers(this, Boolean.TRUE);
