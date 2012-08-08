@@ -317,9 +317,11 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @return true if holes exist, otherwise false
      */
     protected boolean hasHoles(Set<Long> keys) {
-        long previous = -1;
+
+        long previous = indexSequence;
+
         for (Long sequence : keys) {
-            if (previous != -1 && previous + step != sequence) {
+            if (sequence > indexSequence && previous + step != sequence) {
                 return true;
             }
             previous = sequence;

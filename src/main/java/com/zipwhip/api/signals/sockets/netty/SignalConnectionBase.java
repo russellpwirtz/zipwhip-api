@@ -33,420 +33,423 @@ import com.zipwhip.lifecycle.CascadingDestroyableBase;
  */
 public abstract class SignalConnectionBase extends CascadingDestroyableBase implements SignalConnection {
 
-	protected static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
+    protected static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
 
-	public static final int CONNECTION_TIMEOUT_SECONDS = 45;
+    public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
-	private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping inactive seconds
-	private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
+    private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping inactive seconds
+    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
-	private String host = "74.209.177.242";
-	private int port = 3000;
+    private String host = "74.209.177.242";
+    private int port = 3000;
 
-	private int pingTimeout = DEFAULT_PING_TIMEOUT;
-	private int pongTimeout = DEFAULT_PONG_TIMEOUT;
+    private int pingTimeout = DEFAULT_PING_TIMEOUT;
+    private int pongTimeout = DEFAULT_PONG_TIMEOUT;
 
-	private ExecutorService executor;
+    private ExecutorService executor;
 
-	private ScheduledFuture<?> pingTimeoutFuture;
-	private ScheduledFuture<?> pongTimeoutFuture;
-	private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
+    private ScheduledFuture<?> pingTimeoutFuture;
+    private ScheduledFuture<?> pongTimeoutFuture;
+    private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
-	protected ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
-	protected ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
-	protected ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
-	protected ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
-	protected ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
+    protected ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
+    protected ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
+    protected ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+    protected ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
+    protected ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
-	protected ReconnectStrategy reconnectStrategy;
-	private Runnable onSocketActivity;
+    protected ReconnectStrategy reconnectStrategy;
+    private Runnable onSocketActivity;
 
-	protected Channel channel;
-	private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
+    protected Channel channel;
+    private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
-	protected boolean networkDisconnect;
-	protected boolean doKeepalives;
+    protected boolean networkDisconnect;
+    protected boolean doKeepalives;
 
-	public void init(ReconnectStrategy reconnectStrategy) {
+    public void init(ReconnectStrategy reconnectStrategy) {
 
-		this.link(pingEvent);
-		this.link(receiveEvent);
-		this.link(connectEvent);
-		this.link(exceptionEvent);
-		this.link(disconnectEvent);
-		this.link(reconnectStrategy);
+        this.link(pingEvent);
+        this.link(receiveEvent);
+        this.link(connectEvent);
+        this.link(exceptionEvent);
+        this.link(disconnectEvent);
+        this.link(reconnectStrategy);
 
-		this.reconnectStrategy = reconnectStrategy;
-		this.reconnectStrategy.setSignalConnection(this);
-		this.doKeepalives = true;
-	}
+        this.reconnectStrategy = reconnectStrategy;
+        this.reconnectStrategy.setSignalConnection(this);
+        this.doKeepalives = true;
+    }
 
-	@Override
-	public synchronized Future<Boolean> connect() throws Exception {
+    @Override
+    public synchronized Future<Boolean> connect() throws Exception {
 
-		// Enforce a single connection
-		if ((channel != null) && channel.isConnected()) {
-			throw new Exception("Tried to connect but we already have a channel connected!");
-		}
+        // Enforce a single connection
+        if ((channel != null) && channel.isConnected()) {
+            throw new Exception("Tried to connect but we already have a channel connected!");
+        }
 
-		channel = channelFactory.newChannel(getPipeline());
+        channel = channelFactory.newChannel(getPipeline());
 
-		// We are deprecating this, but to support our custom Netty change let's check via reflection
-		if (onSocketActivity != null) {
+        // We are deprecating this, but to support our custom Netty change let's check via reflection
+        if (onSocketActivity != null) {
 
-			try {
-				Method setOnSocketActivityMethod = channel.getClass().getMethod("setOnSocketActivity", Runnable.class);
+            try {
+                Method setOnSocketActivityMethod = channel.getClass().getMethod("setOnSocketActivity", Runnable.class);
 
-				if (setOnSocketActivityMethod != null) {
-					setOnSocketActivityMethod.invoke(channel, onSocketActivity);
-				}
-			} catch (NoSuchMethodException e) {
-				LOGGER.warn("Tried setting onSocketActivity Runnable into the channel but the method does not exist in this build of Netty.");
-			}
-		}
+                if (setOnSocketActivityMethod != null) {
+                    setOnSocketActivityMethod.invoke(channel, onSocketActivity);
+                }
+            } catch (NoSuchMethodException e) {
+                LOGGER.warn("Tried setting onSocketActivity Runnable into the channel but the method does not exist in this build of Netty.");
+            }
+        }
 
-		FutureTask<Boolean> task;
-		InetSocketAddress address = new InetSocketAddress(host, port);
+        FutureTask<Boolean> task;
+        InetSocketAddress address = new InetSocketAddress(host, port);
 
-		if (address.isUnresolved()) {
-			task = new FutureTask<Boolean>(new Callable<Boolean>() {
-				@Override
-				public Boolean call() throws Exception {
-					return Boolean.FALSE;
-				}
-			});
-		} else {
-			final ChannelFuture channelFuture = channel.connect(address);
+        if (address.isUnresolved()) {
+            task = new FutureTask<Boolean>(new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    return Boolean.FALSE;
+                }
+            });
+        } else {
 
-			task = new FutureTask<Boolean>(new Callable<Boolean>() {
+            LOGGER.debug("Connecting to " + host + ":" + port);
 
-				@Override
-				public Boolean call() throws Exception {
+            final ChannelFuture channelFuture = channel.connect(address);
 
-					boolean socketConnected = false;
-					networkDisconnect = true; // Assume a network failure will
-					// occur during connect
+            task = new FutureTask<Boolean>(new Callable<Boolean>() {
 
-					if (channelFuture != null) {
-						channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                @Override
+                public Boolean call() throws Exception {
 
-						socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
+                    boolean socketConnected = false;
+                    networkDisconnect = true; // Assume a network failure will
+                    // occur during connect
 
-						networkDisconnect = socketConnected;
+                    if (channelFuture != null) {
+                        channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-					}
-					return socketConnected;
+                        socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
 
-				}
-			});
+                        networkDisconnect = socketConnected;
 
-			if (executor == null) {
-				executor = Executors.newSingleThreadExecutor();
-			}
-			executor.execute(task);
-		}
-		return task;
-	}
+                    }
+                    return socketConnected;
 
-	@Override
-	public synchronized Future<Void> disconnect() {
-		return disconnect(false);
-	}
+                }
+            });
 
-	@Override
-	public synchronized Future<Void> disconnect(final boolean network) {
+            if (executor == null) {
+                executor = Executors.newSingleThreadExecutor();
+            }
+            executor.execute(task);
+        }
+        return task;
+    }
 
-		FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
-			@Override
-			public Void call() throws Exception {
+    @Override
+    public synchronized Future<Void> disconnect() {
+        return disconnect(false);
+    }
 
-				networkDisconnect = network;
+    @Override
+    public synchronized Future<Void> disconnect(final boolean network) {
 
-				// If this was not an automatic disconnect stop the retry logic
-				if (!networkDisconnect) {
-					reconnectStrategy.stop();
-				}
+        FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
 
-				if (channel != null) {
+                networkDisconnect = network;
 
-					ChannelFuture closeFuture = channel.close().await();
-					LOGGER.debug("Closing channel success was " + closeFuture.isSuccess());
+                // If this was not an automatic disconnect stop the retry logic
+                if (!networkDisconnect) {
+                    reconnectStrategy.stop();
+                }
 
-					if (closeFuture.isSuccess()) {
-						disconnectEvent.notifyObservers(this, networkDisconnect);
-					}
-				}
+                if (channel != null) {
 
-				executor.shutdownNow();
-				executor = null;
+                    ChannelFuture closeFuture = channel.close().await();
+                    LOGGER.debug("Closing channel success was " + closeFuture.isSuccess());
 
-				if (pingTimeoutFuture != null) {
-					pingTimeoutFuture.cancel(true);
-				}
+                    if (closeFuture.isSuccess()) {
+                        disconnectEvent.notifyObservers(this, networkDisconnect);
+                    }
+                }
 
-				if (pongTimeoutFuture != null) {
-					pongTimeoutFuture.cancel(true);
-				}
-
-				return null;
-			}
-		});
-
-		if (executor == null) {
-			executor = Executors.newSingleThreadExecutor();
-		}
-		executor.execute(task);
-
-		return task;
-	}
-
-	@Override
-	public void keepalive() {
-
-		LOGGER.debug("Keepalive requested!");
-
-		cancelPong();
-		schedulePing(true);
-	}
-
-	@Override
-	public void startKeepalives() {
-
-		LOGGER.debug("Start keepalives requested!");
-
-		doKeepalives = true;
-		schedulePing(false);
-	}
-
-	@Override
-	public void stopKeepalives() {
-
-		LOGGER.debug("Start keepalives requested!");
-
-		doKeepalives = false;
-		cancelPing();
-	}
-
-	@Override
-	public void send(SerializingCommand command) {
-		// send this over the wire.
-		channel.write(command);
-	}
-
-	@Override
-	public boolean isConnected() {
-		return (channel != null) && channel.isConnected();
-	}
-
-	@Override
-	public void onMessageReceived(Observer<Command> observer) {
-		receiveEvent.addObserver(observer);
-	}
-
-	@Override
-	public void onConnect(Observer<Boolean> observer) {
-		connectEvent.addObserver(observer);
-	}
-
-	@Override
-	public void onDisconnect(Observer<Boolean> observer) {
-		disconnectEvent.addObserver(observer);
-	}
-
-	@Override
-	public void removeOnConnectObserver(Observer<Boolean> observer) {
-		connectEvent.removeObserver(observer);
-	}
-
-	@Override
-	public void removeOnDisconnectObserver(Observer<Boolean> observer) {
-		disconnectEvent.removeObserver(observer);
-	}
-
-	@Override
-	public void onPingEvent(Observer<PingEvent> observer) {
-		pingEvent.addObserver(observer);
-	}
-
-	@Override
-	public void onExceptionCaught(Observer<String> observer) {
-		exceptionEvent.addObserver(observer);
-	}
+                executor.shutdownNow();
+                executor = null;
 
-	@Override
-	public void setHost(String host) {
-		this.host = host;
-	}
+                if (pingTimeoutFuture != null) {
+                    pingTimeoutFuture.cancel(true);
+                }
 
-	@Override
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	@Override
-	public int getPingTimeout() {
-		return pingTimeout;
-	}
-
-	@Override
-	public void setPingTimeout(int pingTimeout) {
-		this.pingTimeout = pingTimeout;
-	}
+                if (pongTimeoutFuture != null) {
+                    pongTimeoutFuture.cancel(true);
+                }
+
+                return null;
+            }
+        });
+
+        if (executor == null) {
+            executor = Executors.newSingleThreadExecutor();
+        }
+        executor.execute(task);
+
+        return task;
+    }
+
+    @Override
+    public void keepalive() {
+
+        LOGGER.debug("Keepalive requested!");
+
+        cancelPong();
+        schedulePing(true);
+    }
+
+    @Override
+    public void startKeepalives() {
+
+        LOGGER.debug("Start keepalives requested!");
+
+        doKeepalives = true;
+        schedulePing(false);
+    }
+
+    @Override
+    public void stopKeepalives() {
+
+        LOGGER.debug("Start keepalives requested!");
+
+        doKeepalives = false;
+        cancelPing();
+    }
+
+    @Override
+    public void send(SerializingCommand command) {
+        // send this over the wire.
+        channel.write(command);
+    }
+
+    @Override
+    public boolean isConnected() {
+        return (channel != null) && channel.isConnected();
+    }
+
+    @Override
+    public void onMessageReceived(Observer<Command> observer) {
+        receiveEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onConnect(Observer<Boolean> observer) {
+        connectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onDisconnect(Observer<Boolean> observer) {
+        disconnectEvent.addObserver(observer);
+    }
+
+    @Override
+    public void removeOnConnectObserver(Observer<Boolean> observer) {
+        connectEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void removeOnDisconnectObserver(Observer<Boolean> observer) {
+        disconnectEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void onPingEvent(Observer<PingEvent> observer) {
+        pingEvent.addObserver(observer);
+    }
+
+    @Override
+    public void onExceptionCaught(Observer<String> observer) {
+        exceptionEvent.addObserver(observer);
+    }
 
-	@Override
-	public int getPongTimeout() {
-		return pongTimeout;
-	}
+    @Override
+    public void setHost(String host) {
+        this.host = host;
+    }
 
-	@Override
-	public void setPongTimeout(int pongTimeout) {
-		this.pongTimeout = pongTimeout;
-	}
+    @Override
+    public void setPort(int port) {
+        this.port = port;
+    }
 
-	@Override
-	public ReconnectStrategy getReconnectStrategy() {
-		return reconnectStrategy;
-	}
+    @Override
+    public int getPingTimeout() {
+        return pingTimeout;
+    }
+
+    @Override
+    public void setPingTimeout(int pingTimeout) {
+        this.pingTimeout = pingTimeout;
+    }
 
-	@Override
-	public void setReconnectStrategy(ReconnectStrategy reconnectStrategy) {
+    @Override
+    public int getPongTimeout() {
+        return pongTimeout;
+    }
 
-		// Stop our old strategy
-		if (this.reconnectStrategy != null) {
-			this.reconnectStrategy.stop();
-			this.reconnectStrategy.destroy();
-		}
+    @Override
+    public void setPongTimeout(int pongTimeout) {
+        this.pongTimeout = pongTimeout;
+    }
 
-		this.reconnectStrategy = reconnectStrategy;
-		this.reconnectStrategy.setSignalConnection(this);
-	}
+    @Override
+    public ReconnectStrategy getReconnectStrategy() {
+        return reconnectStrategy;
+    }
 
-	@Deprecated
-	public Runnable getOnSocketActivity() {
-		return onSocketActivity;
-	}
+    @Override
+    public void setReconnectStrategy(ReconnectStrategy reconnectStrategy) {
 
-	@Deprecated
-	public void setOnSocketActivity(Runnable onSocketActivity) {
-		this.onSocketActivity = onSocketActivity;
-	}
+        // Stop our old strategy
+        if (this.reconnectStrategy != null) {
+            this.reconnectStrategy.stop();
+            this.reconnectStrategy.destroy();
+        }
 
-	public final String getHost() {
-		return host;
-	}
+        this.reconnectStrategy = reconnectStrategy;
+        this.reconnectStrategy.setSignalConnection(this);
+    }
 
-	public final int getPort() {
-		return port;
-	}
+    @Deprecated
+    public Runnable getOnSocketActivity() {
+        return onSocketActivity;
+    }
 
-	@Override
-	protected void onDestroy() {
+    @Deprecated
+    public void setOnSocketActivity(Runnable onSocketActivity) {
+        this.onSocketActivity = onSocketActivity;
+    }
 
-		if (isConnected()) {
-			disconnect();
-		}
+    public final String getHost() {
+        return host;
+    }
 
-		if (channelFactory != null) {
-			channelFactory.releaseExternalResources();
-		}
+    public final int getPort() {
+        return port;
+    }
 
-		if (pingTimeoutFuture != null) {
-			pingTimeoutFuture.cancel(true);
-		}
+    @Override
+    protected void onDestroy() {
 
-		if (pongTimeoutFuture != null) {
-			pongTimeoutFuture.cancel(true);
-		}
+        if (isConnected()) {
+            disconnect();
+        }
 
-		if (scheduledExecutor != null) {
-			scheduledExecutor.shutdownNow();
-		}
-	}
+        if (channelFactory != null) {
+            channelFactory.releaseExternalResources();
+        }
 
-	protected abstract ChannelPipeline getPipeline();
+        if (pingTimeoutFuture != null) {
+            pingTimeoutFuture.cancel(true);
+        }
 
-	protected void schedulePing(boolean now) {
+        if (pongTimeoutFuture != null) {
+            pongTimeoutFuture.cancel(true);
+        }
 
-		cancelPing();
+        if (scheduledExecutor != null) {
+            scheduledExecutor.shutdownNow();
+        }
+    }
 
-		LOGGER.debug("Scheduling a PING to start in " + pingTimeout + "ms");
-		pingEvent.notifyObservers(this, PingEvent.PING_SCHEDULED);
+    protected abstract ChannelPipeline getPipeline();
 
-		pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
-			@Override
-			public void run() {
+    protected void schedulePing(boolean now) {
 
-				LOGGER.debug("Sending a PING");
-				pingEvent.notifyObservers(this, PingEvent.PING_SENT);
+        cancelPing();
 
-				// Schedule the timeout first in case there is a problem sending
-				// the ping
-				pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
-					@Override
-					public void run() {
+        LOGGER.debug("Scheduling a PING to start in " + pingTimeout + "ms");
+        pingEvent.notifyObservers(this, PingEvent.PING_SCHEDULED);
 
-						LOGGER.warn("PONG timeout, disconnecting...");
-						pingEvent.notifyObservers(this, PingEvent.PONG_TIMEOUT);
+        pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
 
-						disconnect(true);
-					}
-				}, pongTimeout, TimeUnit.MILLISECONDS);
+                LOGGER.debug("Sending a PING");
+                pingEvent.notifyObservers(this, PingEvent.PING_SENT);
 
-				send(PingPongCommand.getShortformInstance());
+                // Schedule the timeout first in case there is a problem sending
+                // the ping
+                pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
+                    @Override
+                    public void run() {
 
-			}
-		}, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
-	}
+                        LOGGER.warn("PONG timeout, disconnecting...");
+                        pingEvent.notifyObservers(this, PingEvent.PONG_TIMEOUT);
 
-	protected void receivePong(PingPongCommand command) {
+                        disconnect(true);
+                    }
+                }, pongTimeout, TimeUnit.MILLISECONDS);
 
-		if (command.isRequest()) {
+                send(PingPongCommand.getShortformInstance());
 
-			LOGGER.debug("Received a REVERSE PING");
+            }
+        }, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
+    }
 
-			PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
-			reversePong.setTimestamp(command.getTimestamp());
-			reversePong.setToken(command.getToken());
+    protected void receivePong(PingPongCommand command) {
 
-			LOGGER.debug("Sending a REVERSE PONG");
-			send(reversePong);
+        if (command.isRequest()) {
 
-		} else {
+            LOGGER.debug("Received a REVERSE PING");
 
-			LOGGER.debug("Received a PONG");
-			pingEvent.notifyObservers(this, PingEvent.PONG_RECEIVED);
-		}
+            PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
+            reversePong.setTimestamp(command.getTimestamp());
+            reversePong.setToken(command.getToken());
 
-		cancelPong();
+            LOGGER.debug("Sending a REVERSE PONG");
+            send(reversePong);
 
-		if (doKeepalives) {
-			schedulePing(false);
-		}
-	}
+        } else {
 
-	protected void cancelPing() {
+            LOGGER.debug("Received a PONG");
+            pingEvent.notifyObservers(this, PingEvent.PONG_RECEIVED);
+        }
 
-		if ((pingTimeoutFuture != null) && !pingTimeoutFuture.isCancelled()) {
+        cancelPong();
 
-			if (pingTimeoutFuture != null) {
+        if (doKeepalives) {
+            schedulePing(false);
+        }
+    }
 
-				LOGGER.debug("Resetting scheduled PING");
-				pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
+    protected void cancelPing() {
 
-				pingTimeoutFuture.cancel(false);
-			}
-		}
-	}
+        if ((pingTimeoutFuture != null) && !pingTimeoutFuture.isCancelled()) {
 
-	protected void cancelPong() {
+            if (pingTimeoutFuture != null) {
 
-		if ((pongTimeoutFuture != null) && !pongTimeoutFuture.isCancelled()) {
+                LOGGER.debug("Resetting scheduled PING");
+                pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
 
-			LOGGER.debug("Resetting timeout PONG");
+                pingTimeoutFuture.cancel(false);
+            }
+        }
+    }
 
-			pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
-			pongTimeoutFuture.cancel(false);
-		}
-	}
+    protected void cancelPong() {
+
+        if ((pongTimeoutFuture != null) && !pongTimeoutFuture.isCancelled()) {
+
+            LOGGER.debug("Resetting timeout PONG");
+
+            pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
+            pongTimeoutFuture.cancel(false);
+        }
+    }
 
 }
