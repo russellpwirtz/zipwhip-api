@@ -47,7 +47,6 @@ public class WebSocketSignalConnection extends SignalConnectionBase {
 
 	private long messageId = 0l;
 	private String URL = "ws://signal-server-01.lynnwood.zipwhip.com:80/socket.io/1/websocket";
-	private int port = 80;
 	private WebSocketClientHandshaker handshaker = null;
 	private URI uri;
 
@@ -179,6 +178,21 @@ public class WebSocketSignalConnection extends SignalConnectionBase {
 		Executors.newSingleThreadExecutor().execute(task);
 
 		return task;
+	}
+
+	/**
+	 * @return the uRL
+	 */
+	public final String getURL() {
+		return URL;
+	}
+
+	/**
+	 * @param uRL
+	 *            the uRL to set
+	 */
+	public final void setURL(String url) {
+		URL = url;
 	}
 
 }
