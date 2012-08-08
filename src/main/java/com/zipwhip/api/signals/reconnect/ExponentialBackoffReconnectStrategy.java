@@ -1,10 +1,14 @@
 package com.zipwhip.api.signals.reconnect;
 
-import com.zipwhip.events.Observer;
+import java.util.Date;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.log4j.Logger;
 
-import java.util.Date;
-import java.util.concurrent.*;
+import com.zipwhip.events.Observer;
 
 /**
  * This class schedules reconnect attempts in a geometrically increasing (2^X by default) way up to a threshold.
@@ -14,170 +18,212 @@ import java.util.concurrent.*;
  */
 public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
-    private static final Logger LOGGER = Logger.getLogger(ExponentialBackoffReconnectStrategy.class);
+	private static final Logger LOGGER = Logger.getLogger(ExponentialBackoffReconnectStrategy.class);
 
-    /**
-     * The default maximum backoff time (10 minutes)
-     */
-    public static final long DEFAULT_MAX_BACKOFF_SECONDS = 10 * 60;
+	/**
+	 * The default maximum backoff time (10 minutes)
+	 */
+	public static final long DEFAULT_MAX_BACKOFF_SECONDS = 10 * 60;
 
-    /**
-     * The default 'multiplier' value is 2 (100% increase per backoff)
-     */
-    public static final double DEFAULT_MULTIPLIER = 2.0;
+	/**
+	 * The default 'multiplier' value is 2 (100% increase per backoff)
+	 */
+	public static final double DEFAULT_MULTIPLIER = 2.0;
 
-    private boolean connectObserverSet;
+	private static final long DEFUALT_DELAY = 2;
 
-    private long maxBackoffSeconds;
-    private double multiplier;
-    private long consecutiveReconnectAttempts;
+	private static final long INITIAL_ATTEMPTS = 1;
+	private TimeUnit delayUnits = TimeUnit.SECONDS;
+	private boolean connectObserverSet;
 
-    private ScheduledExecutorService scheduler;
-    private Future<Boolean> reconnectTask;
-    private Runnable reconnectRunnable;
+	private long maxBackoffSeconds = DEFAULT_MAX_BACKOFF_SECONDS;
+	private double multiplier;
+	private long consecutiveReconnectAttempts = INITIAL_ATTEMPTS;
 
-    public ExponentialBackoffReconnectStrategy() {
-        this(DEFAULT_MAX_BACKOFF_SECONDS);
-    }
+	private ScheduledExecutorService scheduler;
+	private Future<Boolean> reconnectTask;
+	private Runnable reconnectRunnable;
 
-    public ExponentialBackoffReconnectStrategy(long maxBackoffSeconds) {
-        super();
-        this.multiplier = DEFAULT_MULTIPLIER;
-        this.maxBackoffSeconds = maxBackoffSeconds;
-    }
+	public ExponentialBackoffReconnectStrategy() {
+		this(DEFAULT_MAX_BACKOFF_SECONDS);
+	}
 
-    /**
-     * Returns the current value of exponential 'multiplier' i.e. the exponential base.
-     *
-     * @return The current value of exponential 'multiplier'
-     */
-    public double getMultiplier() {
-        return multiplier;
-    }
+	public ExponentialBackoffReconnectStrategy(long maxBackoffSeconds) {
+		super();
+		this.multiplier = DEFAULT_MULTIPLIER;
+		this.maxBackoffSeconds = maxBackoffSeconds;
+	}
 
-    /**
-     * Set the multiplier value. Values much in excess of the default, 2.0 will grow the backoff very fast.
-     *
-     * @param multiplier The value to use as the exponential base when calculating backoff intervals.
-     */
-    public void setMultiplier(double multiplier) {
-        this.multiplier = multiplier;
-    }
+	/**
+	 * Returns the current value of exponential 'multiplier' i.e. the exponential base.
+	 *
+	 * @return The current value of exponential 'multiplier'
+	 */
+	public double getMultiplier() {
+		return multiplier;
+	}
 
-    @Override
-    public void stop() {
+	/**
+	 * Set the multiplier value. Values much in excess of the default, 2.0 will grow the backoff very fast.
+	 *
+	 * @param multiplier The value to use as the exponential base when calculating backoff intervals.
+	 */
+	public void setMultiplier(double multiplier) {
+		this.multiplier = multiplier;
+	}
 
-        cleanup();
+	@Override
+	public void stop() {
 
-        super.stop();
-    }
+		cleanup();
 
-    @Override
-    protected synchronized void doStrategy() {
+		super.stop();
+	}
 
-        // Start listening for connect events to reset our counter
-        if (!connectObserverSet) {
+	@Override
+	protected synchronized void doStrategy() {
 
-            signalConnection.onConnect(new Observer<Boolean>() {
-                @Override
-                public void notify(Object sender, Boolean connected) {
+		// Start listening for connect events to reset our counter
+		if (!connectObserverSet) {
 
-                    if (connected) {
+			signalConnection.onConnect(new Observer<Boolean>() {
+				@Override
+				public void notify(Object sender, Boolean connected) {
 
-                        LOGGER.debug("We reconnected, cleaning up and resetting count.");
+					if (connected) {
 
-                        // Cancel any scheduled reconnects
-                        cleanup();
+						if (LOGGER.isDebugEnabled()) {
+							LOGGER.debug("We reconnected, cleaning up and resetting count.");
+						}
 
-                        // We connected, reset
-                        consecutiveReconnectAttempts = 0;
-                    }
-                }
-            });
+						// Cancel any scheduled reconnects
+						cleanup();
 
-            connectObserverSet = true;
-        }
+						// We connected, reset
+						consecutiveReconnectAttempts = INITIAL_ATTEMPTS;
+					}
+				}
+			});
 
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor();
-        }
+			connectObserverSet = true;
+		}
 
-        if (reconnectRunnable == null) {
+		if (scheduler == null) {
+			scheduler = Executors.newSingleThreadScheduledExecutor();
+		}
 
-            reconnectRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    try {
+		if (reconnectRunnable == null) {
 
-                        LOGGER.debug("Connect attempt at ==>> " + new Date(System.currentTimeMillis()));
+			reconnectRunnable = new Runnable() {
+				@Override
+				public void run() {
+					try {
 
-                        consecutiveReconnectAttempts++;
+						if (LOGGER.isDebugEnabled()) {
+							LOGGER.debug("Connect attempt at ==>> " + new Date(System.currentTimeMillis()));
+						}
 
-                        reconnectTask = signalConnection.connect();
-                        Boolean success = reconnectTask.get();
+						consecutiveReconnectAttempts++;
 
-                        if (success) {
-                            LOGGER.debug("Reconnected successfully");
-                        } else {
-                            signalConnection.disconnect(true);
-                        }
+						reconnectTask = signalConnection.connect();
+						Boolean success = reconnectTask.get();
 
-                    }
-                    catch (InterruptedException e) {
+						if (success) {
+							if (LOGGER.isDebugEnabled()) {
+								LOGGER.debug("Reconnected successfully");
+							}
+						} else {
+							signalConnection.disconnect(true);
+						}
 
-                        LOGGER.warn("Execution interrupted, we probably already reconnected");
-                    }
-                    catch (Exception e) {
+					}
+					catch (InterruptedException e) {
 
-                        LOGGER.error("Error reconnecting", e);
-                    }
-                }
-            };
-        }
+						LOGGER.warn("Execution interrupted, we probably already reconnected");
+					}
+					catch (Exception e) {
 
-        try {
+						LOGGER.error("Error reconnecting", e);
+					}
+				}
+			};
+		}
 
-            LOGGER.debug("Scheduling attempt at ==>> " + new Date(System.currentTimeMillis()));
+		try {
 
-            scheduler.schedule(reconnectRunnable, calculateBackoff(), TimeUnit.SECONDS);
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Scheduling attempt at ==>> " + new Date(System.currentTimeMillis()));
+			}
 
-        } catch (Exception e) {
+			scheduler.schedule(reconnectRunnable, calculateBackoff(), delayUnits);
 
-            LOGGER.error(e);
-        }
-    }
+		} catch (Exception e) {
 
-    @Override
-    protected void onDestroy() {
-        stop();
-    }
+			LOGGER.error(e);
+		}
+	}
 
-    private long calculateBackoff() {
+	@Override
+	protected void onDestroy() {
+		stop();
+	}
 
-        long backoff = Math.round(Math.pow(multiplier, consecutiveReconnectAttempts));
+	protected long calculateBackoff() {
 
-        LOGGER.debug("Backoff calculated as ==>> " + backoff + (backoff == 1 ? " second" : " seconds"));
+		long backoff = Math.max(DEFUALT_DELAY, Math.round(Math.pow(multiplier, consecutiveReconnectAttempts)));
 
-        return (backoff > maxBackoffSeconds ? maxBackoffSeconds : backoff);
-    }
+		backoff = (backoff > maxBackoffSeconds ? maxBackoffSeconds : backoff);
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("Backoff calculated as ==>> " + backoff + (backoff == 1 ? " second" : " seconds"));
+		}
 
-    private void cleanup() {
-        // If we have scheduled a reconnect cancel it
-        if (reconnectTask != null && !reconnectTask.isDone()) {
+		return backoff;
+	}
 
-            boolean cancelled = reconnectTask.cancel(true);
+	private void cleanup() {
+		// If we have scheduled a reconnect cancel it
+		if ((reconnectTask != null) && !reconnectTask.isDone()) {
 
-            LOGGER.debug("Cancelling reconnect task success: " + cancelled);
-        }
+			boolean cancelled = reconnectTask.cancel(true);
 
-        // Cleanup any scheduled reconnects
-        if (scheduler != null) {
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Cancelling reconnect task success: " + cancelled);
+			}
+		}
 
-            LOGGER.debug("Shutting down scheduled execution");
+		// Cleanup any scheduled reconnects
+		if (scheduler != null) {
 
-            scheduler.shutdownNow();
-            scheduler = null;
-        }
-    }
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Shutting down scheduled execution");
+			}
+
+			scheduler.shutdownNow();
+			scheduler = null;
+		}
+	}
+
+	/**
+	 * @return the delayUnits
+	 */
+	public final TimeUnit getDelayUnits() {
+		return delayUnits;
+	}
+
+	/**
+	 * @param delayUnits
+	 *            the delayUnits to set
+	 */
+	public final void setDelayUnits(TimeUnit delayUnits) {
+		this.delayUnits = delayUnits;
+	}
+
+	/**
+	 * @param consecutiveReconnectAttempts
+	 *            the consecutiveReconnectAttempts to set
+	 */
+	protected final void setConsecutiveReconnectAttempts(long consecutiveReconnectAttempts) {
+		this.consecutiveReconnectAttempts = consecutiveReconnectAttempts;
+	}
 
 }
