@@ -295,6 +295,37 @@ public class SlidingWindowTest {
     }
 
     @Test
+    public void testInit_POSITIVE_HOLE() throws Exception {
+
+        window.setSize(100);
+        window.setIndexSequence(301473);
+
+        List<Long> results = new ArrayList<Long>();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(301475l, 301475l, results));
+        Assert.assertEquals(0, results.size());
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(301476l, 301476l, results));
+        Assert.assertEquals(0, results.size());
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.POSITIVE_HOLE, window.receive(301477l, 301477l, results));
+        Assert.assertEquals(0, results.size());
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.HOLE_FILLED, window.receive(301474l, 301474l, results));
+        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(new Long(301474l), results.get(0));
+        Assert.assertEquals(new Long(301475l), results.get(1));
+        Assert.assertEquals(new Long(301476l), results.get(2));
+        Assert.assertEquals(new Long(301477l), results.get(3));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(301478l, 301478l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(301478l), results.get(0));
+    }
+
+    @Test
     public void testReceive_NEGATIVE_HOLE() throws Exception {
 
         List<Long> results = new ArrayList<Long>();
@@ -459,10 +490,8 @@ public class SlidingWindowTest {
     public void testHasHoles() throws Exception {
         window.setSize(5);
         List<Long> results = new ArrayList<Long>();
-        window.receive(0l, 0l, results);
-        Assert.assertFalse(window.hasHoles(window.window.keySet()));
         window.receive(2l, 2l, results);
-        Assert.assertTrue(window.hasHoles(window.window.keySet()));
+        Assert.assertFalse(window.hasHoles(window.window.keySet()));
         window.receive(1l, 1l, results);
         Assert.assertFalse(window.hasHoles(window.window.keySet()));
         window.receive(4l, 4l, results);
