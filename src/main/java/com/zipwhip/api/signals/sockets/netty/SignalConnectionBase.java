@@ -2,14 +2,7 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -41,12 +34,12 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private String host = "74.209.177.242";
-    private int port = 3000;
+    private int[] ports = new int[]{80, 443, 8080, 3000};
 
     private int pingTimeout = DEFAULT_PING_TIMEOUT;
     private int pongTimeout = DEFAULT_PONG_TIMEOUT;
 
-    private ExecutorService executor;
+    private ExecutorService connectExecutor;
 
     private ScheduledFuture<?> pingTimeoutFuture;
     private ScheduledFuture<?> pongTimeoutFuture;
@@ -64,6 +57,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected Channel channel;
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
+    protected boolean connecting;
     protected boolean networkDisconnect;
     protected boolean doKeepalives;
 
@@ -89,65 +83,53 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             throw new Exception("Tried to connect but we already have a channel connected!");
         }
 
-        channel = channelFactory.newChannel(getPipeline());
+        connecting = true;
 
-        // We are deprecating this, but to support our custom Netty change let's check via reflection
-        if (onSocketActivity != null) {
+        FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
 
-            try {
-                Method setOnSocketActivityMethod = channel.getClass().getMethod("setOnSocketActivity", Runnable.class);
+            @Override
+            public Boolean call() throws Exception {
 
-                if (setOnSocketActivityMethod != null) {
-                    setOnSocketActivityMethod.invoke(channel, onSocketActivity);
-                }
-            } catch (NoSuchMethodException e) {
-                LOGGER.warn("Tried setting onSocketActivity Runnable into the channel but the method does not exist in this build of Netty.");
-            }
-        }
+                for (int port : ports) {
 
-        FutureTask<Boolean> task;
-        InetSocketAddress address = new InetSocketAddress(host, port);
+                    LOGGER.debug("Connecting to " + host + ":" + port);
 
-        if (address.isUnresolved()) {
-            task = new FutureTask<Boolean>(new Callable<Boolean>() {
-                @Override
-                public Boolean call() throws Exception {
-                    return Boolean.FALSE;
-                }
-            });
-        } else {
+                    InetSocketAddress address = new InetSocketAddress(host, port);
 
-            LOGGER.debug("Connecting to " + host + ":" + port);
+                    if (address.isUnresolved()) {
+                        return Boolean.FALSE;
+                    }
 
-            final ChannelFuture channelFuture = channel.connect(address);
+                    channel = channelFactory.newChannel(getPipeline());
+                    setupOnSocketActivity();
 
-            task = new FutureTask<Boolean>(new Callable<Boolean>() {
-
-                @Override
-                public Boolean call() throws Exception {
+                    final ChannelFuture channelFuture = channel.connect(address);
 
                     boolean socketConnected = false;
-                    networkDisconnect = true; // Assume a network failure will
-                    // occur during connect
+                    networkDisconnect = true; // Assume a network failure will occur during connect
 
                     if (channelFuture != null) {
                         channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
                         socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
-
                         networkDisconnect = socketConnected;
-
                     }
-                    return socketConnected;
 
+                    if (socketConnected) {
+                        connecting = false;
+                        return Boolean.TRUE;
+                    }
                 }
-            });
 
-            if (executor == null) {
-                executor = Executors.newSingleThreadExecutor();
+                connecting = false;
+                return Boolean.FALSE;
             }
-            executor.execute(task);
+        });
+
+        if (connectExecutor == null) {
+            connectExecutor = Executors.newSingleThreadExecutor();
         }
+        connectExecutor.execute(task);
+
         return task;
     }
 
@@ -180,8 +162,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                     }
                 }
 
-                executor.shutdownNow();
-                executor = null;
+                connectExecutor.shutdownNow();
+                connectExecutor = null;
 
                 if (pingTimeoutFuture != null) {
                     pingTimeoutFuture.cancel(true);
@@ -195,10 +177,15 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             }
         });
 
-        if (executor == null) {
-            executor = Executors.newSingleThreadExecutor();
+        /**
+         * This is unintuitive, but we need to prevent multiple disconnects from being scheduled
+         * simultaneously. Netty can throw a different set of events on the channel depending on
+         * the circumstance of the disconnect, and in some cases this means a channelClosed and
+         * an exceptionCaught event. If we allow multiple disconnects we sacrifice thread-safety.
+         */
+        if (connectExecutor != null && !connecting) {
+            connectExecutor.execute(task);
         }
-        executor.execute(task);
 
         return task;
     }
@@ -277,13 +264,23 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
+    public final String getHost() {
+        return host;
+    }
+
+    @Override
     public void setHost(String host) {
         this.host = host;
     }
 
     @Override
-    public void setPort(int port) {
-        this.port = port;
+    public final int[] getPorts() {
+        return ports;
+    }
+
+    @Override
+    public void setPorts(int[] ports) {
+        this.ports = ports;
     }
 
     @Override
@@ -332,14 +329,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     @Deprecated
     public void setOnSocketActivity(Runnable onSocketActivity) {
         this.onSocketActivity = onSocketActivity;
-    }
-
-    public final String getHost() {
-        return host;
-    }
-
-    public final int getPort() {
-        return port;
     }
 
     @Override
@@ -449,6 +438,25 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
             pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
             pongTimeoutFuture.cancel(false);
+        }
+    }
+
+    /**
+     * We are deprecating this, but to support our custom Netty change let's check via reflection
+     */
+    private void setupOnSocketActivity() {
+
+        if (onSocketActivity != null) {
+
+            try {
+                Method setOnSocketActivityMethod = channel.getClass().getMethod("setOnSocketActivity", Runnable.class);
+
+                if (setOnSocketActivityMethod != null) {
+                    setOnSocketActivityMethod.invoke(channel, onSocketActivity);
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Tried setting onSocketActivity Runnable into the channel but the method does not exist in this build of Netty.");
+            }
         }
     }
 

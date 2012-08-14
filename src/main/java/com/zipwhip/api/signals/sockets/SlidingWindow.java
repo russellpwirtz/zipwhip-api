@@ -213,11 +213,12 @@ public class SlidingWindow<P> extends DestroyableBase {
 
             // This sequence is much lower, must be a reset
             if (indexSequence + step - sequence > window.getIdealSize()) {
-                results.add(value);
                 indexSequence = sequence;
                 window.clear();
             }
 
+            // Always pass this packet through even if it's out of order.
+            results.add(value);
             window.put(sequence, value);
 
             return ReceiveResult.NEGATIVE_HOLE;

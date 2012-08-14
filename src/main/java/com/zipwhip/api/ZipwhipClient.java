@@ -315,10 +315,10 @@ public interface ZipwhipClient extends Destroyable {
     boolean messageRead(List<String> uuids) throws Exception;
 
     /**
-     * Delete messages by their corresponding IDs.
+     * Read messages by their corresponding IDs.
      *
-     * @param ids A list of message ids to delete.
-     * @return True for a successful delete otherwise false.
+     * @param ids A list of message ids to read.
+     * @return True for a successful read otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
      */
     boolean readMessage(List<Long> ids) throws Exception;
@@ -334,10 +334,10 @@ public interface ZipwhipClient extends Destroyable {
     boolean messageDelete(List<String> uuids) throws Exception;
 
     /**
-     * Read messages by their corresponding IDs.
+     * Delete messages by their corresponding IDs.
      *
-     * @param ids A list of message ids to mark as read.
-     * @return True for a successful read otherwise false.
+     * @param ids A list of message ids to delete.
+     * @return True for a successful delete otherwise false.
      * @throws Exception If an error occurred while sending or parsing the response.
      */
     boolean deleteMessage(List<Long> ids) throws Exception;

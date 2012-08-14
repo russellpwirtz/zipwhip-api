@@ -586,7 +586,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             }
 
             if (command.getPort() > 0) {
-                connection.setPort(command.getPort());
+
+                int[] newPortArray = new int[connection.getPorts().length + 1];
+                newPortArray[0] = command.getPort();
+
+                for (int i = 0; i < connection.getPorts().length; i++) {
+                    newPortArray[i + 1] = connection.getPorts()[i];
+                }
+
+                connection.setPorts(newPortArray);
             }
 
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -611,20 +619,29 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
     private void handlePresenceCommand(PresenceCommand command) {
 
-        if (LOGGER.isDebugEnabled())
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Handling PresenceCommand " + command.getPresence());
+        }
 
         boolean selfPresenceExists = false;
         List<Presence> presenceList = command.getPresence();
+
         if (presenceList == null) {
-            if (LOGGER.isDebugEnabled())
+
+            if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Nothing is known about us or our peers");
+            }
+
             selfPresenceExists = false;
+
         } else {
 
             for (Presence presence : command.getPresence()) {
-                if (clientId.equals(presence.getAddress().getClientId()))
+
+                if (clientId.equals(presence.getAddress().getClientId())) {
                     selfPresenceExists = true;
+                }
+
                 if (presence.getCategory().equals(PresenceCategory.Phone)) {
                     presenceReceivedEvent.notifyObservers(this, presence.getConnected());
                 }
@@ -633,9 +650,13 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         if (!selfPresenceExists) {
 
             if (presence != null) {
-                if (LOGGER.isDebugEnabled())
+
+                if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Reidentifying our presence object");
+                }
+
                 connection.send(new PresenceCommand(Collections.singletonList(presence)));
+
             } else {
                 LOGGER.debug("Our presence object was empty, so we didn't share it");
             }

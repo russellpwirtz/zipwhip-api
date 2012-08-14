@@ -21,7 +21,7 @@ public interface SignalConnection extends Destroyable {
     /**
      * Initiate a raw TCP connection to the signal server ASYNCHRONOUSLY. This
      * is just a raw connection, not an authenticated/initialized one.
-     * 
+     *
      * @return The future will tell you when the connection is complete.
      * @throws Exception if there is is an error connecting
      */
@@ -67,21 +67,21 @@ public interface SignalConnection extends Destroyable {
 
     /**
      * Send something to the SignalServer
-     * 
+     *
      * @param command the Command to send
      */
     void send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected
-     * 
+     *
      * @return returns true if connected, false if not connected.
      */
     boolean isConnected();
 
     /**
      * Allows you to listen for things that are received by the API.
-     * 
+     *
      * @param observer An observer to receive callbacks on when this event fires
      */
     void onMessageReceived(Observer<Command> observer);
@@ -89,7 +89,7 @@ public interface SignalConnection extends Destroyable {
     /**
      * Allows you to observe the connection trying to connect.
      * The observer will return True if the connection was successful, False otherwise.
-     * 
+     *
      * @param observer An observer to receive callbacks on when this event fires
      */
     void onConnect(Observer<Boolean> observer);
@@ -131,6 +131,13 @@ public interface SignalConnection extends Destroyable {
     void onExceptionCaught(Observer<String> observer);
 
     /**
+     * Get the host being used to connect to Zipwhip.
+     *
+     * @return the host being used to connect to Zipwhip.
+     */
+    String getHost();
+
+    /**
      * Set the host to be used on the NEXT connection.
      * If not set the default SignalServer host will be used.
      *
@@ -139,12 +146,21 @@ public interface SignalConnection extends Destroyable {
     void setHost(String host);
 
     /**
-     * Set the port to be used on the NEXT connection.
-     * If not set the default SignalServer port will be used.
+     * Get the ports being used to connect to Zipwhip.
      *
-     * @param port the port to be used on the NEXT connection
+     * @return the ports being used to connect to Zipwhip.
      */
-    void setPort(int port);
+    int[] getPorts();
+
+    /**
+     * Sets the ports to be used on the NEXT connection.
+     * If not set the default SignalServer port sequence will be used.
+     * <p/>
+     * The ports will be used in a fallback sequence from ports[0].
+     *
+     * @param ports the ports to be used on the NEXT connection
+     */
+    void setPorts(int[] ports);
 
     /**
      * Get the time to wait after the connection has been inactive

@@ -390,9 +390,10 @@ public class SlidingWindowTest {
 
         Assert.assertEquals(5l, window.getIndexSequence());
 
-        // Since this negative hole was inside the window it gets dropped now that we moved on
+        // Even though this negative hole was inside the window it gets passed on even though it's now out of order
         Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(3l, 3l, results));
-        Assert.assertEquals(0, results.size());
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(3), results.get(0));
         Assert.assertEquals(5l, window.getIndexSequence());
     }
 
@@ -439,7 +440,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(new Long(7), results.get(0));
         results.clear();
 
-        // Since this negative hole was outside the window it gets dropped now that we moved on
+        // Since this negative hole was outside the window it gets sent to us.
         Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(2l, 2l, results));
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(new Long(2), results.get(0));
