@@ -1,17 +1,22 @@
 package com.zipwhip.api;
 
 import com.ning.http.client.*;
+import com.ning.http.client.Part;
+import com.ning.http.multipart.FilePart;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -84,7 +89,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     /**
      * Create a new {@code NingHttpConnection}
      *
-     * @param authenticator  A {@code SignTool} to use for signing request URLs.
+     * @param authenticator A {@code SignTool} to use for signing request URLs.
      */
     public NingHttpConnection(SignTool authenticator) {
         this();
@@ -144,13 +149,23 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     }
 
     /**
-     *
      * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
      * @param params Map of query params to append to the method
      * @return NetworkFuture<String>  where the String result is the raw serer response.
      */
     @Override
-    public ObservableFuture<String> send(final String method, Map<String, Object> params) {
+    public ObservableFuture<String> send(final String method, Map<String, Object> params) throws Exception {
+        return send(method, params, null);
+    }
+
+    /**
+     * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
+     * @param params Map of query params to append to the method
+     * @param files  A list of Files to be added as parts for a multi part upload.
+     * @return NetworkFuture<String>  where the String result is the raw serer response.
+     */
+    @Override
+    public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
 
         final RequestBuilder rb = new RequestBuilder();
 
@@ -160,7 +175,26 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
         final ObservableFuture<String> responseFuture = new DefaultObservableFuture<String>(this, workerExecutor);
 
         try {
-            asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {
+            com.ning.http.client.RequestBuilder builder = new com.ning.http.client.RequestBuilder();
+            builder.setUrl(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator));
+
+            if (CollectionUtil.exists(files)) {
+
+                builder.setMethod("POST");
+
+                for (File file : files) {
+                    /**
+                     * TODO The first argument "data" is required for the TinyUrlController to work.
+                     * Unfortunately this breaks the HostedContentController if more than one file
+                     * is being uploaded. TinyUrlController needs to be fixed to get the file names
+                     * from the fileMap as HostedContentController does.
+                     */
+                    Part part = new FilePart("data", file.getName(), file);
+                    builder.addBodyPart(part);
+                }
+            }
+
+            asyncHttpClient.prepareRequest(builder.build()).execute(new AsyncCompletionHandler<Object>() {
 
                 @Override
                 public Object onCompleted(Response response) throws Exception {

@@ -5,6 +5,7 @@ import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Parser;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Date: Jul 18, 2009
@@ -51,5 +52,9 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
     EnrollmentResult parseEnrollmentResult(ServerResponse serverResponse) throws Exception;
 
     String parseFaceName(ServerResponse serverResponse) throws Exception;
+
+    Map<String, String> parseHostedContentSave(ServerResponse serverResponse) throws Exception;
+
+    TinyUrl parseTinyUrl(ServerResponse serverResponse) throws Exception;
 
 }

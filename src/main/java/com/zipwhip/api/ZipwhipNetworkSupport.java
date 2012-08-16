@@ -5,12 +5,15 @@ import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -94,6 +97,10 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String ATTACHMENT_LIST = "messageAttachment/list";
     public static final String HOSTED_CONTENT_GET = "hostedContent/get";
+    public static final String HOSTED_CONTENT_SAVE = "hostedContent/save";
+
+    public static final String TINY_URL_RESERVE = "tinyUrl/reserve";
+    public static final String TINY_URL_SAVE = "tinyUrl/save";
 
     /**
      * A runnable for for for executing asynchronous server responses.
@@ -161,7 +168,19 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         return get(executeAsync(method, params, requiresAuthentication, FORWARD_RUNNABLE));
     }
 
+    protected ServerResponse executeSync(final String method, final Map<String, Object> params, List<File> files) throws Exception {
+        return get(executeAsync(method, params, files, true, FORWARD_RUNNABLE));
+    }
+
+    protected ServerResponse executeSync(final String method, final Map<String, Object> params, List<File> files, boolean requiresAuthentication) throws Exception {
+        return get(executeAsync(method, params, files, requiresAuthentication, FORWARD_RUNNABLE));
+    }
+
     protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
+        return executeAsync(method, params, null, requiresAuthentication, businessLogic);
+    }
+
+    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, List<File> files, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
 
         if (requiresAuthentication && !connection.isAuthenticated()) {
             throw new Exception("The connection is not authenticated, can't continue.");
@@ -169,7 +188,13 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
         final ObservableFuture<T> result = new DefaultObservableFuture<T>(this, callbackExecutor);
 
-        final ObservableFuture<String> responseFuture = getConnection().send(method, params);
+        final ObservableFuture<String> responseFuture;
+
+        if (CollectionUtil.exists(files)) {
+            responseFuture = getConnection().send(method, params, files);
+        } else {
+            responseFuture = getConnection().send(method, params);
+        }
 
         responseFuture.addObserver(new Observer<ObservableFuture<String>>() {
 

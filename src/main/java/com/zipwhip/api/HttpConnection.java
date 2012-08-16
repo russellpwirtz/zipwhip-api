@@ -11,7 +11,9 @@ import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -139,6 +141,11 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
         });
 
         return future;
+    }
+
+    @Override
+    public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
+        throw new NotImplementedException();
     }
 
     @Override

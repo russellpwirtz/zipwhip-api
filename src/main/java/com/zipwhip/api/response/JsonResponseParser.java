@@ -10,9 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Date: Jul 18, 2009
@@ -41,10 +39,8 @@ public class JsonResponseParser implements ResponseParser {
         JSONObject thing = new JSONObject(response);
         String responseKey = "response";
 
-        boolean success = thing.getBoolean("success");
+        boolean success = thing.optBoolean("success");
         Map<String, Map<String, List<Signal>>> sessions = null;
-
-        JSONObject sessionsObject = thing.optJSONObject("sessions");
 
         // IS THIS A COMPLEX OBJECT?
         JSONObject jsonObject = thing.optJSONObject(responseKey);
@@ -67,9 +63,14 @@ public class JsonResponseParser implements ResponseParser {
             return new StringServerResponse(response, success, string, sessions);
         }
 
-        /// THIS MUST BE A BOOLEAN
-        boolean bool = thing.getBoolean(responseKey);
-        return new BooleanServerResponse(response, success, bool, sessions);
+        /// MIGHT BE A BOOLEAN
+        try {
+            boolean bool = thing.getBoolean(responseKey);
+            return new BooleanServerResponse(response, success, bool, sessions);
+        } catch (Exception e) {
+            // NOPE, JUST RETURN THE RAW RESULT
+            return new StringServerResponse(response, true, response, null);
+        }
     }
 
     @Override
@@ -80,12 +81,7 @@ public class JsonResponseParser implements ResponseParser {
         if (serverResponse instanceof ObjectServerResponse) {
             ObjectServerResponse r = (ObjectServerResponse) serverResponse;
             JSONArray array = r.response.getJSONArray("tokens");
-
             result = parser.parseMessageTokens(r.response, array);
-//        } else if (serverResponse instanceof ArrayServerResponse) {
-//            ArrayServerResponse cplx = (ArrayServerResponse) serverResponse;
-//
-//            result = parser.parseMessageTokens(cplx.response);
         } else {
             throw new Exception("ServerResponse must be an ObjectServerResponse");
         }
@@ -397,6 +393,38 @@ public class JsonResponseParser implements ResponseParser {
         }
 
         return name;
+    }
+
+    @Override
+    public Map<String, String> parseHostedContentSave(ServerResponse serverResponse) throws Exception {
+
+        Map<String, String> result = new HashMap<String, String>();
+
+        if (serverResponse instanceof ObjectServerResponse) {
+
+            ObjectServerResponse objectServerResponse = (ObjectServerResponse) serverResponse;
+
+            Iterator<?> iterator = objectServerResponse.response.keys();
+
+            while (iterator.hasNext()) {
+                String key = (String) iterator.next();
+                result.put(key, objectServerResponse.response.optString(key));
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public TinyUrl parseTinyUrl(ServerResponse serverResponse) throws Exception {
+
+        JSONObject jsonObject = new JSONObject(serverResponse.getRaw());
+
+        TinyUrl result = new TinyUrl();
+        result.setKey(jsonObject.optString("key"));
+        result.setUrl(jsonObject.optString("url"));
+
+        return result;
     }
 
 }

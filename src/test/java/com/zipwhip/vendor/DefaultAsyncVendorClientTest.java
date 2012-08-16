@@ -8,11 +8,11 @@ import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
-import org.apache.log4j.BasicConfigurator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.*;
 
@@ -317,6 +317,11 @@ public class DefaultAsyncVendorClientTest {
             }
 
             return result;
+        }
+
+        @Override
+        public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
+            return null;
         }
 
         @Override

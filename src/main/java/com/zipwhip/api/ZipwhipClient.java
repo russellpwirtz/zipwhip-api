@@ -9,8 +9,10 @@ import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 
+import java.io.File;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 
 /**
@@ -116,6 +118,20 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception If an error occurred while sending the message or parsing the response.
      */
     List<MessageToken> sendMessage(String address, String body, int fromAddress) throws Exception;
+
+    /**
+     * Send an MMS message via Zipwhip.
+     * <p/>
+     * This method will send an MMS with attachments that have been pre-uploaded to Zipwhip via
+     * {@code saveHostedContent}. The argument {@code storageKeys} are the result of that method.
+     *
+     * @param addresses The address, generally the mobile number, of the message recipient.
+     * @param body      The body of the message to be sent.
+     * @param urls      A list of public URLs to attach to the message.
+     * @return A {@code List} of {@code MessageToken}s, indicating the status of the message.
+     * @throws Exception If an error occurred while sending the message or parsing the response.
+     */
+    List<MessageToken> sendMessage(Collection<String> addresses, String body, List<String> urls) throws Exception;
 
     /**
      * Create a new group.
@@ -508,7 +524,7 @@ public interface ZipwhipClient extends Destroyable {
     boolean acceptedTCs() throws Exception;
 
     /**
-     * Initiates the signup process to:
+     * Initiates the sign up process to:
      * 1) Enroll a new account if one doesn't exist
      * 2) Create necessary subscriptions
      * 3) Eventually return a valid session key for this device
@@ -534,9 +550,9 @@ public interface ZipwhipClient extends Destroyable {
     String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception;
 
     /**
-     * @param packageName
-     * @return
-     * @throws Exception
+     * @param packageName The name of the subscription package to unenroll.
+     * @return True if the unenrollment was successful otherwise false.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
     boolean userUnenroll(String packageName) throws Exception;
 
@@ -563,7 +579,7 @@ public interface ZipwhipClient extends Destroyable {
      * Query Zipwhip Face Ecosystem for a user's preferred profile image.
      *
      * @param mobileNumber The mobile number of the user you wish to query.
-     * @param size         the size of thumnail in pixels
+     * @param size         the size of thumbnail in pixels
      * @return A byte[] of the user's image.
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
@@ -586,6 +602,34 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
      */
     byte[] getHostedContent(String storageKey) throws Exception;
+
+    /**
+     * Upload one or more files into Zipwhip hosted content servers.
+     *
+     * @param files A list of files to upload to Zipwhip HostedContent.
+     * @return A map from file name to the HostedContent storage key.
+     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
+     */
+    Map<String, String> saveHostedContent(List<File> files) throws Exception;
+
+    /**
+     * Reserve a tiny url in the Zipwhip TinyUrl system. The resulting TinyUrl
+     * can be used to upload content to via {@code saveTinyUrl}.
+     *
+     * @return The tinyUrl.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the result.
+     */
+    TinyUrl reserveTinyUrl() throws Exception;
+
+    /**
+     * Save content into a tinyUrl with the Zipwhip TinyUrl system.
+     *
+     * @param key      The storage key returned by the call to {@code reserveTinyUrl}.
+     * @param mimeType An optional mime-type for the file. If not provided it will default to multipart/mixed.
+     * @param file     A file to be uploaded into the tinyUrl.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the result.
+     */
+    boolean saveTinyUrl(String key, String mimeType, File file) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.

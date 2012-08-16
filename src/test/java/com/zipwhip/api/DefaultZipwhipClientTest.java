@@ -9,7 +9,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -136,6 +138,11 @@ public class DefaultZipwhipClientTest {
             }
 
             return result;
+        }
+
+        @Override
+        public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
+            return null;
         }
 
         @Override

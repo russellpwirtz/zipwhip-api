@@ -1,10 +1,7 @@
 package com.zipwhip.api;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 import java.util.concurrent.Future;
 
 import com.zipwhip.api.dto.*;
@@ -256,6 +253,19 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("contacts", address);
         params.put("body", body);
         params.put("fromAddress", fromAddress);
+
+        return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
+    }
+
+    @Override
+    public List<MessageToken> sendMessage(Collection<String> addresses, String body, List<String> urls) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("contacts", addresses);
+        params.put("body", body);
+        params.put("fromAddress", "0");
+        params.put("attachment", urls);
 
         return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
     }
@@ -884,7 +894,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     public byte[] getHostedContent(String storageKey) throws Exception {
 
         if (StringUtil.isNullOrEmpty(storageKey)) {
-            throw new Exception("Missing required parameter: storageKey.");
+            throw new Exception("Missing required parameter: storageKey");
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -895,6 +905,44 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // Block and wait...
         binaryResponseFuture.awaitUninterruptibly();
         return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public Map<String, String> saveHostedContent(List<File> files) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(files)) {
+            throw new Exception("At least one file required.");
+        }
+
+        return responseParser.parseHostedContentSave(executeSync(HOSTED_CONTENT_SAVE, null, files));
+    }
+
+    @Override
+    public TinyUrl reserveTinyUrl() throws Exception {
+        return responseParser.parseTinyUrl(executeSync(TINY_URL_RESERVE, null));
+    }
+
+    @Override
+    public boolean saveTinyUrl(String key, String mimeType, File file) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(key)) {
+            throw new IllegalArgumentException("A storage key is required to save.");
+        }
+
+        if (file == null) {
+            throw new IllegalArgumentException("A File is required to save.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("key", key);
+
+        if (StringUtil.exists(mimeType)) {
+            params.put("mimeType", mimeType);
+        }
+
+        ServerResponse response = executeSync(TINY_URL_SAVE, params, Collections.singletonList(file));
+        return response.isSuccess();
+
     }
 
     @Override
