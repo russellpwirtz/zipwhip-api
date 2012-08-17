@@ -9,7 +9,7 @@ package com.zipwhip.api.dto;
  */
 public class Contact extends BasicDto {
 
-    private static final long serialVersionUID = 5874121954952313L;
+    private static final long serialVersionUID = 1874121954952313L;
 
     long id;
     String address;
@@ -32,6 +32,7 @@ public class Contact extends BasicDto {
     String channel;
     String city;
     String state;
+    boolean deleted;
 
     public String getFwd() {
         return fwd;
@@ -201,6 +202,14 @@ public class Contact extends BasicDto {
         this.loc = loc;
     }
 
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
     @Override
     public String toString() {
         StringBuilder toStringBuilder = new StringBuilder("==> Contact details:");
@@ -228,6 +237,7 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nChannel: ").append(channel);
         toStringBuilder.append("\nLast Updated: ").append(city);
         toStringBuilder.append("\nLast Updated: ").append(state);
+        toStringBuilder.append("\nDeleted: ").append(deleted);
 
         return toStringBuilder.toString();
     }
@@ -240,6 +250,7 @@ public class Contact extends BasicDto {
 
         Contact contact = (Contact) o;
 
+        if (deleted != contact.deleted) return false;
         if (deviceId != contact.deviceId) return false;
         if (id != contact.id) return false;
         if (moCount != contact.moCount) return false;
@@ -289,6 +300,8 @@ public class Contact extends BasicDto {
         result = 31 * result + (channel != null ? channel.hashCode() : 0);
         result = 31 * result + (city != null ? city.hashCode() : 0);
         result = 31 * result + (state != null ? state.hashCode() : 0);
+        result = 31 * result + (deleted ? 1 : 0);
         return result;
     }
+
 }
