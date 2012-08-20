@@ -348,7 +348,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         task.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         if (!task.isSuccess()) {
-            throw new Exception("exception for task", task.getCause());
+            throw new Exception(task.getCause());
         }
 
         return task.getResult();
