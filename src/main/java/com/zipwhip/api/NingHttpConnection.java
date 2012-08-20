@@ -176,7 +176,21 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
 
         try {
             com.ning.http.client.RequestBuilder builder = new com.ning.http.client.RequestBuilder();
-            builder.setUrl(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator));
+
+            /**
+             * The next 4 lines are needed because of a bug in Ning in NettyAsyncHttpProvider.java.
+             * Ning has not implemented multipart upload over SSH. If we are using HTTPS some files
+             * will result in a loop which can crash the JVM with an out of memory exception.
+             *
+             * https://issues.sonatype.org/browse/AHC-78
+             */
+            String toUseHost = host;
+
+            if (toUseHost.startsWith("https")) {
+                toUseHost = toUseHost.replaceFirst("https", "http");
+            }
+
+            builder.setUrl(UrlUtil.getSignedUrl(toUseHost, apiVersion, method, rb.build(), sessionKey, authenticator));
 
             if (CollectionUtil.exists(files)) {
 
@@ -189,7 +203,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
                      * is being uploaded. TinyUrlController needs to be fixed to get the file names
                      * from the fileMap as HostedContentController does.
                      */
-                    Part part = new FilePart("data", file.getName(), file);
+                    Part part = new FilePart("data", file, "multipart/form-data", null);
                     builder.addBodyPart(part);
                 }
             }
