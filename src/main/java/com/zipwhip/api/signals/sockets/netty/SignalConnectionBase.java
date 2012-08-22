@@ -95,7 +95,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         // Enforce a single connection
         validateNotConnected();
 
-        final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
+        // prevent any side requests from any other threads from getting in.
+        cancelReconnectStrategy();
 
         // immediately/synchronously create the wrapper.
         this.wrapper = channelWrapperFactory.create();
@@ -112,33 +113,37 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 // value to false.
                 networkDisconnect = true;
 
-                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                try {
+                    final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
+
+                    LOGGER.debug("Connecting to " + address);
 
                     // synchronous connection to endpoint, will crash if not successful.
-                    try {
-                        LOGGER.debug("Connecting to " + address);
-                        if (!wrapper.connect(address)) {
-                            // not a successful connection?
-                            // TODO: should the wrapper self destruct if it reaches a disonnected state??
-                            wrapper.destroy();
-                            wrapper = null;
+                    wrapper.connect(address);
+                } catch (InterruptedException e) {
+                    // timeout?
+                    wrapper.destroy();
+                    wrapper = null;
 
-                            return Boolean.FALSE;
-                        }
-                    } catch (InterruptedException e) {
-                        // timeout?
-                        wrapper.destroy();
-                        wrapper = null;
-
-                        return Boolean.FALSE;
-                    }
-
-                    networkDisconnect = !wrapper.isConnected();
+                    return Boolean.FALSE;
                 }
 
-                connectEvent.notifyObservers(this, wrapper.isConnected());
+                networkDisconnect = !isConnected();
 
-                return wrapper.isConnected();
+                // the rule is that we destroy the wrapper if it's not connected.
+                if (!isConnected()) {
+                    synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                        wrapper.destroy();
+                        wrapper = null;
+                    }
+                }
+
+                // restore the strategy so it can listen to these events.
+                startReconnectStrategy();
+
+                connectEvent.notifyObservers(this, isConnected());
+
+                return isConnected();
             }
         });
     }
@@ -477,7 +482,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             pongTimeoutFuture.cancel(false);
         }
     }
-
 
 
 }
