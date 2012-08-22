@@ -2,9 +2,7 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 
-import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -13,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  * User: Michael
  * Date: 8/21/12
  * Time: 3:25 PM
- *
+ * <p/>
  * Write on a channel and report back the success/failure
  */
 public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
@@ -38,6 +36,7 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
         ChannelFuture future = wrapper.channel.write(message);
 
         boolean finished = future.await(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
         if (!finished) {
             // TODO: this might cause the client to RE-TRANSMIT a request that the server actually did receive.
             // what's the right action here??

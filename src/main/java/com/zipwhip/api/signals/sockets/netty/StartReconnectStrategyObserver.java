@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.events.Observer;
 
 /**
@@ -8,7 +7,7 @@ import com.zipwhip.events.Observer;
  * User: Michael
  * Date: 8/21/12
  * Time: 2:34 PM
- *
+ * <p/>
  * Whenever we reconnect, we start the strategy
  */
 public class StartReconnectStrategyObserver implements Observer<Boolean> {
@@ -23,7 +22,7 @@ public class StartReconnectStrategyObserver implements Observer<Boolean> {
     public void notify(Object sender, Boolean connected) {
         // ignore the connected flag
         if (connection.isConnected()) {
-            if (connection.reconnectStrategy != null){
+            if (connection.reconnectStrategy != null) {
                 connection.reconnectStrategy.start();
             }
         }

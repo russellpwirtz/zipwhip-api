@@ -587,15 +587,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             }
 
             if (command.getPort() > 0) {
-
-                int[] newPortArray = new int[connection.getPorts().length + 1];
-                newPortArray[0] = command.getPort();
-
-                for (int i = 0; i < connection.getPorts().length; i++) {
-                    newPortArray[i + 1] = connection.getPorts()[i];
-                }
-
-                connection.setPorts(newPortArray);
+                connection.setPort(command.getPort());
             }
 
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();

@@ -167,7 +167,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     }
 
     @Override
-    public void setPorts(int[] ports) {
+    public void setPort(int port) {
     }
 
     @Override
