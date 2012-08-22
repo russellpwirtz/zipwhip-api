@@ -1,7 +1,5 @@
 package com.zipwhip.util;
 
-import com.zipwhip.util.CollectionUtil;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +10,7 @@ import java.util.Collection;
  * User: Michael
  * Date: 8/15/12
  * Time: 10:06 AM
- *
+ * <p/>
  * Handy utility for working with internet addresses.
  */
 public class SocketAddressUtil {
@@ -46,4 +44,14 @@ public class SocketAddressUtil {
 
         return result;
     }
+
+    public static InetSocketAddress getSingle(String address, Integer port) {
+
+        if (port == null) {
+            port = DEFAULT_PORT;
+        }
+
+        return new InetSocketAddress(address, port);
+    }
+
 }

@@ -3,7 +3,6 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.events.Observer;
 import org.apache.log4j.BasicConfigurator;
-import org.json.CDL;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,7 +16,6 @@ import static junit.framework.Assert.*;
  * User: Michael
  * Date: 8/21/12
  * Time: 4:39 PM
- * To change this template use File | Settings | File Templates.
  */
 public class NettySignalConnectionTest {
 
@@ -28,13 +26,12 @@ public class NettySignalConnectionTest {
         BasicConfigurator.configure();
 
         connection = new NettySignalConnection();
-        connection.setPorts(new int[]{3000});
     }
 
     @Test
     public void testBadPort() throws Exception {
 
-        connection.setPorts(new int[]{3123});
+        connection.setPort(3123);
 
         assertFalse("Expected connection to be connected", connection.connect().get());
     }
@@ -75,7 +72,6 @@ public class NettySignalConnectionTest {
     public void testReconnectStrategy() throws Exception {
 
         final CountDownLatch latch = new CountDownLatch(1);
-
 
 
         connection.setReconnectStrategy(new ReconnectStrategy() {

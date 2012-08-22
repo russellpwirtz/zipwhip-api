@@ -9,9 +9,8 @@ import java.util.concurrent.*;
  * User: jed
  * Date: 9/7/11
  * Time: 2:29 PM
- *
+ * <p/>
  * Try to reconnect the SignalConnection every 5 seconds until we get a successful connection.
- *
  */
 public class DefaultReconnectStrategy extends ReconnectStrategy {
 
@@ -60,14 +59,8 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
             public void run() {
                 try {
 
-                    reconnectTask = signalConnection.connect();
-                    Boolean success = reconnectTask.get();
+                    signalConnection.connect();
 
-                    if (success) {
-                        LOGGER.debug("Reconnected successfully");
-                    } else {
-                        signalConnection.disconnect(true);
-                    }
                 } catch (Exception e) {
                     LOGGER.error("Error reconnecting", e);
                 }

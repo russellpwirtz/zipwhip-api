@@ -7,7 +7,6 @@ import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
@@ -30,14 +29,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final Object WRAPPER_BEING_TOUCHED_LOCK = new Object();
 
-    // made not final so it can be testable...
-    public static int CONNECTION_TIMEOUT_SECONDS = 45;
+    public static final int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping inactive seconds
     private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
 
     private String host = "74.209.177.242";
-    private int[] ports = new int[]{80, 443, 8080, 3000};
+    private int port = 3000;
 
     private int pingTimeout = DEFAULT_PING_TIMEOUT;
     private int pongTimeout = DEFAULT_PONG_TIMEOUT;
@@ -56,14 +54,12 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     protected ReconnectStrategy reconnectStrategy;
 
-//    protected Channel channel;
     protected ChannelWrapper wrapper;
     protected ChannelWrapperFactory channelWrapperFactory;
     protected ChannelPipelineFactory channelPipelineFactory;
 
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
-    protected boolean connecting;
     protected boolean networkDisconnect;
     protected boolean doKeepalives;
 
@@ -97,8 +93,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         // Enforce a single connection
         validateNotConnected();
 
-        // TODO: Make this pretty
-        final InetSocketAddress address = SocketAddressUtil.get(host, ports).iterator().next();
+        final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
 
         // immediately/synchronously create the wrapper.
         this.wrapper = channelWrapperFactory.create();
@@ -196,7 +191,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     private void startReconnectStrategy() {
-        if (reconnectStrategy != null){
+        if (reconnectStrategy != null) {
             reconnectStrategy.start();
         }
     }
@@ -208,7 +203,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     private void cancelReconnectStrategy() {
-        if (reconnectStrategy != null){
+        if (reconnectStrategy != null) {
             reconnectStrategy.stop();
         }
     }
@@ -267,7 +262,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized boolean isConnected() {
-        if (wrapper == null){
+        if (wrapper == null) {
             return false;
         }
 
@@ -323,13 +318,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
-    public final int[] getPorts() {
-        return ports;
+    public final int getPort() {
+        return port;
     }
 
     @Override
-    public void setPorts(int[] ports) {
-        this.ports = ports;
+    public void setPort(int port) {
+        this.port = port;
     }
 
     @Override
@@ -370,7 +365,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         if (this.reconnectStrategy != null) {
             this.reconnectStrategy.setSignalConnection(this);
             this.link(reconnectStrategy);
-       }
+        }
     }
 
     @Override
@@ -480,7 +475,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             pongTimeoutFuture.cancel(false);
         }
     }
-
 
 
 }

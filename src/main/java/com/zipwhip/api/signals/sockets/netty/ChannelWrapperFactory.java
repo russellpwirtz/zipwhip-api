@@ -7,14 +7,12 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
-import java.lang.reflect.Method;
-
 /**
  * Created with IntelliJ IDEA.
  * User: Michael
  * Date: 8/21/12
  * Time: 1:55 PM
- *
+ * <p/>
  * Creates "ChannelWrapper" instances "correctly" (NOTE: you still have to call 'connect' manually).
  */
 public class ChannelWrapperFactory implements Factory<ChannelWrapper> {
