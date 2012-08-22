@@ -21,10 +21,9 @@ public class StartReconnectStrategyObserver implements Observer<Boolean> {
     @Override
     public void notify(Object sender, Boolean connected) {
         // ignore the connected flag
-        if (connection.isConnected()) {
-            if (connection.reconnectStrategy != null) {
-                connection.reconnectStrategy.start();
-            }
+        if (connection.isConnected() && connection.reconnectStrategy != null) {
+            connection.reconnectStrategy.start();
         }
     }
+
 }

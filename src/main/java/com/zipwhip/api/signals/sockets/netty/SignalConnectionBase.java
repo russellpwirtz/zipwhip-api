@@ -7,7 +7,6 @@ import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
@@ -62,7 +61,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
-    protected boolean networkDisconnect;
     protected boolean doKeepalives;
 
     public void init(ReconnectStrategy reconnectStrategy) {
@@ -85,6 +83,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
         // start the reconnectStrategy whenever we do a connect
         this.connectEvent.addObserver(new StartReconnectStrategyObserver(this));
+
         // stop the reconnectStrategy whenever we disconnect manually.
         this.disconnectEvent.addObserver(new StopReconnectStrategyObserver(this));
     }
@@ -121,11 +120,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                     wrapper.destroy();
                     wrapper = null;
 
+                    connectEvent.notifyObservers(this, isConnected());
+                    disconnectEvent.notifyObservers(this, Boolean.TRUE);
                     return Boolean.FALSE;
                 }
-
-                // was the network the reason for our disconnected state?
-                networkDisconnect = !isConnected();
 
                 // the rule is that we destroy the wrapper if it's not connected.
                 if (!isConnected()) {
@@ -139,6 +137,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 startReconnectStrategy();
 
                 connectEvent.notifyObservers(this, isConnected());
+
+                if (!isConnected()) {
+                    disconnectEvent.notifyObservers(this, Boolean.TRUE);
+                }
 
                 return isConnected();
             }
@@ -155,8 +157,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
         validateConnected();
 
-        networkDisconnect = network;
-
         cancelPingPongs();
 
         cancelReconnectStrategy();
@@ -165,10 +165,11 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
             @Override
             public Void call() throws Exception {
+
+                // sanity check the state to make sure it hasn't changed by the time we ran.
                 validateConnected();
 
                 synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-                    // sanity check the state to make sure it hasn't changed by the time we ran.
 
                     try {
                         wrapper.disconnect();
@@ -185,8 +186,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                     startReconnectStrategy();
                 }
 
-                // TODO: can we notify of disconnect earlier??
-                disconnectEvent.notifyObservers(this, networkDisconnect);
+                disconnectEvent.notifyObservers(this, network);
 
                 return null;
             }

@@ -124,11 +124,12 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
                         }
 
                         consecutiveReconnectAttempts++;
-
                         reconnectTask = signalConnection.connect();
+
                     } catch (InterruptedException e) {
 
                         LOGGER.warn("Execution interrupted, we probably already reconnected");
+
                     } catch (Exception e) {
 
                         LOGGER.error("Error reconnecting", e);

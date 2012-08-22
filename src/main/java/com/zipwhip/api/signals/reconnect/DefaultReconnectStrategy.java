@@ -58,9 +58,8 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
             @Override
             public void run() {
                 try {
-
-                    signalConnection.connect();
-
+                    LOGGER.debug("Attempting a reconnect...");
+                    reconnectTask = signalConnection.connect();
                 } catch (Exception e) {
                     LOGGER.error("Error reconnecting", e);
                 }

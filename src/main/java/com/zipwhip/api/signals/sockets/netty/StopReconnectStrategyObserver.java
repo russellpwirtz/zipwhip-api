@@ -20,10 +20,9 @@ public class StopReconnectStrategyObserver implements Observer<Boolean> {
 
     @Override
     public void notify(Object sender, Boolean networkDisconnect) {
-        if (!connection.networkDisconnect) {
-            if (connection.reconnectStrategy != null){
-                connection.reconnectStrategy.stop();
-            }
+        if (!networkDisconnect && connection.reconnectStrategy != null) {
+            connection.reconnectStrategy.stop();
         }
     }
+
 }
