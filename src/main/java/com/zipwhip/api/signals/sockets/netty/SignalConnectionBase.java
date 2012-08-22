@@ -109,10 +109,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 // maybe unneeded sanity check.
                 validateNotConnected();
 
-                // before we do the "lengthy" network call (which could take 30+ seconds, lets set the networkDisconnect
-                // value to false.
-                networkDisconnect = true;
-
                 try {
                     final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
 
@@ -128,6 +124,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                     return Boolean.FALSE;
                 }
 
+                // was the network the reason for our disconnected state?
                 networkDisconnect = !isConnected();
 
                 // the rule is that we destroy the wrapper if it's not connected.
