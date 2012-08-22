@@ -15,10 +15,10 @@ public class NettyChannelHandler extends SimpleChannelHandler {
 
     protected static final Logger LOGGER = Logger.getLogger(NettyChannelHandler.class);
 
-    private SignalConnectionBase signalConnection;
+    private SignalConnectionDelegate delegate;
 
-    public NettyChannelHandler(SignalConnectionBase signalConnection) {
-        this.signalConnection = signalConnection;
+    public NettyChannelHandler(SignalConnectionDelegate delegate) {
+        this.delegate = delegate;
     }
 
     @Override
@@ -35,62 +35,53 @@ public class NettyChannelHandler extends SimpleChannelHandler {
         } else if (msg instanceof PingPongCommand) {
 
             // We received a PONG, cancel the PONG timeout.
-            signalConnection.receivePong((PingPongCommand) msg);
+            delegate.receivePong((PingPongCommand) msg);
 
             return;
 
         } else {
 
-            // We have activity on the wire, reschedule the next PING
-            if (signalConnection.doKeepalives) {
-                signalConnection.schedulePing(false);
-            }
+            // TODO: when we have the "Keep alive channel handler" in place, we won't have to do this.
+//            // We have activity on the wire, reschedule the next PING
+//            if (delegate.doKeepalives) {
+//                delegate.schedulePing(false);
+//            }
         }
 
         Command command = (Command) msg;
 
-        signalConnection.receiveEvent.notifyObservers(this, command);
+        delegate.notifyReceiveEvent(this, command);
     }
 
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-
         LOGGER.debug("channelConnected");
-
-        signalConnection.reconnectStrategy.start();
-
-        signalConnection.connectEvent.notifyObservers(this, Boolean.TRUE);
-
-        super.channelConnected(ctx, e);
+//        delegate.notifyConnect(this, Boolean.TRUE);
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-
         LOGGER.debug("channelClosed, disconnecting...");
 
-        signalConnection.disconnect(Boolean.TRUE);
+        delegate.disconnect(Boolean.TRUE);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-
         LOGGER.error("Caught exception on channel, disconnecting... ", e.getCause());
 
-        signalConnection.exceptionEvent.notifyObservers(this, e.toString());
+        delegate.notifyException(this, e.toString());
 
-        signalConnection.disconnect(Boolean.TRUE);
+        delegate.disconnect(Boolean.TRUE);
     }
 
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        super.channelDisconnected(ctx, e);
         LOGGER.debug("channelDisconnected, just logging...");
     }
 
     @Override
     public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        super.channelUnbound(ctx, e);
         LOGGER.debug("channelUnbound, just logging...");
     }
 

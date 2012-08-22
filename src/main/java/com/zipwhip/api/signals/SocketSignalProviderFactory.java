@@ -13,7 +13,6 @@ import com.zipwhip.util.Factory;
 public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy;
-    private Runnable onSocketActivity;
 
     private SocketSignalProviderFactory() {
     }
@@ -31,21 +30,11 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
             nettySignalConnection.setReconnectStrategy(reconnectStrategy);
         }
 
-        if (onSocketActivity != null) {
-            nettySignalConnection.setOnSocketActivity(onSocketActivity);
-        }
-
         return new SocketSignalProvider(nettySignalConnection);
     }
 
     public SocketSignalProviderFactory reconnectStrategy(ReconnectStrategy reconnectStrategy) {
         this.reconnectStrategy = reconnectStrategy;
-        return this;
-    }
-
-    @Deprecated
-    public SocketSignalProviderFactory onSocketActivity(Runnable onSocketActivity) {
-        this.onSocketActivity = onSocketActivity;
         return this;
     }
 

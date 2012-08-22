@@ -24,7 +24,7 @@ public class App {
 
     public static final String USERNAME = "2063758020";
     public static final String PASSWORD = "zipwhip1";
-    public static final String TO_NUMBER = "2069308934";
+    public static final String TO_NUMBER = "2063758020";
 
     public static void main(String[] args) {
 

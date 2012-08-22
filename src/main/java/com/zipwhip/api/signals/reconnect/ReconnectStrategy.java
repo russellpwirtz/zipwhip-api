@@ -66,7 +66,7 @@ public abstract class ReconnectStrategy extends DestroyableBase {
     /**
      * Start participating in the {@code SignalConnection} connect/disconnect lifecycle.
      * This method is final as it handles the basic mechanics of binding to the {@code SignalConnection}.
-     * To implement your strategy see {@code doStrategy}.
+     * To implement your strategy see {@code doStrategyWithoutBlocking}.
      */
     public synchronized final void start() {
 
@@ -83,7 +83,7 @@ public abstract class ReconnectStrategy extends DestroyableBase {
 
                     // If the disconnect was generated due to a network problem we want to try a reconnect.
                     if (networkGenerated && isStarted) {
-                        doStrategy();
+                        doStrategyWithoutBlocking();
                     }
                 }
             };
@@ -104,7 +104,9 @@ public abstract class ReconnectStrategy extends DestroyableBase {
     /**
      * Put your strategy implementation here. This method will be called from {@code start} every time a reconnect event
      * fires from the {@code SignalConnection}. This method should not be called directly by clients.
+     *
+     * VERY IMPORTANT: DO NOT BLOCK OR SYNCHRONIZE ON ANYTHING IN THE CONNECTION!
      */
-    protected abstract void doStrategy();
+    protected abstract void doStrategyWithoutBlocking();
 
 }

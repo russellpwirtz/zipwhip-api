@@ -13,7 +13,7 @@ import java.util.concurrent.Future;
 public class MockReconnectStrategy extends ReconnectStrategy {
 
     @Override
-    protected void doStrategy() {
+    protected void doStrategyWithoutBlocking() {
 
         try {
             System.out.println("Strategy firing...");

@@ -70,7 +70,7 @@ public interface SignalConnection extends Destroyable {
      *
      * @param command the Command to send
      */
-    void send(SerializingCommand command);
+    Future<Boolean> send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected
@@ -146,21 +146,19 @@ public interface SignalConnection extends Destroyable {
     void setHost(String host);
 
     /**
-     * Get the ports being used to connect to Zipwhip.
+     * Get the port being used to connect to Zipwhip.
      *
-     * @return the ports being used to connect to Zipwhip.
+     * @return the port being used to connect to Zipwhip.
      */
-    int[] getPorts();
+    int getPort();
 
     /**
-     * Sets the ports to be used on the NEXT connection.
-     * If not set the default SignalServer port sequence will be used.
-     * <p/>
-     * The ports will be used in a fallback sequence from ports[0].
+     * Sets the port to be used on the NEXT connection.
+     * If not set the default SignalServer port will be used.
      *
-     * @param ports the ports to be used on the NEXT connection
+     * @param port the port to be used on the NEXT connection
      */
-    void setPorts(int[] ports);
+    void setPort(int port);
 
     /**
      * Get the time to wait after the connection has been inactive

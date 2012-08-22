@@ -60,9 +60,11 @@ public class SignalConnectionDelegate extends DestroyableBase {
     }
 
     public void disconnect(Boolean network) {
-        ensureValid();
+        if (connection.isConnected()) {
+            ensureValid();
 
-        connection.disconnect(network);
+            connection.disconnect(network);
+        }
     }
 
     public void schedulePing(boolean now) {
@@ -78,22 +80,10 @@ public class SignalConnectionDelegate extends DestroyableBase {
         connection.reconnectStrategy.start();
     }
 
-    public synchronized void notifyConnect(Object sender, Boolean result) {
-        ensureValid();
-
-        connection.connectEvent.notifyObservers(sender, result);
-    }
-
     public synchronized void notifyException(Object sender, String result) {
         ensureValid();
 
         connection.exceptionEvent.notifyObservers(sender, result);
-    }
-
-    public void setNetworkDisconnect(boolean networkDisconnect) {
-        ensureValid();
-
-        connection.networkDisconnect = networkDisconnect;
     }
 
     public void stopReconnectStrategy() {
