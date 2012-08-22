@@ -60,9 +60,11 @@ public class SignalConnectionDelegate extends DestroyableBase {
     }
 
     public void disconnect(Boolean network) {
-        ensureValid();
+        if (connection.isConnected()) {
+            ensureValid();
 
-        connection.disconnect(network);
+            connection.disconnect(network);
+        }
     }
 
     public void schedulePing(boolean now) {

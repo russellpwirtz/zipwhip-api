@@ -10,6 +10,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import org.apache.log4j.Logger;
 
 import com.zipwhip.api.signals.PingEvent;
@@ -394,7 +395,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                 try {
                     // Block until the TCP connection connects or times out
-                    connectFuture.get(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    connectFuture.get(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                     if (connection.isConnected()) {
 

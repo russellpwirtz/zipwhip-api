@@ -81,7 +81,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 	}
 
 	@Override
-	protected synchronized void doStrategy() {
+	protected synchronized void doStrategyWithoutBlocking() {
 
 		// Start listening for connect events to reset our counter
 		if (!connectObserverSet) {
@@ -126,15 +126,15 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 						consecutiveReconnectAttempts++;
 
 						reconnectTask = signalConnection.connect();
-						Boolean success = reconnectTask.get();
-
-						if (success) {
-							if (LOGGER.isDebugEnabled()) {
-								LOGGER.debug("Reconnected successfully");
-							}
-						} else {
-							signalConnection.disconnect(true);
-						}
+//						Boolean success = reconnectTask.get();
+//
+//						if (success) {
+//							if (LOGGER.isDebugEnabled()) {
+//								LOGGER.debug("Reconnected successfully");
+//							}
+//						} else {
+//							signalConnection.disconnect(true);
+//						}
 
 					}
 					catch (InterruptedException e) {

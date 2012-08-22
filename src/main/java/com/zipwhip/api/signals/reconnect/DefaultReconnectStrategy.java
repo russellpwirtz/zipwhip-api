@@ -47,7 +47,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
     }
 
     @Override
-    protected void doStrategy() {
+    protected void doStrategyWithoutBlocking() {
 
         LOGGER.debug("Scheduling a reconnect attempt in 5 seconds...");
 

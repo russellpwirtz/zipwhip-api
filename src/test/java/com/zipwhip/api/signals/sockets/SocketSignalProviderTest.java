@@ -316,7 +316,7 @@ public class SocketSignalProviderTest {
         assertEquals(0, signalObserver.signalReceivedCount);
         assertEquals(0, signalCommandObserver.signalCommandReceivedCount);
 
-        Thread.sleep(2000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(4000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
         assertEquals(1, signalObserver.signalReceivedCount);
         assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
 

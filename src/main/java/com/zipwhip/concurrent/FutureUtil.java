@@ -13,7 +13,7 @@ import java.util.concurrent.FutureTask;
  *
  * Convenience methods for creating/working with futures.
  */
-public class Futures {
+public class FutureUtil {
 
     public static <T> Future<T> execute(Executor executor, Callable<T> callable) {
         if (executor == null){

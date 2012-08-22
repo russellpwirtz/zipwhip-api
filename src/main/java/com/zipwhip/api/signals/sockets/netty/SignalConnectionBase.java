@@ -1,14 +1,14 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.*;
 
+import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import com.zipwhip.api.signals.PingEvent;
@@ -28,7 +28,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     protected static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
 
-    public static final int CONNECTION_TIMEOUT_SECONDS = 45;
+    private final Object WRAPPER_BEING_TOUCHED_LOCK = new Object();
+
+    // made not final so it can be testable...
+    public static int CONNECTION_TIMEOUT_SECONDS = 45;
 
     private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping inactive seconds
     private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
@@ -39,22 +42,25 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     private int pingTimeout = DEFAULT_PING_TIMEOUT;
     private int pongTimeout = DEFAULT_PONG_TIMEOUT;
 
-    private ExecutorService connectExecutor;
+    protected ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private ScheduledFuture<?> pingTimeoutFuture;
     private ScheduledFuture<?> pongTimeoutFuture;
     private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
 
-    protected ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
-    protected ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
-    protected ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
-    protected ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
-    protected ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
+    protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
+    protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
+    protected final ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>();
+    protected final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
+    protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     protected ReconnectStrategy reconnectStrategy;
-    private Runnable onSocketActivity;
 
-    protected Channel channel;
+//    protected Channel channel;
+    protected ChannelWrapper wrapper;
+    protected ChannelWrapperFactory channelWrapperFactory;
+    protected ChannelPipelineFactory channelPipelineFactory;
+
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
     protected boolean connecting;
@@ -68,69 +74,76 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         this.link(connectEvent);
         this.link(exceptionEvent);
         this.link(disconnectEvent);
-        this.link(reconnectStrategy);
 
-        this.reconnectStrategy = reconnectStrategy;
-        this.reconnectStrategy.setSignalConnection(this);
+        this.setReconnectStrategy(reconnectStrategy);
+
         this.doKeepalives = true;
+
+        // sanity checks on the config.
+        assert channelPipelineFactory != null;
+        assert channelFactory != null;
+
+        channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this);
+
+        // start the reconnectStrategy whenever we do a connect
+        this.connectEvent.addObserver(new StartReconnectStrategyObserver(this));
+        // stop the reconnectStrategy whenever we disconnect manually.
+        this.disconnectEvent.addObserver(new StopReconnectStrategyObserver(this));
     }
 
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
         // Enforce a single connection
-        if ((channel != null) && channel.isConnected()) {
-            throw new Exception("Tried to connect but we already have a channel connected!");
-        }
+        validateNotConnected();
 
-        connecting = true;
+        // TODO: Make this pretty
+        final InetSocketAddress address = SocketAddressUtil.get(host, ports).iterator().next();
 
-        FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
+        // immediately/synchronously create the wrapper.
+        this.wrapper = channelWrapperFactory.create();
+
+        return FutureUtil.execute(this.executor, new Callable<Boolean>() {
 
             @Override
             public Boolean call() throws Exception {
 
-                for (int port : ports) {
+                // maybe unneeded sanity check.
+                validateNotConnected();
 
-                    LOGGER.debug("Connecting to " + host + ":" + port);
+                // before we do the "lengthy" network call (which could take 30+ seconds, lets set the networkDisconnect
+                // value to false.
+                networkDisconnect = true;
 
-                    InetSocketAddress address = new InetSocketAddress(host, port);
+                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
 
-                    if (address.isUnresolved()) {
+                    // synchronous connection to endpoint, will crash if not successful.
+                    try {
+                        LOGGER.debug("Connecting to " + address);
+                        if (!wrapper.connect(address)) {
+                            // not a successful connection?
+                            // TODO: should the wrapper self destruct if it reaches a disonnected state??
+                            wrapper.destroy();
+                            wrapper = null;
+
+                            return Boolean.FALSE;
+                        }
+                    } catch (InterruptedException e) {
+                        // timeout?
+                        wrapper.destroy();
+                        wrapper = null;
+
                         return Boolean.FALSE;
                     }
 
-                    channel = channelFactory.newChannel(getPipeline());
-                    setupOnSocketActivity();
-
-                    final ChannelFuture channelFuture = channel.connect(address);
-
-                    boolean socketConnected = false;
-                    networkDisconnect = true; // Assume a network failure will occur during connect
-
-                    if (channelFuture != null) {
-                        channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                        socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
-                        networkDisconnect = socketConnected;
-                    }
-
-                    if (socketConnected) {
-                        connecting = false;
-                        return Boolean.TRUE;
-                    }
+                    networkDisconnect = !wrapper.isConnected();
                 }
 
-                connecting = false;
-                return Boolean.FALSE;
+                connectEvent.notifyObservers(this, wrapper.isConnected());
+
+                return wrapper.isConnected();
             }
         });
-
-        if (connectExecutor == null) {
-            connectExecutor = Executors.newSingleThreadExecutor();
-        }
-        connectExecutor.execute(task);
-
-        return task;
     }
 
     @Override
@@ -141,53 +154,79 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     @Override
     public synchronized Future<Void> disconnect(final boolean network) {
 
-        FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
+        validateConnected();
+
+        networkDisconnect = network;
+
+        cancelPingPongs();
+
+        cancelReconnectStrategy();
+
+        return FutureUtil.execute(executor, new Callable<Void>() {
+
             @Override
             public Void call() throws Exception {
+                validateConnected();
 
-                networkDisconnect = network;
+                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                    // sanity check the state to make sure it hasn't changed by the time we ran.
 
-                // If this was not an automatic disconnect stop the retry logic
-                if (!networkDisconnect) {
-                    reconnectStrategy.stop();
-                }
-
-                if (channel != null) {
-
-                    ChannelFuture closeFuture = channel.close().await();
-                    LOGGER.debug("Closing channel success was " + closeFuture.isSuccess());
-
-                    if (closeFuture.isSuccess()) {
-                        disconnectEvent.notifyObservers(this, networkDisconnect);
+                    try {
+                        wrapper.disconnect();
+                    } catch (IllegalStateException e) {
+                        // odd, very odd, this shouldn't happen.
+                        LOGGER.warn("Error disconnecting, the channel said", e);
                     }
+
+                    wrapper.destroy();
+                    wrapper = null;
                 }
 
-                connectExecutor.shutdownNow();
-                connectExecutor = null;
-
-                if (pingTimeoutFuture != null) {
-                    pingTimeoutFuture.cancel(true);
+                if (network) {
+                    startReconnectStrategy();
                 }
 
-                if (pongTimeoutFuture != null) {
-                    pongTimeoutFuture.cancel(true);
-                }
+                // TODO: can we notify of disconnect earlier??
+                disconnectEvent.notifyObservers(this, networkDisconnect);
 
                 return null;
             }
-        });
 
-        /**
-         * This is unintuitive, but we need to prevent multiple disconnects from being scheduled
-         * simultaneously. Netty can throw a different set of events on the channel depending on
-         * the circumstance of the disconnect, and in some cases this means a channelClosed and
-         * an exceptionCaught event. If we allow multiple disconnects we sacrifice thread-safety.
-         */
-        if (connectExecutor != null && !connecting) {
-            connectExecutor.execute(task);
+        });
+    }
+
+    private void startReconnectStrategy() {
+        if (reconnectStrategy != null){
+            reconnectStrategy.start();
+        }
+    }
+
+    private void validateNotConnected() {
+        if ((wrapper != null) && wrapper.isConnected()) {
+            throw new IllegalStateException("Tried to connect but we already have a channel connected!");
+        }
+    }
+
+    private void cancelReconnectStrategy() {
+        if (reconnectStrategy != null){
+            reconnectStrategy.stop();
+        }
+    }
+
+    private void validateConnected() {
+        if (wrapper == null || !wrapper.isConnected()) {
+            throw new IllegalStateException("Not currently connected, expected to be!");
+        }
+    }
+
+    private void cancelPingPongs() {
+        if (pingTimeoutFuture != null) {
+            pingTimeoutFuture.cancel(true);
         }
 
-        return task;
+        if (pongTimeoutFuture != null) {
+            pongTimeoutFuture.cancel(true);
+        }
     }
 
     @Override
@@ -218,14 +257,24 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
-    public void send(SerializingCommand command) {
+    public synchronized Future<Boolean> send(final SerializingCommand command) throws IllegalStateException {
         // send this over the wire.
-        channel.write(command);
+        validateConnected();
+        assert wrapper.channel.isWritable(); // TODO: consider a special exception?
+
+        return wrapper.write(command);
     }
 
     @Override
-    public boolean isConnected() {
-        return (channel != null) && channel.isConnected();
+    public synchronized boolean isConnected() {
+        if (wrapper == null){
+            return false;
+        }
+
+        // sanity check our assumptions.
+        assert !wrapper.isDestroyed();
+
+        return wrapper.isConnected();
     }
 
     @Override
@@ -314,21 +363,14 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         // Stop our old strategy
         if (this.reconnectStrategy != null) {
             this.reconnectStrategy.stop();
-            this.reconnectStrategy.destroy();
+            this.unlink(reconnectStrategy);
         }
 
         this.reconnectStrategy = reconnectStrategy;
-        this.reconnectStrategy.setSignalConnection(this);
-    }
-
-    @Deprecated
-    public Runnable getOnSocketActivity() {
-        return onSocketActivity;
-    }
-
-    @Deprecated
-    public void setOnSocketActivity(Runnable onSocketActivity) {
-        this.onSocketActivity = onSocketActivity;
+        if (this.reconnectStrategy != null) {
+            this.reconnectStrategy.setSignalConnection(this);
+            this.link(reconnectStrategy);
+       }
     }
 
     @Override
@@ -354,8 +396,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             scheduledExecutor.shutdownNow();
         }
     }
-
-    protected abstract ChannelPipeline getPipeline();
 
     protected void schedulePing(boolean now) {
 
@@ -441,23 +481,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    /**
-     * We are deprecating this, but to support our custom Netty change let's check via reflection
-     */
-    private void setupOnSocketActivity() {
 
-        if (onSocketActivity != null) {
-
-            try {
-                Method setOnSocketActivityMethod = channel.getClass().getMethod("setOnSocketActivity", Runnable.class);
-
-                if (setOnSocketActivityMethod != null) {
-                    setOnSocketActivityMethod.invoke(channel, onSocketActivity);
-                }
-            } catch (Exception e) {
-                LOGGER.warn("Tried setting onSocketActivity Runnable into the channel but the method does not exist in this build of Netty.");
-            }
-        }
-    }
 
 }

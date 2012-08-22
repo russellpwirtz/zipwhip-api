@@ -15,12 +15,22 @@ import java.util.Collection;
  *
  * Handy utility for working with internet addresses.
  */
-public class AddressUtil {
+public class SocketAddressUtil {
 
     private static final int DEFAULT_PORT = 80;
 
     public static Collection<InetSocketAddress> get(String address, Integer... ports) {
         return get(address, Arrays.asList(ports));
+    }
+
+    public static Collection<InetSocketAddress> get(String address, int[] ports) {
+        Collection<Integer> collection = new ArrayList<Integer>(ports.length);
+
+        for (int port : ports) {
+            collection.add(port);
+        }
+
+        return get(address, collection);
     }
 
     public static Collection<InetSocketAddress> get(String address, Collection<Integer> ports) {

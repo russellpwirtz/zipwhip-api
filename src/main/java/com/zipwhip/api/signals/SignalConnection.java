@@ -70,7 +70,7 @@ public interface SignalConnection extends Destroyable {
      *
      * @param command the Command to send
      */
-    void send(SerializingCommand command);
+    Future<Boolean> send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected

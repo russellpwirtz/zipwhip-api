@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
+import com.zipwhip.executors.FakeFuture;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 
@@ -100,13 +101,14 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     }
 
     @Override
-    public void send(SerializingCommand command) {
+    public Future<Boolean> send(SerializingCommand command) {
         LOG.debug("Request received to send to server " + command);
         sent.add(command);
         // This doesnt appear to be the right place to send to
         //for (Observer<Command> o : receiveEvent) {
         //    o.notify(this, new SignalCommand(new JsonSignal(SIGNAL_JSON)));
         //}
+        return new FakeFuture<Boolean>(true);
     }
 
     @Override
@@ -207,11 +209,11 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
         return false;
     }
 
-    @Override
-    protected ChannelPipeline getPipeline() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+//    @Override
+//    protected ChannelPipeline getPipeline() {
+//        // TODO Auto-generated method stub
+//        return null;
+//    }
 
     /**
      * Provide a means to simulate traffic coming in from the signal server
