@@ -6,11 +6,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
+import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.executors.FakeObservableFuture;
 import org.apache.log4j.Logger;
 
 import com.zipwhip.api.signals.PingEvent;
@@ -30,7 +32,6 @@ import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
@@ -75,6 +76,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Presence presence;
     private Map<String, Long> versions = new HashMap<String, Long>();
     private Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
+
+    private ExecutorService eventExecutor = Executors.newFixedThreadPool(2);
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
@@ -347,26 +350,26 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     @Override
-    public Future<Boolean> connect() throws Exception {
+    public ObservableFuture<Boolean> connect() throws Exception {
         return connect(originalClientId, null, null);
     }
 
     @Override
-    public Future<Boolean> connect(String clientId) throws Exception {
+    public ObservableFuture<Boolean> connect(String clientId) throws Exception {
         return connect(clientId, null, null);
     }
 
     @Override
-    public Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
+    public ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
         return connect(clientId, versions, presence);
     }
 
     @Override
-    public Future<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
+    public ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
 
         if (isConnected() || ((connectLatch != null) && (connectLatch.getCount() > 0))) {
             LOGGER.debug("Connect requested but already connected or connecting...");
-            return new FakeFuture<Boolean>(Boolean.TRUE);
+            return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
         }
 
         // This will help us do the connect synchronously
@@ -389,7 +392,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         // Connect our TCP socket
         final Future<Boolean> connectFuture = connection.connect();
 
-        FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
+        return FutureUtil.execute(executor, this, new Callable<Boolean>() {
             @Override
             public Boolean call() {
 
@@ -425,21 +428,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 return isConnected();
             }
         });
-
-        // this background thread stops us from blocking.
-        executor.execute(task);
-        return task;
     }
 
     @Override
-    public Future<Void> disconnect() throws Exception {
+    public ObservableFuture<Void> disconnect() throws Exception {
 
         for (String key : slidingWindows.keySet()) {
             slidingWindows.get(key).destroy();
         }
         slidingWindows.clear();
 
-        return connection.disconnect(false);
+        return FutureUtil.execute(eventExecutor, this, connection.disconnect(false));
     }
 
     @Override

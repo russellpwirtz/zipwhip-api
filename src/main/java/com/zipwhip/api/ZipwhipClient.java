@@ -4,6 +4,7 @@ import com.zipwhip.api.dto.*;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
@@ -13,7 +14,6 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 /**
  * Implementations of this class provide a high level way to communicate with the Zipwhip web API.
@@ -638,7 +638,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return so you can wait until login succeeds
      * @throws Exception any connection problem
      */
-    Future<Boolean> connect(Presence presence) throws Exception;
+    ObservableFuture<Boolean> connect(Presence presence) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
@@ -646,7 +646,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return so you can wait until login succeeds
      * @throws Exception any connection problem
      */
-    Future<Boolean> connect() throws Exception;
+    ObservableFuture<Boolean> connect() throws Exception;
 
     /**
      * Tell the SignalProvider to disconnect from the server.
@@ -654,7 +654,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    Future<Void> disconnect() throws Exception;
+    ObservableFuture<Void> disconnect() throws Exception;
 
     /**
      * Listen for signals. This is a convenience method

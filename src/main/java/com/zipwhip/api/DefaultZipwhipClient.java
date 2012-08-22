@@ -2,7 +2,6 @@ package com.zipwhip.api;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.Future;
 
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.exception.NotAuthenticatedException;
@@ -146,12 +145,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public Future<Boolean> connect() throws Exception {
+    public ObservableFuture<Boolean> connect() throws Exception {
         return connect(null);
     }
 
     @Override
-    public Future<Boolean> connect(Presence presence) throws Exception {
+    public ObservableFuture<Boolean> connect(Presence presence) throws Exception {
 
         // we need to determine if we're authenticated enough
         if (!connection.isConnected() || !connection.isAuthenticated()) {
@@ -187,7 +186,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public Future<Void> disconnect() throws Exception {
+    public ObservableFuture<Void> disconnect() throws Exception {
 
         if (!connection.isConnected()) {
             throw new Exception("The connection is not connected!");

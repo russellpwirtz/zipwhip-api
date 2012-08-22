@@ -3,13 +3,13 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/1/11 Time: 4:22 PM
@@ -66,7 +66,7 @@ public interface SignalProvider extends Destroyable {
      * @return a ObservableFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
-    Future<Boolean> connect() throws Exception;
+    ObservableFuture<Boolean> connect() throws Exception;
 
     /**
      * Tell it to connect.
@@ -77,7 +77,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting
      */
-    Future<Boolean> connect(String clientId) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId) throws Exception;
 
     /**
      * Tell it to connect.
@@ -89,7 +89,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
 
     /**
      * Tell it to connect.
@@ -102,7 +102,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    Future<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
 
     /**
      *
@@ -111,7 +111,7 @@ public interface SignalProvider extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    Future<Void> disconnect() throws Exception;
+    ObservableFuture<Void> disconnect() throws Exception;
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions
