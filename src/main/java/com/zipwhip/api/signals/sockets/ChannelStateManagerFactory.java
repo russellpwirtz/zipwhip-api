@@ -17,27 +17,27 @@ public class ChannelStateManagerFactory implements Factory<StateManager<ChannelS
 
     private static final ChannelStateManagerFactory INSTANCE = new ChannelStateManagerFactory();
 
-    private Directory<ChannelState, ChannelState> directory;
+    private Directory<ChannelState, ChannelState> transitions;
 
     public ChannelStateManagerFactory() {
-        directory = new SetDirectory<ChannelState, ChannelState>();
+        transitions = new SetDirectory<ChannelState, ChannelState>();
 
         // for connecting
-        directory.add(ChannelState.NONE, ChannelState.CONNECTING);
-        directory.add(ChannelState.CONNECTING, ChannelState.CONNECTED);
-        directory.add(ChannelState.CONNECTING, ChannelState.DISCONNECTED);
+        transitions.add(ChannelState.NONE, ChannelState.CONNECTING);
+        transitions.add(ChannelState.CONNECTING, ChannelState.CONNECTED);
+        transitions.add(ChannelState.CONNECTING, ChannelState.DISCONNECTED);
 
         // for manual disconnecting
-        directory.add(ChannelState.CONNECTED, ChannelState.DISCONNECTING);
-        directory.add(ChannelState.DISCONNECTING, ChannelState.DISCONNECTED);
+        transitions.add(ChannelState.CONNECTED, ChannelState.DISCONNECTING);
+        transitions.add(ChannelState.DISCONNECTING, ChannelState.DISCONNECTED);
 
         // for abrupt changes (connection failed?)
-        directory.add(ChannelState.CONNECTED, ChannelState.DISCONNECTED);
+        transitions.add(ChannelState.CONNECTED, ChannelState.DISCONNECTED);
     }
 
     @Override
     public StateManager<ChannelState> create() throws Exception {
-        StateManager<ChannelState> result = new StateManager<ChannelState>(directory);
+        StateManager<ChannelState> result = new StateManager<ChannelState>(transitions);
 
         result.set(ChannelState.NONE);
 

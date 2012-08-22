@@ -171,7 +171,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         stateManager.ensure(ChannelState.CONNECTED);
     }
 
-
     protected boolean isConnecting() {
         if (channel == null){
             return false;

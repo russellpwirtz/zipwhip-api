@@ -56,7 +56,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     protected ReconnectStrategy reconnectStrategy;
 
-//    protected Channel channel;
+    //    protected Channel channel;
     protected ChannelWrapper wrapper;
     protected ChannelWrapperFactory channelWrapperFactory;
     protected ChannelPipelineFactory channelPipelineFactory;
@@ -94,54 +94,61 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
 
-        // Enforce a single connection
+        // Enforce a single connection. Crash if we're already connected.
         validateNotConnected();
 
-        // TODO: Make this pretty
-        final InetSocketAddress address = SocketAddressUtil.get(host, ports).iterator().next();
-
         // immediately/synchronously create the wrapper.
-        this.wrapper = channelWrapperFactory.create();
+        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+            this.wrapper = channelWrapperFactory.create();
+        }
+
+        // before we do the "lengthy" network call (which could take 30+ seconds, lets set
+        // the networkDisconnect value to true. If this value is true, it means we should
+        // retry connect because the network was the problem (instead of the user).
+        networkDisconnect = true;
+
+        // make sure this guy doesn't come in while we're working with
+        // more work requests. Otherwise we'll get cross talk.
+        cancelReconnectStrategy();
 
         return FutureUtil.execute(this.executor, new Callable<Boolean>() {
 
             @Override
             public Boolean call() throws Exception {
 
-                // maybe unneeded sanity check.
+                // Make sure that nothing changed between the enqueue and the execute.
                 validateNotConnected();
 
-                // before we do the "lengthy" network call (which could take 30+ seconds, lets set the networkDisconnect
-                // value to false.
-                networkDisconnect = true;
+                // TODO: Make this pretty. The older API allows for fallback, we no longer support it.
+                final InetSocketAddress address = SocketAddressUtil.get(host, ports).iterator().next();
 
-                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                try {
+                    LOGGER.debug("Connecting to " + address);
 
-                    // synchronous connection to endpoint, will crash if not successful.
-                    try {
-                        LOGGER.debug("Connecting to " + address);
-                        if (!wrapper.connect(address)) {
-                            // not a successful connection?
-                            // TODO: should the wrapper self destruct if it reaches a disonnected state??
-                            wrapper.destroy();
-                            wrapper = null;
+                    // synchronous connection to endpoint,
+                    // will crash if not successful.
+                    wrapper.connect(address);
+                } catch (InterruptedException e) {
+                    LOGGER.warn(String.format("The connection to %s was interrupted", address), e);
+                }
 
-                            return Boolean.FALSE;
-                        }
-                    } catch (InterruptedException e) {
+                networkDisconnect = !wrapper.isConnected();
+
+                if (!wrapper.isConnected()) {
+                    synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
                         // timeout?
                         wrapper.destroy();
                         wrapper = null;
-
-                        return Boolean.FALSE;
                     }
-
-                    networkDisconnect = !wrapper.isConnected();
                 }
 
-                connectEvent.notifyObservers(this, wrapper.isConnected());
+                // rebind the listeners
+                startReconnectStrategy();
 
-                return wrapper.isConnected();
+                // announce the event to the listeners
+                connectEvent.notifyObservers(this, isConnected());
+
+                return isConnected();
             }
         });
     }
@@ -196,7 +203,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     private void startReconnectStrategy() {
-        if (reconnectStrategy != null){
+        if (reconnectStrategy != null) {
             reconnectStrategy.start();
         }
     }
@@ -208,7 +215,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     private void cancelReconnectStrategy() {
-        if (reconnectStrategy != null){
+        if (reconnectStrategy != null) {
             reconnectStrategy.stop();
         }
     }
@@ -267,7 +274,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized boolean isConnected() {
-        if (wrapper == null){
+        if (wrapper == null) {
             return false;
         }
 
@@ -370,7 +377,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         if (this.reconnectStrategy != null) {
             this.reconnectStrategy.setSignalConnection(this);
             this.link(reconnectStrategy);
-       }
+        }
     }
 
     @Override
@@ -480,7 +487,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             pongTimeoutFuture.cancel(false);
         }
     }
-
 
 
 }
