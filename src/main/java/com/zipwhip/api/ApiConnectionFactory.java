@@ -94,10 +94,6 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
                 ServerResponse serverResponse = responseParser.parse(future.getResult());
 
-                if (!serverResponse.isSuccess()) {
-                    throw new RuntimeException("Error authenticating client");
-                }
-
                 if (serverResponse instanceof StringServerResponse) {
                     connection.setSessionKey(((StringServerResponse) serverResponse).response);
                 }
