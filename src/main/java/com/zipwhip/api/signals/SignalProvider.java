@@ -105,13 +105,22 @@ public interface SignalProvider extends Destroyable {
     ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
 
     /**
-     *
      * Tell it to disconnect.
      *
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
     ObservableFuture<Void> disconnect() throws Exception;
+
+    /**
+     * Tell it to disconnect. Call this with false is equivalent to calling {@code disconnect()}.
+     * Calling it with true will cause the connection to go into reconnect mode once the disconnect happens.
+     *
+     * @param causedByNetwork If the network state caused the disconnect
+     * @return an event that tells you its complete
+     * @throws Exception if an I/O happens while disconnecting
+     */
+    ObservableFuture<Void> disconnect(Boolean causedByNetwork) throws Exception;
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions

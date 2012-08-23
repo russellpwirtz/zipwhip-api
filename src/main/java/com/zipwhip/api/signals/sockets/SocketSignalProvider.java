@@ -445,6 +445,16 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     @Override
+    public ObservableFuture<Void> disconnect(Boolean causedByNetwork) throws Exception {
+        if  (causedByNetwork) {
+            return disconnect();
+        } else {
+            return FutureUtil.execute(eventExecutor, this, connection.disconnect(false));
+        }
+    }
+
+
+    @Override
     public void nudge() {
         connection.keepalive();
     }
