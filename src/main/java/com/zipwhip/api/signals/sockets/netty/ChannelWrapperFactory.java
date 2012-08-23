@@ -1,5 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -15,7 +17,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * <p/>
  * Creates "ChannelWrapper" instances "correctly" (NOTE: you still have to call 'connect' manually).
  */
-public class ChannelWrapperFactory implements Factory<ChannelWrapper> {
+public class ChannelWrapperFactory extends DestroyableBase implements Factory<ChannelWrapper> {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
 
@@ -47,5 +49,12 @@ public class ChannelWrapperFactory implements Factory<ChannelWrapper> {
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
         return new ChannelWrapper(channel, delegate);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (channelPipelineFactory instanceof Destroyable) {
+            ((Destroyable) channelPipelineFactory).destroy();
+        }
     }
 }

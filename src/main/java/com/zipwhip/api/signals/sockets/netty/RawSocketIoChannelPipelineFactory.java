@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIdleStateHandler;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
+import com.zipwhip.lifecycle.DestroyableBase;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -11,6 +12,7 @@ import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
+import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 
 /**
@@ -21,7 +23,7 @@ import org.jboss.netty.util.Timer;
  *
  * The pipeline for raw sockets.
  */
-public class RawSocketIoChannelPipelineFactory implements ChannelPipelineFactory {
+public class RawSocketIoChannelPipelineFactory extends DestroyableBase implements ChannelPipelineFactory {
 
     public static final int DEFAULT_FRAME_SIZE = 8192;
     public static final int DEFAULT_PING_INTERVAL_SECONDS = 300; // when to ping inactive seconds
@@ -31,16 +33,17 @@ public class RawSocketIoChannelPipelineFactory implements ChannelPipelineFactory
     private final StringDecoder stringDecoder = new StringDecoder();
     private final StringEncoder stringEncoder = new StringEncoder();
     private final SocketIoCommandDecoder socketIoCommandDecoder = new SocketIoCommandDecoder();
+    private final Timer idleChannelTimer = new HashedWheelTimer();
 
-    public RawSocketIoChannelPipelineFactory(Timer idleChannelTimer) {
-        this(idleChannelTimer, DEFAULT_PING_INTERVAL_SECONDS, DEFAULT_PONG_TIMEOUT_SECONDS);
+    public RawSocketIoChannelPipelineFactory() {
+        this(DEFAULT_PING_INTERVAL_SECONDS, DEFAULT_PONG_TIMEOUT_SECONDS);
     }
 
-    public RawSocketIoChannelPipelineFactory(Timer idleChannelTimer, int pingIntervalSeconds) {
-        this(idleChannelTimer, pingIntervalSeconds, DEFAULT_PONG_TIMEOUT_SECONDS);
+    public RawSocketIoChannelPipelineFactory(int pingIntervalSeconds) {
+        this(pingIntervalSeconds, DEFAULT_PONG_TIMEOUT_SECONDS);
     }
 
-    public RawSocketIoChannelPipelineFactory(Timer idleChannelTimer, int pingIntervalSeconds, int pongTimeoutSeconds) {
+    public RawSocketIoChannelPipelineFactory(int pingIntervalSeconds, int pongTimeoutSeconds) {
         idleStateHandler = new SocketIdleStateHandler(idleChannelTimer, pingIntervalSeconds, pongTimeoutSeconds);
     }
 
@@ -61,4 +64,8 @@ public class RawSocketIoChannelPipelineFactory implements ChannelPipelineFactory
         );
     }
 
+    @Override
+    protected void onDestroy() {
+        idleChannelTimer.stop();
+    }
 }

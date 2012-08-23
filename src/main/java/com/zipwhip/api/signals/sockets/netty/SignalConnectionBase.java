@@ -1,26 +1,27 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.*;
-
+import com.zipwhip.api.signals.PingEvent;
+import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
+import com.zipwhip.api.signals.commands.SerializingCommand;
+import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.events.ObservableHelper;
+import com.zipwhip.events.Observer;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
-import com.zipwhip.api.signals.PingEvent;
-import com.zipwhip.api.signals.SignalConnection;
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.SerializingCommand;
-import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.events.ObservableHelper;
-import com.zipwhip.events.Observer;
-import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
+import java.net.InetSocketAddress;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * @author jed
@@ -43,30 +44,31 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     protected ExecutorService executor = Executors.newSingleThreadExecutor();
+    // concerned about the usefulness about being able to swap reconnect strategies on the fly
     protected ReconnectStrategy reconnectStrategy;
 
     protected ChannelWrapper wrapper;
-    protected ChannelWrapperFactory channelWrapperFactory;
-    protected ChannelPipelineFactory channelPipelineFactory;
-    protected final Timer channelIdleTimer = new HashedWheelTimer();
+    protected final ChannelWrapperFactory channelWrapperFactory;
+    //protected final Timer channelIdleTimer = new HashedWheelTimer();
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
+    protected SignalConnectionBase(ChannelPipelineFactory channelPipelineFactory) {
+        if (channelPipelineFactory == null) {
+            channelPipelineFactory = new RawSocketIoChannelPipelineFactory();
+        }
 
-    public void init(ReconnectStrategy reconnectStrategy) {
+        if (reconnectStrategy == null) {
+            this.setReconnectStrategy(reconnectStrategy);
+        }
 
+        this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this);
+
+        this.link(channelWrapperFactory);
         this.link(pingEvent);
         this.link(receiveEvent);
         this.link(connectEvent);
         this.link(exceptionEvent);
         this.link(disconnectEvent);
-
-        this.setReconnectStrategy(reconnectStrategy);
-
-        // sanity checks on the config.
-        assert channelPipelineFactory != null;
-        assert channelFactory != null;
-
-        channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this);
 
         // start the reconnectStrategy whenever we do a connect
         this.connectEvent.addObserver(new StartReconnectStrategyObserver(this));
@@ -314,17 +316,15 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     protected void onDestroy() {
-
         if (isConnected()) {
             disconnect();
         }
 
-        if (channelFactory != null) {
+        if (channelFactory instanceof Destroyable) {
+            ((Destroyable) channelFactory).destroy();
+        } else {
             channelFactory.releaseExternalResources();
         }
-
-        channelIdleTimer.stop();
-
     }
 
     protected void receivePong(PingPongCommand command) {

@@ -13,7 +13,7 @@ public class NettySignalConnection extends SignalConnectionBase {
      * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy} and {@code ChannelPipelineFactory}.
      */
     public NettySignalConnection() {
-        this(new DefaultReconnectStrategy());
+        this(null, null);
     }
 
     /**
@@ -22,7 +22,7 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
     public NettySignalConnection(ChannelPipelineFactory channelPipelineFactory) {
-        this(new DefaultReconnectStrategy(), channelPipelineFactory);
+        this(null, channelPipelineFactory);
     }
 
     /**
@@ -31,8 +31,7 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param reconnectStrategy The reconnect strategy to use in the case of socket disconnects.
      */
     public NettySignalConnection(ReconnectStrategy reconnectStrategy) {
-        this.channelPipelineFactory = new RawSocketIoChannelPipelineFactory(channelIdleTimer);
-        this.init(reconnectStrategy);
+        this(reconnectStrategy, null);
     }
 
     /**
@@ -42,8 +41,11 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
     public NettySignalConnection(ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
-        this.channelPipelineFactory = channelPipelineFactory;
-        this.init(reconnectStrategy);
+        super(channelPipelineFactory);
+
+        if (reconnectStrategy == null) {
+            setReconnectStrategy(new DefaultReconnectStrategy());
+        }
     }
 
 }
