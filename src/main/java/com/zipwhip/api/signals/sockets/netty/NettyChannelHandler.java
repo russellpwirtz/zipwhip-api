@@ -1,9 +1,13 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.handler.timeout.IdleState;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 
 /**
  * Created with IntelliJ IDEA.
@@ -11,7 +15,7 @@ import org.jboss.netty.channel.*;
  * Date: 5/31/12
  * Time: 5:22 PM
  */
-public class NettyChannelHandler extends SimpleChannelHandler {
+public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
     protected static final Logger LOGGER = Logger.getLogger(NettyChannelHandler.class);
 
@@ -22,66 +26,94 @@ public class NettyChannelHandler extends SimpleChannelHandler {
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, MessageEvent event) throws Exception {
 
-        Object msg = e.getMessage();
+        Object msg = event.getMessage();
 
         if (!(msg instanceof Command)) {
 
             LOGGER.warn("Received a message that was not a command!");
-
             return;
 
         } else if (msg instanceof PingPongCommand) {
 
-            // We received a PONG, cancel the PONG timeout.
             delegate.receivePong((PingPongCommand) msg);
-
             return;
-
-        } else {
-
-            // TODO: when we have the "Keep alive channel handler" in place, we won't have to do this.
-//            // We have activity on the wire, reschedule the next PING
-//            if (delegate.doKeepalives) {
-//                delegate.schedulePing(false);
-//            }
         }
 
-        Command command = (Command) msg;
-
-        delegate.notifyReceiveEvent(this, command);
+        delegate.notifyReceiveEvent(this, (Command) msg);
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        LOGGER.debug("channelConnected");
-//        delegate.notifyConnect(this, Boolean.TRUE);
+    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent event) throws Exception {
+
+        Channel channel = event.getChannel();
+
+        assert channel.isConnected() == delegate.isConnected();
+
+        if (event.getState() == IdleState.READER_IDLE) {
+
+            LOGGER.debug("Channel READER_IDLE");
+
+            if (delegate.isConnected()) {
+                LOGGER.warn("PONG timed out closing channel...");
+                delegate.disconnect(Boolean.TRUE);
+            } else {
+                LOGGER.error("Received a READER_IDLE event but the channel is not connected.");
+            }
+
+        } else if (event.getState() == IdleState.ALL_IDLE) {
+
+            if (channel.isWritable() && delegate.isConnected()) {
+
+                LOGGER.debug("Channel ALL_IDLE, sending PING");
+
+                try {
+                    delegate.send(PingPongCommand.getShortformInstance());
+                } catch (IllegalStateException e) {
+                    // We were probably disconnected
+                    assert !delegate.isConnected();
+                    return;
+                }  catch (Exception e) {
+                    LOGGER.warn("Tried to send a PING but got an exception" , e);
+                    delegate.disconnect(Boolean.TRUE);
+                    return;
+                }
+
+                delegate.notifyPingEvent(this, PingEvent.PING_SENT);
+
+            } else {
+                LOGGER.error("Time to send a PING but the channel is not writable, closing channel...");
+                delegate.disconnect(Boolean.TRUE);
+            }
+        }
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelClosed, disconnecting...");
-
         delegate.disconnect(Boolean.TRUE);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        LOGGER.error("Caught exception on channel, disconnecting... ", e.getCause());
-
-        delegate.notifyException(this, e.toString());
-
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) throws Exception {
+        LOGGER.error("Caught exception on channel, disconnecting... ", event.getCause());
+        delegate.notifyException(this, event.toString());
         delegate.disconnect(Boolean.TRUE);
     }
 
     @Override
-    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
+        LOGGER.debug("channelConnected, just logging...");
+    }
+
+    @Override
+    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelDisconnected, just logging...");
     }
 
     @Override
-    public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelUnbound, just logging...");
     }
 

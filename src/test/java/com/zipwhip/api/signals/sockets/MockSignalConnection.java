@@ -10,7 +10,6 @@ import java.util.concurrent.FutureTask;
 
 import com.zipwhip.executors.FakeFuture;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
 
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
@@ -151,14 +150,6 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     }
 
     @Override
-    public void startKeepalives() {
-    }
-
-    @Override
-    public void stopKeepalives() {
-    }
-
-    @Override
     public void onExceptionCaught(Observer<String> observer) {
     }
 
@@ -168,24 +159,6 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 
     @Override
     public void setPort(int port) {
-    }
-
-    @Override
-    public int getPingTimeout() {
-        return 0;
-    }
-
-    @Override
-    public void setPingTimeout(int pingTimeout) {
-    }
-
-    @Override
-    public int getPongTimeout() {
-        return 0;
-    }
-
-    @Override
-    public void setPongTimeout(int pongTimeout) {
     }
 
     @Override
@@ -199,21 +172,12 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 
     @Override
     public void destroy() {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public boolean isDestroyed() {
-        // TODO Auto-generated method stub
         return false;
     }
-
-//    @Override
-//    protected ChannelPipeline getPipeline() {
-//        // TODO Auto-generated method stub
-//        return null;
-//    }
 
     /**
      * Provide a means to simulate traffic coming in from the signal server
