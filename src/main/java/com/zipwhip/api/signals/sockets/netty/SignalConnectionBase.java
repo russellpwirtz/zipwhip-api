@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import java.net.InetSocketAddress;
 import java.util.concurrent.*;
 
+import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
@@ -13,15 +14,16 @@ import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 
 /**
- * @author jdinsel
+ * @author jed
  */
 public abstract class SignalConnectionBase extends CascadingDestroyableBase implements SignalConnection {
 
@@ -29,23 +31,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final Object WRAPPER_BEING_TOUCHED_LOCK = new Object();
 
-    // made not final so it can be testable...
     public static int CONNECTION_TIMEOUT_SECONDS = 45;
 
-    private static final int DEFAULT_PING_TIMEOUT = 1000 * 300; // when to ping inactive seconds
-    private static final int DEFAULT_PONG_TIMEOUT = 1000 * 30; // when to disconnect if a ping was not ponged by this time
-
     private String host = "74.209.177.242";
-    private int port = 3000;
-
-    private int pingTimeout = DEFAULT_PING_TIMEOUT;
-    private int pongTimeout = DEFAULT_PONG_TIMEOUT;
-
-    protected ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    private ScheduledFuture<?> pingTimeoutFuture;
-    private ScheduledFuture<?> pongTimeoutFuture;
-    private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(2);
+    private int port = 80;
 
     protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
@@ -53,15 +42,15 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
     protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
+    protected ExecutorService executor = Executors.newSingleThreadExecutor();
     protected ReconnectStrategy reconnectStrategy;
 
     protected ChannelWrapper wrapper;
     protected ChannelWrapperFactory channelWrapperFactory;
     protected ChannelPipelineFactory channelPipelineFactory;
-
+    protected final Timer channelIdleTimer = new HashedWheelTimer();
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
-    protected boolean doKeepalives;
 
     public void init(ReconnectStrategy reconnectStrategy) {
 
@@ -72,8 +61,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         this.link(disconnectEvent);
 
         this.setReconnectStrategy(reconnectStrategy);
-
-        this.doKeepalives = true;
 
         // sanity checks on the config.
         assert channelPipelineFactory != null;
@@ -93,12 +80,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
         // Enforce a single connection
         validateNotConnected();
+        assert this.wrapper == null;
 
         // prevent any side requests from any other threads from getting in.
         cancelReconnectStrategy();
 
         // immediately/synchronously create the wrapper.
-        this.wrapper = channelWrapperFactory.create();
+        final ChannelWrapper channelWrapper = this.wrapper = channelWrapperFactory.create();
 
         return FutureUtil.execute(this.executor, new Callable<Boolean>() {
 
@@ -108,16 +96,18 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 // maybe unneeded sanity check.
                 validateNotConnected();
 
+                assert channelWrapper == wrapper;
+
                 try {
                     final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
 
                     LOGGER.debug("Connecting to " + address);
 
                     // synchronous connection to endpoint, will crash if not successful.
-                    wrapper.connect(address);
+                    channelWrapper.connect(address);
                 } catch (InterruptedException e) {
                     // timeout?
-                    wrapper.destroy();
+                    channelWrapper.destroy();
                     wrapper = null;
 
                     connectEvent.notifyObservers(this, isConnected());
@@ -128,7 +118,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 // the rule is that we destroy the wrapper if it's not connected.
                 if (!isConnected()) {
                     synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-                        wrapper.destroy();
+                        channelWrapper.destroy();
                         wrapper = null;
                     }
                 }
@@ -156,9 +146,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     public synchronized Future<Void> disconnect(final boolean network) {
 
         validateConnected();
-
-        cancelPingPongs();
-
         cancelReconnectStrategy();
 
         return FutureUtil.execute(executor, new Callable<Void>() {
@@ -218,49 +205,22 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    private void cancelPingPongs() {
-        if (pingTimeoutFuture != null) {
-            pingTimeoutFuture.cancel(true);
-        }
-
-        if (pongTimeoutFuture != null) {
-            pongTimeoutFuture.cancel(true);
-        }
-    }
-
     @Override
     public void keepalive() {
-
-        LOGGER.debug("Keepalive requested!");
-
-        cancelPong();
-        schedulePing(true);
-    }
-
-    @Override
-    public void startKeepalives() {
-
-        LOGGER.debug("Start keepalives requested!");
-
-        doKeepalives = true;
-        schedulePing(false);
-    }
-
-    @Override
-    public void stopKeepalives() {
-
-        LOGGER.debug("Start keepalives requested!");
-
-        doKeepalives = false;
-        cancelPing();
+        LOGGER.debug("Keepalive requested");
+        send(PingPongCommand.getShortformInstance());
     }
 
     @Override
     public synchronized Future<Boolean> send(final SerializingCommand command) throws IllegalStateException {
-        // send this over the wire.
-        validateConnected();
-        assert wrapper.channel.isWritable(); // TODO: consider a special exception?
 
+        validateConnected();
+
+        if(!wrapper.channel.isWritable()) {
+            throw new IllegalStateException("Channel is not writable.");
+        }
+
+        // send this over the wire.
         return wrapper.write(command);
     }
 
@@ -332,26 +292,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
-    public int getPingTimeout() {
-        return pingTimeout;
-    }
-
-    @Override
-    public void setPingTimeout(int pingTimeout) {
-        this.pingTimeout = pingTimeout;
-    }
-
-    @Override
-    public int getPongTimeout() {
-        return pongTimeout;
-    }
-
-    @Override
-    public void setPongTimeout(int pongTimeout) {
-        this.pongTimeout = pongTimeout;
-    }
-
-    @Override
     public ReconnectStrategy getReconnectStrategy() {
         return reconnectStrategy;
     }
@@ -383,50 +323,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             channelFactory.releaseExternalResources();
         }
 
-        if (pingTimeoutFuture != null) {
-            pingTimeoutFuture.cancel(true);
-        }
+        channelIdleTimer.stop();
 
-        if (pongTimeoutFuture != null) {
-            pongTimeoutFuture.cancel(true);
-        }
-
-        if (scheduledExecutor != null) {
-            scheduledExecutor.shutdownNow();
-        }
-    }
-
-    protected void schedulePing(boolean now) {
-
-        cancelPing();
-
-        LOGGER.debug("Scheduling a PING to start in " + pingTimeout + "ms");
-        pingEvent.notifyObservers(this, PingEvent.PING_SCHEDULED);
-
-        pingTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
-            @Override
-            public void run() {
-
-                LOGGER.debug("Sending a PING");
-                pingEvent.notifyObservers(this, PingEvent.PING_SENT);
-
-                // Schedule the timeout first in case there is a problem sending
-                // the ping
-                pongTimeoutFuture = scheduledExecutor.schedule(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        LOGGER.warn("PONG timeout, disconnecting...");
-                        pingEvent.notifyObservers(this, PingEvent.PONG_TIMEOUT);
-
-                        disconnect(true);
-                    }
-                }, pongTimeout, TimeUnit.MILLISECONDS);
-
-                send(PingPongCommand.getShortformInstance());
-
-            }
-        }, now ? 0 : pingTimeout, TimeUnit.MILLISECONDS);
     }
 
     protected void receivePong(PingPongCommand command) {
@@ -447,38 +345,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             LOGGER.debug("Received a PONG");
             pingEvent.notifyObservers(this, PingEvent.PONG_RECEIVED);
         }
-
-        cancelPong();
-
-        if (doKeepalives) {
-            schedulePing(false);
-        }
     }
-
-    protected void cancelPing() {
-
-        if ((pingTimeoutFuture != null) && !pingTimeoutFuture.isCancelled()) {
-
-            if (pingTimeoutFuture != null) {
-
-                LOGGER.debug("Resetting scheduled PING");
-                pingEvent.notifyObservers(this, PingEvent.PING_CANCELLED);
-
-                pingTimeoutFuture.cancel(false);
-            }
-        }
-    }
-
-    protected void cancelPong() {
-
-        if ((pongTimeoutFuture != null) && !pongTimeoutFuture.isCancelled()) {
-
-            LOGGER.debug("Resetting timeout PONG");
-
-            pingEvent.notifyObservers(this, PingEvent.PONG_CANCELLED);
-            pongTimeoutFuture.cancel(false);
-        }
-    }
-
 
 }

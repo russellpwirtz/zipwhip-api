@@ -1,13 +1,10 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
-import com.zipwhip.events.ObservableHelper;
+import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.lifecycle.DestroyableBase;
-import org.jboss.netty.util.Timer;
-
-import java.util.Observable;
-import java.util.concurrent.Callable;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,20 +23,65 @@ import java.util.concurrent.Callable;
  */
 public class SignalConnectionDelegate extends DestroyableBase {
 
-    final SignalConnectionBase connection;
+    private final SignalConnectionBase connection;
 
     public SignalConnectionDelegate(SignalConnectionBase connection) {
         this.connection = connection;
     }
 
-    public synchronized void receivePong(PingPongCommand msg) {
-        ensureValid();
+    public void disconnect(Boolean network) {
+        if (connection.isConnected()) {
+            ensureValid();
+            connection.disconnect(network);
+        }
+    }
 
-        connection.receivePong(msg);
+    public boolean isConnected() {
+        return connection.isConnected();
+    }
+
+    public synchronized void send(SerializingCommand command) {
+        ensureValid();
+        connection.send(command);
+    }
+
+    public synchronized void receivePong(PingPongCommand command) {
+        ensureValid();
+        connection.receivePong(command);
+    }
+
+    public synchronized void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
+        ensureValid();
+        connection.receiveEvent.notifyObservers(handler, command);
+    }
+
+    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
+        ensureValid();
+        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
+    }
+
+    public synchronized void notifyException(Object sender, String result) {
+        ensureValid();
+        connection.exceptionEvent.notifyObservers(sender, result);
+    }
+
+    public synchronized void notifyPingEvent(Object sender, PingEvent event) {
+        ensureValid();
+        connection.pingEvent.notify(sender, event);
+    }
+
+    public synchronized void startReconnectStrategy() {
+        ensureValid();
+        connection.reconnectStrategy.start();
+    }
+
+    public synchronized void stopReconnectStrategy() {
+        ensureValid();
+        connection.reconnectStrategy.stop();
     }
 
     /**
-     * The decision was to throw rather than return false
+     * Throw rather than return false
      */
     private synchronized void ensureValid() {
         if (isDestroyed()) {
@@ -47,59 +89,9 @@ public class SignalConnectionDelegate extends DestroyableBase {
         }
     }
 
-    /**
-     * The caller (a ChannelHandler) will want to talk to the connection. We need to only forward the requests if allowed.
-     *
-     * @param handler
-     * @param command
-     */
-    public void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
-        ensureValid();
-
-        connection.receiveEvent.notifyObservers(handler, command);
-    }
-
-    public void disconnect(Boolean network) {
-        if (connection.isConnected()) {
-            ensureValid();
-
-            connection.disconnect(network);
-        }
-    }
-
-    public void schedulePing(boolean now) {
-        // We have activity on the wire, reschedule the next PING
-        if (connection.doKeepalives) {
-            connection.schedulePing(false);
-        }
-    }
-
-    public synchronized void startReconnectStrategy() {
-        ensureValid();
-
-        connection.reconnectStrategy.start();
-    }
-
-    public synchronized void notifyException(Object sender, String result) {
-        ensureValid();
-
-        connection.exceptionEvent.notifyObservers(sender, result);
-    }
-
-    public void stopReconnectStrategy() {
-        ensureValid();
-
-        connection.reconnectStrategy.stop();
-    }
-
-    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
-        ensureValid();
-
-        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
-    }
-
     @Override
     protected synchronized void onDestroy() {
 
     }
+
 }

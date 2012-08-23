@@ -423,6 +423,9 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                     // Need to make sure we always count down
                     connectLatch.countDown();
+
+                    // Cancel the execution of connection.connect()
+                    connectFuture.cancel(true);
                 }
 
                 return isConnected();
@@ -444,16 +447,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     @Override
     public void nudge() {
         connection.keepalive();
-    }
-
-    @Override
-    public void startPings() {
-        connection.startKeepalives();
-    }
-
-    @Override
-    public void stopPings() {
-        connection.stopKeepalives();
     }
 
     @Override
@@ -547,8 +540,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                     connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key));
                 }
             }
-
-            startPings();
 
         } else {
 

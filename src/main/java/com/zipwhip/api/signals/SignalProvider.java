@@ -122,20 +122,6 @@ public interface SignalProvider extends Destroyable {
     void nudge();
 
     /**
-     * By default the connection will ping the SignalServer periodically.
-     * If {@code stopPings} has been called this will restart them.
-     * Otherwise it will have no effect.
-     */
-    void startPings();
-
-    /**
-     * By default the connection will ping the SignalServer periodically.
-     * If this has not been called since {@code startPings} was last called then any
-     * pending pings will be cancelled and no future ones will be scheduled.
-     */
-    void stopPings();
-
-    /**
      * You can Observe this event to capture signals that come in.
      *
      * As signals are always wrapped by SignalCommand this event and {@code onSignalCommandReceived} will fire simultaneously.
