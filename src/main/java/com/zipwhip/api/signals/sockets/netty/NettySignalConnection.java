@@ -45,6 +45,8 @@ public class NettySignalConnection extends SignalConnectionBase {
 
         if (reconnectStrategy == null) {
             setReconnectStrategy(new DefaultReconnectStrategy());
+        } else {
+            setReconnectStrategy(reconnectStrategy);
         }
     }
 
