@@ -38,7 +38,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     private SignalConnectionDelegate delegate;
 
     /**
-     *
+     * Independently keep track of the state of the connection.
      */
     private StateManager<ChannelState> stateManager;
 
@@ -50,14 +50,14 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     public ChannelWrapper(Channel channel, SignalConnectionDelegate delegate) {
         this.channel = channel;
         this.delegate = delegate;
-
         this.stateManager = ChannelStateManagerFactory.newStateManager();
     }
 
     /**
+     * Safely connect the underlying channel.
      *
-     * @param remoteAddress
-     * @throws Exception if not successful
+     * @param remoteAddress The address to connect to.
+     * @throws InterruptedException if interrupted while connecting.
      */
     public boolean connect(final SocketAddress remoteAddress) throws InterruptedException {
 
@@ -69,13 +69,12 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         boolean completed;
 
         try {
-            // TODO: What exception does it throw if it's a bad endpoint?
             // since we're on the IO thread, we need to block here.
-            completed = future.await(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+
         } catch (InterruptedException e) {
+
             if (!future.isDone()) {
-                // shit it didn't finish!
-                // cancel it.
                 future.cancel();
                 // Subsequent calls to close have no effect
                 future.getChannel().close();
@@ -87,7 +86,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
 
         if (!completed) {
-            // shit it didn't finish!
             // cancel it.
             future.cancel();
             // Subsequent calls to close have no effect
@@ -134,7 +132,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         try {
             // wait synchronously for it to close?
-            if (!channel.close().await(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)){
+            if (!channel.close().await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
                 // not completed in that time!
                 // what do we do?!?!
                 LOGGER.warn(String.format("The channel %s failed to close in the time limit! We are going to just destroy ourselves anyway.", channel));
@@ -156,7 +154,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
     }
 
-
     public synchronized Future<Boolean> write(Object message) {
         assertConnected();
 
@@ -171,29 +168,34 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         stateManager.ensure(ChannelState.CONNECTED);
     }
 
+    /**
+     * Safely check if the underlying channel is connecting meaning that it is open or bound but not connected.
+     * We can't synchronize on this object because other threads are trying to peer in.
+     *
+     * @return True if the underlying channel is disconnected.
+     */
     protected boolean isConnecting() {
-        if (channel == null){
-            return false;
-        }
-
-        return (channel.isOpen() || channel.isBound()) && !channel.isConnected();
+        return (channel != null) && (channel.isOpen() || channel.isBound()) && !channel.isConnected();
     }
 
+    /**
+     * Safely check if the underlying channel is disconnected.
+     * We can't synchronize on this object because other threads are trying to peer in.
+     *
+     * @return True if the underlying channel is disconnected.
+     */
     protected boolean isDisconnected() {
-        if (channel == null){
-            return false;
-        }
-
-        return channel.getCloseFuture().isDone() && channel.getCloseFuture().isSuccess();
+        return (channel != null) && channel.getCloseFuture().isDone() && channel.getCloseFuture().isSuccess();
     }
 
-    // we can't synchronize on this object because other threads are trying to peer in.
+    /**
+     * Safely check if the underlying channel is connected.
+     * We can't synchronize on this object because other threads are trying to peer in.
+     *
+     * @return True if the underlying channel is connected.
+     */
     protected synchronized boolean isConnected() {
-        if (channel == null){
-            return false;
-        }
-
-        return channel.isConnected() && channel.isBound() && channel.isOpen() && channel.isReadable() && channel.isWritable();
+        return (channel != null) && channel.isConnected() && channel.isBound() && channel.isOpen() && channel.isReadable() && channel.isWritable();
     }
 
     private void assertClosed(Channel channel) {
@@ -205,11 +207,14 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
     @Override
     protected void onDestroy() {
-        // ref counting?
+
+        // ref counting
         this.channel = null;
+
         // forcibly kill it.
         if (!delegate.isDestroyed()){
             delegate.destroy();
         }
     }
+
 }

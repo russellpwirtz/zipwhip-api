@@ -9,7 +9,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.FakeObservableFuture;
@@ -399,14 +398,14 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                 try {
                     // Block until the TCP connection connects or times out
-                    connectFuture.get(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    connectFuture.get(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
                     if (connection.isConnected()) {
 
                         connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions));
 
                         // block while the signal server is thinking/hanging.
-                        boolean countedDown = connectLatch.await(NettySignalConnection.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                        boolean countedDown = connectLatch.await(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
                         // If we timed out the latch might still blocking other threads
                         if (!countedDown) {
@@ -671,6 +670,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("Handling SubscriptionCompleteCommand");
 
+        if (!sendPresence(presence)) {
+            LOGGER.warn("Tried and failed to send presence");
+        }
+
+        subscriptionCompleteEvent.notifyObservers(this, command);
+    }
+
+    private boolean sendPresence(Presence presence) {
+
         if (presence != null) {
 
             if (presence.getAddress() == null) {
@@ -680,10 +688,13 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             // Set our clientId in case its not already there
             presence.getAddress().setClientId(clientId);
 
+            // TODO handle send future
             connection.send(new PresenceCommand(Collections.singletonList(presence)));
-        }
+            return true;
 
-        subscriptionCompleteEvent.notifyObservers(this, command);
+        } else {
+            return false;
+        }
     }
 
     private void handleSignalVerificationCommand(SignalVerificationCommand command) {

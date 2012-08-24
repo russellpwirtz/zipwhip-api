@@ -32,10 +32,11 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final Object WRAPPER_BEING_TOUCHED_LOCK = new Object();
 
-    public static int CONNECTION_TIMEOUT_SECONDS = 45;
+    private static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
 
     private String host = "74.209.177.242";
     private int port = 80;
+    private int connectionTimeoutSeconds = DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
     protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
@@ -44,15 +45,21 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
     protected ExecutorService executor = Executors.newSingleThreadExecutor();
-    // concerned about the usefulness about being able to swap reconnect strategies on the fly
+
     protected ReconnectStrategy reconnectStrategy;
 
     protected ChannelWrapper wrapper;
     protected final ChannelWrapperFactory channelWrapperFactory;
-    //protected final Timer channelIdleTimer = new HashedWheelTimer();
+
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
+    /**
+     * Protected constructor for subclasses.
+     *
+     * @param channelPipelineFactory The factory instantiate the ChannelPipeline
+     */
     protected SignalConnectionBase(ChannelPipelineFactory channelPipelineFactory) {
+
         if (channelPipelineFactory == null) {
             channelPipelineFactory = new RawSocketIoChannelPipelineFactory();
         }
@@ -183,30 +190,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         });
     }
 
-    private void startReconnectStrategy() {
-        if (reconnectStrategy != null) {
-            reconnectStrategy.start();
-        }
-    }
-
-    private void validateNotConnected() {
-        if ((wrapper != null) && wrapper.isConnected()) {
-            throw new IllegalStateException("Tried to connect but we already have a channel connected!");
-        }
-    }
-
-    private void cancelReconnectStrategy() {
-        if (reconnectStrategy != null) {
-            reconnectStrategy.stop();
-        }
-    }
-
-    private void validateConnected() {
-        if (wrapper == null || !wrapper.isConnected()) {
-            throw new IllegalStateException("Not currently connected, expected to be!");
-        }
-    }
-
     @Override
     public void keepalive() {
         LOGGER.debug("Keepalive requested");
@@ -294,6 +277,16 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
+    public void setConnectTimeoutSeconds(int connectTimeoutSeconds) {
+        this.connectionTimeoutSeconds = connectTimeoutSeconds;
+    }
+
+    @Override
+    public int getConnectTimeoutSeconds() {
+        return connectionTimeoutSeconds;
+    }
+
+    @Override
     public ReconnectStrategy getReconnectStrategy() {
         return reconnectStrategy;
     }
@@ -314,19 +307,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        if (isConnected()) {
-            disconnect();
-        }
-
-        if (channelFactory instanceof Destroyable) {
-            ((Destroyable) channelFactory).destroy();
-        } else {
-            channelFactory.releaseExternalResources();
-        }
-    }
-
     protected void receivePong(PingPongCommand command) {
 
         if (command.isRequest()) {
@@ -344,6 +324,43 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
             LOGGER.debug("Received a PONG");
             pingEvent.notifyObservers(this, PingEvent.PONG_RECEIVED);
+        }
+    }
+
+    private void startReconnectStrategy() {
+        if (reconnectStrategy != null) {
+            reconnectStrategy.start();
+        }
+    }
+
+    private void validateNotConnected() {
+        if ((wrapper != null) && wrapper.isConnected()) {
+            throw new IllegalStateException("Tried to connect but we already have a channel connected!");
+        }
+    }
+
+    private void cancelReconnectStrategy() {
+        if (reconnectStrategy != null) {
+            reconnectStrategy.stop();
+        }
+    }
+
+    private void validateConnected() {
+        if (wrapper == null || !wrapper.isConnected()) {
+            throw new IllegalStateException("Not currently connected, expected to be!");
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (isConnected()) {
+            disconnect();
+        }
+
+        if (channelFactory instanceof Destroyable) {
+            ((Destroyable) channelFactory).destroy();
+        } else {
+            channelFactory.releaseExternalResources();
         }
     }
 

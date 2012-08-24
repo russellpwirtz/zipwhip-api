@@ -40,6 +40,11 @@ public class SignalConnectionDelegate extends DestroyableBase {
         return connection.isConnected();
     }
 
+    public int getConnectTimeoutSeconds() {
+        assert connection != null;
+        return connection.getConnectTimeoutSeconds();
+    }
+
     public synchronized void send(SerializingCommand command) {
         ensureValid();
         connection.send(command);

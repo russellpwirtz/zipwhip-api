@@ -161,4 +161,19 @@ public interface SignalConnection extends Destroyable {
      */
     void setReconnectStrategy(ReconnectStrategy strategy);
 
+
+    /**
+     * Set the current setting for a connection time out in seconds.
+     *
+     * @param connectTimeoutSeconds The setting for a connection time out in seconds.
+     */
+    void setConnectTimeoutSeconds(int connectTimeoutSeconds);
+
+    /**
+     * Get the current setting for a connection time out in seconds.
+     *
+     * @return The current setting for a connection time out in seconds.
+     */
+    int getConnectTimeoutSeconds();
+
 }

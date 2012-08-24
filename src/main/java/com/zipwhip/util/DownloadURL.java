@@ -23,7 +23,7 @@ public class DownloadURL {
 
     private static Logger LOGGER = Logger.getLogger(DownloadURL.class);
 
-    public static String get(String url) {
+    public static String get(String url) throws Exception {
         String result = "";
         //-----------------------------------------------------//
         //  Step 1:  Start creating a few objects we'll need.
@@ -77,10 +77,12 @@ public class DownloadURL {
 
             LOGGER.fatal("Ouch - a MalformedURLException happened.", mue);
             mue.printStackTrace();
+            throw mue;
 
         } catch (IOException ioe) {
 
             LOGGER.fatal("Oops- an IOException happened.", ioe);
+            throw ioe;
 
         } finally {
 
