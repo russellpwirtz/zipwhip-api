@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
+import com.zipwhip.api.signals.commands.SignalCommand;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.timeout.IdleState;
@@ -39,6 +40,12 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
             delegate.receivePong((PingPongCommand) msg);
             return;
+        } else if (msg instanceof SignalCommand) {
+            if (((SignalCommand) msg).getSignal() != null){
+                LOGGER.error("Command: " + ((SignalCommand) msg).getSignal());
+            } else {
+                LOGGER.error("Command (message): " + ((SignalCommand)msg).toString());
+            }
         }
 
         delegate.notifyReceiveEvent(this, (Command) msg);
@@ -49,7 +56,8 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
         Channel channel = event.getChannel();
 
-        assert channel.isConnected() == delegate.isConnected();
+        LOGGER.debug("channelIdle: " + channel.toString() + ":" + delegate.isDestroyed() + ":" + delegate.isConnected());
+        ensure(channel.isConnected() == delegate.isConnected());
 
         if (event.getState() == IdleState.READER_IDLE) {
 
@@ -89,6 +97,12 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         }
     }
 
+    private void ensure(boolean assertion) {
+        if (!assertion) {
+            throw new RuntimeException("Assertion failed!");
+        }
+    }
+
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelClosed, disconnecting...");
@@ -98,6 +112,8 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) throws Exception {
         LOGGER.error("Caught exception on channel, disconnecting... ", event.getCause());
+        event.getCause().printStackTrace();
+
         delegate.notifyException(this, event.toString());
         delegate.disconnect(Boolean.TRUE);
     }

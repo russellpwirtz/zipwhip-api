@@ -29,9 +29,13 @@ public class SignalConnectionDelegate extends DestroyableBase {
         this.connection = connection;
     }
 
-    public void disconnect(Boolean network) {
+    public synchronized void disconnect(Boolean network) {
+        if (isDestroyed()){
+            return;
+        }
+
+        ensureValid();
         if (connection.isConnected()) {
-            ensureValid();
             connection.disconnect(network);
         }
     }
@@ -60,13 +64,17 @@ public class SignalConnectionDelegate extends DestroyableBase {
         connection.receiveEvent.notifyObservers(handler, command);
     }
 
-    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
-        ensureValid();
-        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
-    }
+//    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
+//        ensureValid();
+//        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
+//    }
 
     public synchronized void notifyException(Object sender, String result) {
-        ensureValid();
+        if (isDestroyed()) {
+            // we don't care if it's destroyed. dont crash.
+            return;
+        }
+
         connection.exceptionEvent.notifyObservers(sender, result);
     }
 

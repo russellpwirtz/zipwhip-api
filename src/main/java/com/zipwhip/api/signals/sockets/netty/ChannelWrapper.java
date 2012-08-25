@@ -175,7 +175,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * @return True if the underlying channel is disconnected.
      */
     protected boolean isConnecting() {
-        return (channel != null) && (channel.isOpen() || channel.isBound()) && !channel.isConnected();
+        return (channel != null) && channel.isOpen() && !channel.isConnected();
     }
 
     /**
@@ -184,8 +184,8 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      *
      * @return True if the underlying channel is disconnected.
      */
-    protected boolean isDisconnected() {
-        return (channel != null) && channel.getCloseFuture().isDone() && channel.getCloseFuture().isSuccess();
+    protected synchronized boolean isDisconnected() {
+        return (channel != null) && !channel.isConnected();
     }
 
     /**
@@ -195,7 +195,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * @return True if the underlying channel is connected.
      */
     protected synchronized boolean isConnected() {
-        return (channel != null) && channel.isConnected() && channel.isBound() && channel.isOpen() && channel.isReadable() && channel.isWritable();
+        return (channel != null) && channel.isConnected();
     }
 
     private void assertClosed(Channel channel) {

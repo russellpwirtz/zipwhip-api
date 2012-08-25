@@ -112,12 +112,16 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                     LOGGER.debug("Connecting to " + address);
 
-                    // synchronous connection to endpoint, will crash if not successful.
-                    channelWrapper.connect(address);
+                    synchronized (WRAPPER_BEING_TOUCHED_LOCK){
+                        // synchronous connection to endpoint, will crash if not successful.
+                        channelWrapper.connect(address);
+                    }
                 } catch (InterruptedException e) {
                     // timeout?
-                    channelWrapper.destroy();
-                    wrapper = null;
+                    synchronized (WRAPPER_BEING_TOUCHED_LOCK){
+                        channelWrapper.destroy();
+                        wrapper = null;
+                    }
 
                     connectEvent.notifyObservers(this, isConnected());
                     disconnectEvent.notifyObservers(this, Boolean.TRUE);
@@ -157,6 +161,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         validateConnected();
         cancelReconnectStrategy();
 
+        final ChannelWrapper channelWrapper = this.wrapper;
+
         return FutureUtil.execute(executor, new Callable<Void>() {
 
             @Override
@@ -164,6 +170,11 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                 // sanity check the state to make sure it hasn't changed by the time we ran.
                 validateConnected();
+
+                if (channelWrapper != SignalConnectionBase.this.wrapper) {
+                    // they changed! oh shit!
+                    throw new RuntimeException("The channels were not the same, so I just saved the day on a race condition by crashing.");
+                }
 
                 synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
 
