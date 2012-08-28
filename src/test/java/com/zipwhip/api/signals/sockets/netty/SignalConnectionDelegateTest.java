@@ -52,8 +52,7 @@ public class SignalConnectionDelegateTest {
 
         // Disconnect fails because we are destroyed
         delegate.disconnect(true);
-
-        assertTrue(delegate.isConnected());
+        assertTrue(connection.isConnected());
     }
 
     @Test
@@ -69,7 +68,6 @@ public class SignalConnectionDelegateTest {
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
-        assertFalse(delegate.isConnected());
     }
 
     @Test
@@ -85,7 +83,6 @@ public class SignalConnectionDelegateTest {
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
-        assertFalse(delegate.isConnected());
     }
 
     @Test
@@ -93,13 +90,12 @@ public class SignalConnectionDelegateTest {
 
         connection.connect().get();
         assertTrue(connection.isConnected());
-        assertTrue(delegate.isConnected());
+        assertFalse(delegate.isDestroyed());
 
         delegate.disconnect(false);
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
-        assertFalse(delegate.isConnected());
     }
 
     @Test
@@ -140,6 +136,11 @@ public class SignalConnectionDelegateTest {
 
         public MockSignalConnection() {
             super(null);
+        }
+
+        @Override
+        public void runIfActive(ChannelWrapper wrapper, Runnable runnable) {
+            runnable.run();
         }
 
         @Override
