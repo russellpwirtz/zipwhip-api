@@ -7,10 +7,14 @@ import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.FakeFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.util.Asserts;
+import com.zipwhip.util.InputRunnable;
 import com.zipwhip.util.SocketAddressUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
@@ -32,9 +36,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final Object WRAPPER_BEING_TOUCHED_LOCK = new Object();
 
-    private static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
+    public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
 
-    private String host = "74.209.177.242";
+    private String host = "69.46.44.181";
+    //    private String host = "74.209.177.242";
     private int port = 80;
     private int connectionTimeoutSeconds = DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
@@ -44,7 +49,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
     protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
-    protected ExecutorService executor = Executors.newSingleThreadExecutor();
+    protected ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-"));
 
     protected ReconnectStrategy reconnectStrategy;
 
@@ -52,6 +57,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ChannelWrapperFactory channelWrapperFactory;
 
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
+    private Future<Void> disconnectFuture;
+    private Future<Boolean> connectFuture;
 
     /**
      * Protected constructor for subclasses.
@@ -86,119 +93,179 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized Future<Boolean> connect() throws Exception {
+        LOGGER.debug(String.format("connect() : %s", Thread.currentThread().toString()));
+
+        // are we already trying to connect?
+        if (connectFuture != null) {
+            return connectFuture;
+        }
+
+        if (isConnected()) {
+            return new FakeFuture<Boolean>(Boolean.TRUE);
+        }
 
         // Enforce a single connection
         validateNotConnected();
-        assert this.wrapper == null;
 
-        // prevent any side requests from any other threads from getting in.
-        cancelReconnectStrategy();
+        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+            // Enforce a single connection
+            validateNotConnected();
 
-        // immediately/synchronously create the wrapper.
-        final ChannelWrapper channelWrapper = this.wrapper = channelWrapperFactory.create();
+            Asserts.assertTrue(this.wrapper == null, "We were already trying to connect when you called us. Calm down, we're working on it.");
 
-        return FutureUtil.execute(this.executor, new Callable<Boolean>() {
+            // prevent any side requests from any other threads from getting in.
+            // TODO: If there is a crash, please don't forget to rebind the reconnectStrategy
+            // TODO: What if the reconnnectStrategy has caused our connect request and we cancelled it?
+            cancelAndUbindReconnectStrategy();
 
-            @Override
-            public Boolean call() throws Exception {
+            // immediately/synchronously create the wrapper.
+            final ChannelWrapper channelWrapper = this.wrapper = channelWrapperFactory.create();
 
-                // maybe unneeded sanity check.
-                validateNotConnected();
+            return connectFuture = FutureUtil.execute(this.executor, new Callable<Boolean>() {
 
-                assert channelWrapper == wrapper;
+                @Override
+                public Boolean call() throws Exception {
+                    boolean success;
 
-                try {
-                    final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
+                    try {
+                        final InetSocketAddress address = SocketAddressUtil.getSingle(host, port);
+                        Asserts.assertTrue(channelWrapper == wrapper, "Same instances of parent object and executor");
 
-                    LOGGER.debug("Connecting to " + address);
+                        // maybe unneeded sanity check.
+                        validateNotConnected();
 
-                    synchronized (WRAPPER_BEING_TOUCHED_LOCK){
-                        // synchronous connection to endpoint, will crash if not successful.
-                        channelWrapper.connect(address);
+                        try {
+
+                            synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                                // maybe unneeded sanity check.
+                                validateNotConnected();
+
+                                // synchronous connection to endpoint, will crash if not successful.
+                                success = channelWrapper.connect(address);
+                            }
+
+                        } catch (InterruptedException e) {
+                            // timeout?
+                            synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                                channelWrapper.destroy();
+                                wrapper = null;
+                            }
+
+                            synchronized (SignalConnectionBase.this) {
+                                connectEvent.notifyObservers(this, Boolean.FALSE);
+                                disconnectEvent.notifyObservers(this, Boolean.TRUE);
+                            }
+
+                            return Boolean.FALSE;
+                        }
+
+                        // the rule is that we destroy the wrapper if it's not connected.
+                        if (!success) {
+                            synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                                channelWrapper.destroy();
+                                wrapper = null;
+                            }
+                        }
+
+                        // restore the strategy so it can listen to these events.
+                        // we are connected, so bind the reconnect strategy up.
+                        bindReconnectStrategy();
+
+                        synchronized (SignalConnectionBase.this) {
+                            Asserts.assertTrue(isConnected() == channelWrapper.isConnected(), String.format("The parent and child should agree %b/%b.", isConnected(), channelWrapper.isConnected()));
+
+                            connectEvent.notifyObservers(this, success);
+                        }
+
+                        if (!success) {
+                            disconnectEvent.notifyObservers(this, Boolean.TRUE);
+                        }
+
+                        LOGGER.debug(String.format("Returning from connect. %b/%b/%b", isConnected(), channelWrapper.isConnected(), success));
+
+                        return isConnected();
+                    } finally {
+                        connectFuture = null;
                     }
-                } catch (InterruptedException e) {
-                    // timeout?
-                    synchronized (WRAPPER_BEING_TOUCHED_LOCK){
-                        channelWrapper.destroy();
-                        wrapper = null;
-                    }
-
-                    connectEvent.notifyObservers(this, isConnected());
-                    disconnectEvent.notifyObservers(this, Boolean.TRUE);
-                    return Boolean.FALSE;
                 }
-
-                // the rule is that we destroy the wrapper if it's not connected.
-                if (!isConnected()) {
-                    synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-                        channelWrapper.destroy();
-                        wrapper = null;
-                    }
-                }
-
-                // restore the strategy so it can listen to these events.
-                startReconnectStrategy();
-
-                connectEvent.notifyObservers(this, isConnected());
-
-                if (!isConnected()) {
-                    disconnectEvent.notifyObservers(this, Boolean.TRUE);
-                }
-
-                return isConnected();
-            }
-        });
+            });
+        }
     }
 
     @Override
-    public synchronized Future<Void> disconnect() {
+    public Future<Void> disconnect() {
         return disconnect(false);
     }
 
     @Override
     public synchronized Future<Void> disconnect(final boolean network) {
+        // if multiple requests to disconnect come in at the same time, only
+        // execute it once.
+        if (disconnectFuture != null) {
+            // we are currently trying to disconnect?
+            return disconnectFuture;
+        }
 
-        validateConnected();
-        cancelReconnectStrategy();
+        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+            final ChannelWrapper channelWrapper = this.wrapper;
 
-        final ChannelWrapper channelWrapper = this.wrapper;
-
-        return FutureUtil.execute(executor, new Callable<Void>() {
-
-            @Override
-            public Void call() throws Exception {
-
-                // sanity check the state to make sure it hasn't changed by the time we ran.
-                validateConnected();
-
-                if (channelWrapper != SignalConnectionBase.this.wrapper) {
-                    // they changed! oh shit!
-                    throw new RuntimeException("The channels were not the same, so I just saved the day on a race condition by crashing.");
-                }
-
-                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-
-                    try {
-                        wrapper.disconnect();
-                    } catch (IllegalStateException e) {
-                        // odd, very odd, this shouldn't happen.
-                        LOGGER.warn("Error disconnecting, the channel said", e);
-                    }
-
-                    wrapper.destroy();
-                    wrapper = null;
-                }
-
-                if (network) {
-                    startReconnectStrategy();
-                }
-
-                disconnectEvent.notifyObservers(this, network);
-
-                return null;
+            // we can't really make any assertions on connected state.
+            // isConnected is outside of our control.
+            // the destroyed state IS within our control, so we can test on it.
+            if (channelWrapper == null || channelWrapper.isDestroyed()) {
+                // Already destroyed
+                return new FakeFuture<Void>(null);
             }
 
-        });
+            cancelAndUbindReconnectStrategy();
+
+            LOGGER.debug("Entering the executor for .disconnect()");
+            return disconnectFuture = FutureUtil.execute(executor, new Callable<Void>() {
+
+                @Override
+                public Void call() throws Exception {
+                    try {
+                        LOGGER.debug("Entered the executor for .disconnect()");
+                        Asserts.assertTrue(wrapper == channelWrapper, "Same instance");
+
+                        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                            Asserts.assertTrue(wrapper == channelWrapper, "Same instance");
+
+                            try {
+                                LOGGER.debug("Disconnecting the wrapper");
+                                channelWrapper.disconnect();
+                            } catch (Exception e) {
+                                // odd, very odd, this shouldn't happen.
+                                LOGGER.warn("Error disconnecting, the channel said", e);
+                            }
+
+                            SignalConnectionBase.this.wrapper = null;
+                            try {
+                                // this might crash?
+                                channelWrapper.destroy();
+                            } catch (Exception e) {
+                                LOGGER.error("There was an error destroying the wrapper", e);
+                            }
+                        }
+
+                        synchronized (SignalConnectionBase.this) {
+                            if (network) {
+                                bindReconnectStrategy();
+                            }
+
+                            // synchronous event firing
+                            disconnectEvent.notifyObservers(this, network);
+                        }
+
+                        LOGGER.debug("Finished disconnecting the wrapper in SignalConnectionBase");
+
+                        return null;
+                    } finally {
+                        disconnectFuture = null;
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -212,24 +279,77 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
         validateConnected();
 
-        if(!wrapper.channel.isWritable()) {
-            throw new IllegalStateException("Channel is not writable.");
+        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+            final ChannelWrapper w = this.wrapper;
+
+            // send this over the wire.
+            return w.write(command);
+        }
+    }
+
+    /**
+     * This function allows you to run tasks on the channel thread
+     *
+     * @param runnable
+     */
+    public void runIfActive(final ChannelWrapper wrapper, final Runnable runnable) {
+        // this test here creates a potential deadlock because it allows
+        // the Delegate to sync before the TOUCH lock. That's the wrong order.
+//        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+//            final ChannelWrapper w = this.wrapper;
+//            if (w != wrapper) {
+//                // they are not the same instance, they are not active. Kick them out.
+//                return false;
+//            } else if (w.isDestroyed()) {
+//                // the wrapper is currently in the state of terminating.
+//                return false;
+//            }
+//        }
+
+        if (wrapper == null) {
+            throw new IllegalArgumentException("The wrapper cannot be null!");
+        } else if (runnable == null) {
+            throw new IllegalArgumentException("The runnable cannot be null!");
         }
 
-        // send this over the wire.
-        return wrapper.write(command);
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (SignalConnectionBase.this) {
+                    synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                        final ChannelWrapper w = SignalConnectionBase.this.wrapper;
+                        if (w != wrapper) {
+                            // they are not the same instance, they are not active.
+                            // Kick them out.
+                            return;
+                        } else if (w.isDestroyed()) {
+                            // the wrapper is currently in the state of terminating.
+                            return;
+                        }
+
+                        // the wrapper is not allowed to SELF-DESTRUCT
+                        // so that means that we're able to safely depend on
+                        // WRAPPER BEING TOUCHED LOCK to prevent destruction between
+                        // the test and the run.
+
+                        runnable.run();
+                    }
+                }
+            }
+        });
     }
 
     @Override
-    public synchronized boolean isConnected() {
-        if (wrapper == null) {
+    public boolean isConnected() {
+        final ChannelWrapper w = wrapper;
+        if (w == null) {
             return false;
         }
 
         // sanity check our assumptions.
-        assert !wrapper.isDestroyed();
+        Asserts.assertTrue(!w.isDestroyed(), "wrapper not destroyed");
 
-        return wrapper.isConnected();
+        return w.isConnected();
     }
 
     @Override
@@ -319,7 +439,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     protected void receivePong(PingPongCommand command) {
-
         if (command.isRequest()) {
 
             LOGGER.debug("Received a REVERSE PING");
@@ -338,26 +457,27 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    private void startReconnectStrategy() {
+    private void validateNotConnected() {
+        if (isConnected()) {
+            throw new IllegalStateException("Tried to connect but we already have a channel connected!");
+        }
+    }
+
+    private synchronized void bindReconnectStrategy() {
         if (reconnectStrategy != null) {
             reconnectStrategy.start();
         }
     }
 
-    private void validateNotConnected() {
-        if ((wrapper != null) && wrapper.isConnected()) {
-            throw new IllegalStateException("Tried to connect but we already have a channel connected!");
-        }
-    }
-
-    private void cancelReconnectStrategy() {
+    private synchronized void cancelAndUbindReconnectStrategy() {
         if (reconnectStrategy != null) {
             reconnectStrategy.stop();
         }
     }
 
     private void validateConnected() {
-        if (wrapper == null || !wrapper.isConnected()) {
+        ChannelWrapper w = wrapper;
+        if (w == null || !w.isConnected()) {
             throw new IllegalStateException("Not currently connected, expected to be!");
         }
     }
@@ -375,4 +495,21 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
+    /**
+     * Run a callable with the current channel.
+     *
+     * @param callable
+     */
+    protected void doWithChannel(InputRunnable<ChannelWrapper> callable) {
+        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+            final ChannelWrapper w = this.wrapper;
+
+            callable.run(w);
+        }
+    }
+
+    public boolean isActive(ChannelWrapper channelWrapper) {
+        final ChannelWrapper w = this.wrapper;
+        return w == channelWrapper;
+    }
 }

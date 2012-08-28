@@ -627,7 +627,6 @@ public class SocketSignalProviderTest {
      * @author jed
      */
     private class VersionChangedObserver implements Observer<VersionMapEntry> {
-
         int versionChangedCount;
         List<Long> versions = new ArrayList<Long>();
 

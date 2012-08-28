@@ -48,7 +48,11 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
-        return new ChannelWrapper(channel, delegate);
+        ChannelWrapper channelWrapper = new ChannelWrapper(channel, delegate);
+
+        delegate.setChannelWrapper(channelWrapper);
+
+        return channelWrapper;
     }
 
     @Override

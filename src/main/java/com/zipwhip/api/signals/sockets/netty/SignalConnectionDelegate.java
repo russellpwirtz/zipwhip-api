@@ -5,6 +5,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.lifecycle.DestroyableBase;
+import org.apache.log4j.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -23,74 +24,110 @@ import com.zipwhip.lifecycle.DestroyableBase;
  */
 public class SignalConnectionDelegate extends DestroyableBase {
 
-    private final SignalConnectionBase connection;
+    private static final Logger LOGGER = Logger.getLogger(SignalConnectionDelegate.class);
+
+    protected final SignalConnectionBase connection;
+    protected ChannelWrapper channelWrapper;
+    private boolean paused = false;
 
     public SignalConnectionDelegate(SignalConnectionBase connection) {
         this.connection = connection;
     }
 
-    public synchronized void disconnect(Boolean network) {
-        if (isDestroyed()){
+    /**
+     * Synchronizing this method causes a deadlock.
+     *
+     * @param network
+     */
+    public void disconnect(final Boolean network) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                if (network) {
+                    LOGGER.debug(toString() + ": Calling disconnect() blindly without checking isConnected()");
+                    connection.disconnect(true);
+                } else {
+                    if (connection.isConnected()) {
+                        LOGGER.debug(toString() + ": Calling disconnect() because connected");
+                        connection.disconnect(false);
+                    } else {
+                        LOGGER.debug(toString() + ": We didn't call disconnect because we were not connected!");
+                    }
+                }
+            }
+        });
+    }
+
+    private void runIfActive(Runnable runnable) {
+        if (paused) {
+            LOGGER.debug("Paused so quitting.");
+            return;
+        }
+        // return without crashing
+        if (isDestroyed()) {
+            LOGGER.debug(toString() + ": Returning silently for runIfActive. We were destroyed.");
             return;
         }
 
-        ensureValid();
-        if (connection.isConnected()) {
-            connection.disconnect(network);
-        }
-    }
+        synchronized (this) {
+            if (isDestroyed()) {
+                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed!");
+                return;
+            }
 
-    public boolean isConnected() {
-        return connection.isConnected();
+            connection.runIfActive(channelWrapper, runnable);
+        }
     }
 
     public int getConnectTimeoutSeconds() {
-        assert connection != null;
         return connection.getConnectTimeoutSeconds();
     }
 
-    public synchronized void send(SerializingCommand command) {
-        ensureValid();
-        connection.send(command);
+    public void send(final SerializingCommand command) {
+        // prevent destruction between these two lines via sync block
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.send(command);
+            }
+        });
     }
 
-    public synchronized void receivePong(PingPongCommand command) {
-        ensureValid();
-        connection.receivePong(command);
+    public void receivePong(final PingPongCommand command) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.receivePong(command);
+            }
+        });
     }
 
-    public synchronized void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
-        ensureValid();
-        connection.receiveEvent.notifyObservers(handler, command);
+    public void notifyReceiveEvent(final NettyChannelHandler handler, final Command command) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.receiveEvent.notifyObservers(handler, command);
+            }
+        });
     }
 
-//    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
-//        ensureValid();
-//        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
-//    }
-
-    public synchronized void notifyException(Object sender, String result) {
-        if (isDestroyed()) {
-            // we don't care if it's destroyed. dont crash.
-            return;
-        }
-
-        connection.exceptionEvent.notifyObservers(sender, result);
+    public void notifyExceptionAndDisconnect(final Object sender, final String result) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.exceptionEvent.notifyObservers(sender, result);
+                connection.disconnect(Boolean.TRUE);
+            }
+        });
     }
 
-    public synchronized void notifyPingEvent(Object sender, PingEvent event) {
-        ensureValid();
-        connection.pingEvent.notify(sender, event);
-    }
-
-    public synchronized void startReconnectStrategy() {
-        ensureValid();
-        connection.reconnectStrategy.start();
-    }
-
-    public synchronized void stopReconnectStrategy() {
-        ensureValid();
-        connection.reconnectStrategy.stop();
+    public synchronized void notifyPingEvent(final Object sender, final PingEvent event) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.pingEvent.notify(sender, event);
+            }
+        });
     }
 
     /**
@@ -104,7 +141,26 @@ public class SignalConnectionDelegate extends DestroyableBase {
 
     @Override
     protected synchronized void onDestroy() {
-
+        channelWrapper = null;
     }
 
+    public ChannelWrapper getChannelWrapper() {
+        return channelWrapper;
+    }
+
+    public void setChannelWrapper(ChannelWrapper channelWrapper) {
+        this.channelWrapper = channelWrapper;
+    }
+
+    public synchronized void pause() {
+        paused = true;
+    }
+
+    public synchronized void resume() {
+        paused = false;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
 }

@@ -34,10 +34,40 @@ public class NettySignalConnectionTest {
 
     @After
     public void tearDown() throws Exception {
-        if (connection != null) {
-            connection.destroy();
-            connection = null;
-        }
+//        if (connection != null) {
+//            connection.destroy();
+//            connection = null;
+//        }
+    }
+
+    // this was a bug we caught. if the channel was closed abruptly we didn't clean up nicely.
+    @Test
+    public void testChannelClosedAbruptly() throws Exception {
+        connection.setReconnectStrategy(null);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        assertTrue("Connecting", connection.connect().get());
+        final boolean[] disconnectCalled = {false};
+        connection.onDisconnect(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                disconnectCalled[0] = true;
+                latch.countDown();
+            }
+        });
+
+        assertTrue(connection.isConnected());
+        assertTrue(connection.wrapper.isConnected());
+        assertTrue(connection.wrapper.channel.isConnected());
+        connection.wrapper.channel.close().await();
+
+        latch.await(50, TimeUnit.SECONDS);
+        assertFalse(connection.isConnected());
+        assertNull("After a close, the wrapper should be null", connection.wrapper);
+        assertTrue(disconnectCalled[0]);
+//        Thread.sleep(10000);
+//        assertFalse(connection.wrapper.isConnected());
+//        assertFalse(connection.wrapper.channel.isConnected());
     }
 
     @Test
@@ -122,7 +152,7 @@ public class NettySignalConnectionTest {
         latch.await(5, TimeUnit.SECONDS);
 
         System.out.println(connection.isConnected());
-        assert connection.isConnected();
+        assertTrue(connection.isConnected());
     }
 
     @Test
@@ -151,7 +181,7 @@ public class NettySignalConnectionTest {
         assertTrue(connection.isConnected());
         assertEquals(1, connectObserver.connectCount);
 
-        latch.await(5, TimeUnit.SECONDS);
+        latch.await(50, TimeUnit.SECONDS);
         assertFalse(connection.isConnected());
         assertEquals(1, disconnectObserver.disconnectCount);
         assertEquals(1, reconnectStrategy.reconnectCount);

@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.concurrent.NamedThreadFactory;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.*;
@@ -35,7 +36,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         // Cleanup any scheduled reconnects
         if (scheduler != null) {
 
-            LOGGER.debug("Shutting down scheduled execution");
+            LOGGER.debug("stop() called, Shutting down scheduled execution");
 
             scheduler.shutdownNow();
             scheduler = null;
@@ -51,7 +52,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         LOGGER.debug("Scheduling a reconnect attempt in 5 seconds...");
 
         if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReconnectStrategy-"));
         }
 
         scheduler.schedule(new Runnable() {

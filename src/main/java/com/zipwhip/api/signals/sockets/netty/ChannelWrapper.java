@@ -3,13 +3,18 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.sockets.ChannelStateManagerFactory;
 import com.zipwhip.api.signals.sockets.StateManager;
 import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
 import java.net.SocketAddress;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created with IntelliJ IDEA.
@@ -35,14 +40,14 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     /**
      * This delegate represents the channel's access to our SignalConnectionBase class.
      */
-    private SignalConnectionDelegate delegate;
+    private final SignalConnectionDelegate delegate;
 
     /**
      * Independently keep track of the state of the connection.
      */
-    private StateManager<ChannelState> stateManager;
-
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    protected final StateManager<ChannelState> stateManager;
+    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper"));
+    private SignalConnectionBase connection;
 
     /**
      * For keeping absolute care over the thread safe state
@@ -59,11 +64,12 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * @param remoteAddress The address to connect to.
      * @throws InterruptedException if interrupted while connecting.
      */
-    public boolean connect(final SocketAddress remoteAddress) throws InterruptedException {
+    public synchronized boolean connect(final SocketAddress remoteAddress) throws InterruptedException {
 
         stateManager.transitionOrThrow(ChannelState.CONNECTING);
-        assert (!isConnected());
+        Asserts.assertTrue(!isConnected(), "Channel is not connecting");
 
+        delegate.pause();
         // do the connect async.
         ChannelFuture future = channel.connect(remoteAddress);
         boolean completed;
@@ -72,6 +78,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             // since we're on the IO thread, we need to block here.
             completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
+            delegate.resume();
         } catch (InterruptedException e) {
 
             if (!future.isDone()) {
@@ -86,6 +93,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
 
         if (!completed) {
+            LOGGER.debug("Oh shit, it's not completed. We're going to cancel/close everything.");
             // cancel it.
             future.cancel();
             // Subsequent calls to close have no effect
@@ -108,56 +116,65 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * appropriate disconnect events rather than rely on the netty ones. NOTE: the netty ones are pretty unreliable
      * anyway.
      */
-    public void disconnect() {
+    public synchronized void disconnect() {
 
+        // make sure our state is correct
         stateManager.transitionOrThrow(ChannelState.DISCONNECTING);
-        assert (isConnected());
-        assert (!isConnecting());
-        assert (!isDisconnected());
 
         // because we intend to delete this.channel during the 'ondestroy' method, we need to capture the
         // reference so we don't NPE.
-        Channel channel = this.channel;
+        final Channel channel = this.channel;
 
         LOGGER.debug("Closing channel " + channel);
 
         // the delegate needs to know that it's been destroyed.
         // the word 'destroy' here means that it is no longer the currently active channel.
         // this is important to prevent stray requests from entering the queues from the network channel threads.
-        synchronized (this) {
-            this.channel = null;
-        }
+        this.channel = null;
 
+        // before we actually close the channel, we need to tear down the link.
         this.delegate.destroy();
 
         try {
-            // wait synchronously for it to close?
-            if (!channel.close().await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
-                // not completed in that time!
-                // what do we do?!?!
-                LOGGER.warn(String.format("The channel %s failed to close in the time limit! We are going to just destroy ourselves anyway.", channel));
+            try {
+                // wait synchronously for it to close?
+                if (!channel.close().await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
+                    // not completed in that time!
+                    // what do we do?!?!
+                    LOGGER.warn(String.format("The channel %s failed to close in the time limit! We are going to just destroy ourselves anyway.", channel));
 
-                // TODO: should we just say it's closed anyway??
+                    // TODO: should we just say it's closed anyway??
 
+                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                } else {
+                    LOGGER.debug(String.format("The channel %s closed cleanly", channel));
+
+                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+
+                    // for debugging (do after all the destroys took place so we aren't left in a bad state after the exception)
+                    assertClosed(channel);
+                }
+            } catch (Exception e) {
+                LOGGER.error("Got exception trying to close", e);
+                // it was interrupted, do we call this disconnected??
                 stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
-            } else {
-                LOGGER.debug(String.format("The channel %s closed cleanly", channel));
-
-                stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
-
-                // for debugging (do after all the destroys took place so we aren't left in a bad state after the exception)
-                assertClosed(channel);
             }
-        } catch (InterruptedException e) {
-            // it was interrupted, do we call this disconnected??
-            stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+        } catch (Exception e){
+            LOGGER.error("Crazy, we got an error the catch block of an error! ", e);
         }
     }
 
     public synchronized Future<Boolean> write(Object message) {
         assertConnected();
 
-        return FutureUtil.execute(executor, new WriteOnChannelSafelyCallable(this, message));
+        return FutureUtil.execute(executor,
+                new WriteOnChannelSafelyCallable(this, message));
+    }
+
+    public boolean shouldBeConnected() {
+        synchronized (stateManager) {
+            return stateManager.get() == ChannelState.CONNECTED;
+        }
     }
 
     private void assertConnected() {
@@ -194,8 +211,10 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      *
      * @return True if the underlying channel is connected.
      */
-    protected synchronized boolean isConnected() {
-        return (channel != null) && channel.isConnected();
+    protected boolean isConnected() {
+        Channel c = channel;
+
+        return (c != null) && c.isConnected();
     }
 
     private void assertClosed(Channel channel) {
@@ -207,6 +226,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
     @Override
     protected void onDestroy() {
+        LOGGER.debug(String.format("Destroying ChannelWrapper %s / %s", this.channel, Thread.currentThread().toString()));
 
         // ref counting
         this.channel = null;
@@ -215,6 +235,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         if (!delegate.isDestroyed()){
             delegate.destroy();
         }
-    }
 
+        executor.shutdownNow();
+    }
 }

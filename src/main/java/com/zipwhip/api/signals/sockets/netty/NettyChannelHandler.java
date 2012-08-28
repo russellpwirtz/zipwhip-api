@@ -28,6 +28,10 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        if (delegate.isPaused()) {
+            LOGGER.error("Paused so ignoring messageReceived?!?!");
+            return;
+        }
 
         Object msg = event.getMessage();
 
@@ -48,22 +52,26 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
             }
         }
 
+        LOGGER.debug("We got an event. Going to notify the listeners: " + msg);
         delegate.notifyReceiveEvent(this, (Command) msg);
     }
 
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent event) throws Exception {
+        if (delegate.isPaused()) {
+            LOGGER.debug("Paused so ignoring idle");
+            return;
+        }
 
         Channel channel = event.getChannel();
 
-        LOGGER.debug("channelIdle: " + channel.toString() + ":" + delegate.isDestroyed() + ":" + delegate.isConnected());
-        ensure(channel.isConnected() == delegate.isConnected());
+        LOGGER.debug("channelIdle: " + channel.toString() + ":" + channel.isConnected() + ":" + delegate.isDestroyed());
 
         if (event.getState() == IdleState.READER_IDLE) {
 
             LOGGER.debug("Channel READER_IDLE");
 
-            if (delegate.isConnected()) {
+            if (channel.isConnected()) {
                 LOGGER.warn("PONG timed out closing channel...");
                 delegate.disconnect(Boolean.TRUE);
             } else {
@@ -72,15 +80,15 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
         } else if (event.getState() == IdleState.ALL_IDLE) {
 
-            if (channel.isWritable() && delegate.isConnected()) {
+            if (channel.isWritable() && channel.isConnected()) {
 
                 LOGGER.debug("Channel ALL_IDLE, sending PING");
 
                 try {
                     delegate.send(PingPongCommand.getShortformInstance());
                 } catch (IllegalStateException e) {
+                    LOGGER.warn("IllegalStateException on send" , e);
                     // We were probably disconnected
-                    assert !delegate.isConnected();
                     return;
                 }  catch (Exception e) {
                     LOGGER.warn("Tried to send a PING but got an exception" , e);
@@ -97,30 +105,42 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         }
     }
 
-    private void ensure(boolean assertion) {
-        if (!assertion) {
-            throw new RuntimeException("Assertion failed!");
-        }
-    }
-
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
+        if (delegate.isPaused()) {
+            LOGGER.debug("Paused so ignoring close event");
+            return;
+        }
+
         LOGGER.debug("channelClosed, disconnecting...");
         delegate.disconnect(Boolean.TRUE);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) throws Exception {
-        LOGGER.error("Caught exception on channel, disconnecting... ", event.getCause());
-        event.getCause().printStackTrace();
+        LOGGER.error("Caught exception on channel... ", event.getCause());
+        if (event.getCause() != null){
+            event.getCause().printStackTrace();
+        }
 
-        delegate.notifyException(this, event.toString());
-        delegate.disconnect(Boolean.TRUE);
+        if (delegate.isPaused()) {
+            LOGGER.debug("Paused so ignoring exception");
+            return;
+        }
+
+        if (delegate.isDestroyed()) {
+            // caught an exception but who cares..
+            LOGGER.debug("Delegate was destroyed so i'm just going to sit here nicely.");
+            return;
+        }
+
+        delegate.notifyExceptionAndDisconnect(this, event.toString());
     }
 
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelConnected, just logging...");
+//        Thread.sleep(4000);
     }
 
     @Override

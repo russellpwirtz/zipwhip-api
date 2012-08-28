@@ -1,9 +1,6 @@
 package com.zipwhip.concurrent;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -14,6 +11,8 @@ import java.util.concurrent.FutureTask;
  * Convenience methods for creating/working with futures.
  */
 public class FutureUtil {
+
+//    private static final Executor EVENTS = Executors.newSingleThreadExecutor(new NamedThreadFactory("FutureUtil-events"));
 
     public static <T> Future<T> execute(Executor executor, Callable<T> callable) {
         if (executor == null){
@@ -37,7 +36,6 @@ public class FutureUtil {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-
                 T result;
 
                 try {
@@ -63,11 +61,11 @@ public class FutureUtil {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                try {
-                    result.setSuccess(future.get());
-                } catch (Exception e) {
-                    result.setFailure(e);
-                }
+            try {
+                result.setSuccess(future.get());
+            } catch (Exception e) {
+                result.setFailure(e);
+            }
             }
         });
 

@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.events.Observer;
 import org.apache.log4j.Logger;
 
@@ -108,7 +109,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
         }
 
         if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReconnectStrategy-"));
         }
 
         if (reconnectRunnable == null) {
