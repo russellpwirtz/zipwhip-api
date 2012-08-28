@@ -97,17 +97,15 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                         }
 
                         try {
-                            // Old clientId
+                            // Un-subscribe the old clientId, OK if this fails
                             executeSync(SIGNALS_DISCONNECT, disconnectParams);
-
-                            // New clientId
-                            executeSync(SIGNALS_CONNECT, connectParams);
-
                         } catch (Exception e) {
-                            LOGGER.error("Error calling signals/connect", e);
+                            LOGGER.error("Error calling signals/disconnect, continue to calling signals/connect", e);
                         }
-                    }
 
+                        // New clientId, safely try to call signals/connect
+                        executeSyncSucceedOrDisconnect(SIGNALS_CONNECT, connectParams);
+                    }
                 } else {
 
                     settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
@@ -123,14 +121,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                         params.put("category", presence.getCategory());
                     }
 
-                    try {
-
-                        executeSync(SIGNALS_CONNECT, params);
-
-                    } catch (Exception e) {
-
-                        LOGGER.error("Error calling signals/connect", e);
-                    }
+                    // New clientId, safely try to call signals/connect
+                    executeSyncSucceedOrDisconnect(SIGNALS_CONNECT, params);
                 }
             }
         });
