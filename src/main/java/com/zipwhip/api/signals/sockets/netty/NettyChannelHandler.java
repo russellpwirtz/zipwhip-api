@@ -73,7 +73,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
             if (channel.isConnected()) {
                 LOGGER.warn("PONG timed out closing channel...");
-                delegate.disconnect(Boolean.TRUE);
+                delegate.disconnectAsyncIfActive(Boolean.TRUE);
             } else {
                 LOGGER.error("Received a READER_IDLE event but the channel is not connected.");
             }
@@ -92,7 +92,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
                     return;
                 }  catch (Exception e) {
                     LOGGER.warn("Tried to send a PING but got an exception" , e);
-                    delegate.disconnect(Boolean.TRUE);
+                    delegate.disconnectAsyncIfActive(Boolean.TRUE);
                     return;
                 }
 
@@ -100,7 +100,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
 
             } else {
                 LOGGER.error("Time to send a PING but the channel is not writable, closing channel...");
-                delegate.disconnect(Boolean.TRUE);
+                delegate.disconnectAsyncIfActive(Boolean.TRUE);
             }
         }
     }
@@ -113,7 +113,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         }
 
         LOGGER.debug("channelClosed, disconnecting...");
-        delegate.disconnect(Boolean.TRUE);
+        delegate.disconnectAsyncIfActive(Boolean.TRUE);
     }
 
     @Override
@@ -140,7 +140,6 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent event) throws Exception {
         LOGGER.debug("channelConnected, just logging...");
-//        Thread.sleep(4000);
     }
 
     @Override

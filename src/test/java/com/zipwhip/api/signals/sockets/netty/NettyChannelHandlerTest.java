@@ -208,7 +208,7 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public void disconnect(Boolean network) {
+        public void disconnectAsyncIfActive(Boolean network) {
             isConnected = false;
             isNetwork = network;
         }
@@ -233,7 +233,7 @@ public class NettyChannelHandlerTest {
         public synchronized void notifyExceptionAndDisconnect(Object sender, String result) {
             exceptionCount++;
             exceptionString = result;
-            disconnect(true);
+            disconnectAsyncIfActive(true);
         }
 
         @Override
