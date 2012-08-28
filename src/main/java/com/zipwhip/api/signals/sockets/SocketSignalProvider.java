@@ -50,6 +50,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("SocketSignalProvider-scheduler-"));
     private ExecutorService eventExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-events-"));
 
+    private final AuthenticationKeyChain authenticationKeyChain = new AuthenticationKeyChain();
+
+    private final StateManager<SignalProviderState> stateManager;
+
     private String clientId;
     private String originalClientId; //So we can detect change
 
@@ -65,16 +69,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         this(new NettySignalConnection());
     }
 
-    public SocketSignalProvider(SignalConnection connection) {
-
-        if (connection == null){
+    public SocketSignalProvider(SignalConnection conn) {
+        if (conn == null) {
             this.connection = new NettySignalConnection();
         } else {
-            this.connection = connection;
+            this.connection = conn;
         }
 
-        this.link(this.connection);
-
+        this.link(connection);
+        this.link(authenticationKeyChain);
         this.link(pingEvent);
         this.link(connectionChangedEvent);
         this.link(newClientIdEvent);
@@ -87,6 +90,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         this.link(signalCommandEvent);
         this.link(commandReceivedEvent);
 
+        StateManager<SignalProviderState> m;
+        try {
+            m = SignalProviderStateManagerFactory.getInstance().create();
+        } catch (Exception e) {
+            m = null;
+        }
+        stateManager = m;
+        if (m == null){
+            throw new RuntimeException("Failed to setup factory");
+        }
+
         this.connection.onMessageReceived(new Observer<Command>() {
             /**
              * The NettySignalConnection will call this method when there's an
@@ -97,6 +111,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
              */
             @Override
             public void notify(Object sender, Command command) {
+
 
                 // Check if this command has a valid version number associated with it...
                 if (command.getVersion() != null && command.getVersion().getValue() > 0) {
@@ -168,6 +183,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                      * check if we need to send the connect command.
                      */
                 if (connected) {
+                    stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
                     writeConnectCommand();
                 }
             }
@@ -195,11 +211,12 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         connection.onDisconnect(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean causedByNetwork) {
-
                 // Ensure that the latch is in a good state for reconnect
                 releaseLatch();
 
                 connectionNegotiated = false;
+
+                stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
 
                 // If the state has changed then notify
                 if (connectionStateSwitch) {
@@ -249,6 +266,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                     presence.setAddress(new ClientAddress(newClientId));
             }
         });
+
     }
 
     private void handleCommands(List<Command> commands) {
@@ -391,6 +409,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         final Future<Boolean> connectFuture;
 
         try {
+            stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
             connectFuture = connection.connect();
         } catch (Exception e) {
             // oh shit, we crashed!
@@ -409,7 +428,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                     connectFuture.get(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
                     if (connection.isConnected()) {
-
                         connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions));
 
                         // block while the signal server is thinking/hanging.
@@ -419,14 +437,11 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                         if (!countedDown) {
                             connectLatch.countDown();
                         }
-
                     } else {
                         // Need to make sure we always count down
                         connectLatch.countDown();
                     }
-
                 } catch (Exception e) {
-
                     LOGGER.error("Exception in connecting..." + e, e.getCause());
 
                     // Need to make sure we always count down
@@ -434,6 +449,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
                     // Cancel the execution of connection.connect()
                     connectFuture.cancel(true);
+
+                    stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
                 }
 
                 return isConnected();
@@ -649,7 +666,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     private void handlePresenceCommand(PresenceCommand command) {
-
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Handling PresenceCommand " + command.getPresence());
         }
@@ -658,7 +674,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         List<Presence> presenceList = command.getPresence();
 
         if (presenceList == null) {
-
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Nothing is known about us or our peers");
             }
@@ -668,7 +683,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         } else {
 
             for (Presence presence : command.getPresence()) {
-
                 if (clientId.equals(presence.getAddress().getClientId())) {
                     selfPresenceExists = true;
                 }
@@ -695,7 +709,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     private void handleSignalCommand(SignalCommand command) {
-
         LOGGER.debug("Handling SignalCommand");
 
         // Distribute the command and the raw signal to give client's flexibility regarding what data they need
@@ -704,21 +717,25 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
-
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("Handling SubscriptionCompleteCommand");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Handling SubscriptionCompleteCommand " + command.toString());
+        }
 
         if (!sendPresence(presence)) {
             LOGGER.warn("Tried and failed to send presence");
         }
 
+        stateManager.transitionOrThrow(SignalProviderState.AUTHENTICATED);
+
+//        Asserts.assertTrue(authenticationKeyChain.isAuthenticated(clientId, command.getSubscriptionId()), "This subscriptionId was already authenticated!");
+//        // WARNING: We don't know which clientId this really came in for..
+//        authenticationKeyChain.add(clientId, command.getSubscriptionId());
+
         subscriptionCompleteEvent.notifyObservers(this, command);
     }
 
     private boolean sendPresence(Presence presence) {
-
         if (presence != null) {
-
             if (presence.getAddress() == null) {
                 presence.setAddress(new ClientAddress());
             }

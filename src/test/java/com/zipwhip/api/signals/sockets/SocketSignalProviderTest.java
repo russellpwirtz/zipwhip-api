@@ -1,30 +1,24 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.events.Observer;
+import com.zipwhip.signals.address.ClientAddress;
+import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.PresenceCommand;
-import com.zipwhip.api.signals.commands.SignalCommand;
-import com.zipwhip.api.signals.commands.SignalVerificationCommand;
-import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.events.Observer;
-import com.zipwhip.signals.address.ClientAddress;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.PresenceCategory;
 
 import static org.junit.Assert.*;
 

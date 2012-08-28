@@ -1,8 +1,5 @@
 package com.zipwhip.api;
 
-import java.io.File;
-import java.util.*;
-
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.BooleanServerResponse;
@@ -18,6 +15,9 @@ import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+
+import java.io.File;
+import java.util.*;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -107,7 +107,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                         executeSyncSucceedOrDisconnect(SIGNALS_CONNECT, connectParams);
                     }
                 } else {
-
                     settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
 
                     // lets do a signals connect!
@@ -149,32 +148,42 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             throw new NotAuthenticatedException("The connection cannot operate at this time");
         }
 
-        String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+        String existingSessionKey = connection.getSessionKey();
+        String storedSessionKey = settingsStore.get(SettingsStore.Keys.SESSION_KEY);
+        String correctSessionKey = storedSessionKey;
+
+        // If the sessionKey has changed we need to invalidate the settings data
+        if (StringUtil.exists(existingSessionKey) && !StringUtil.equals(existingSessionKey, storedSessionKey)) {
+            LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
+            settingsStore.clear();
+
+            correctSessionKey = connection.getSessionKey();
+
+            settingsStore.put(SettingsStore.Keys.SESSION_KEY, correctSessionKey);
+        }
+
+        String existingClientId = signalProvider == null ? null : signalProvider.getClientId();
+        String storedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+        String correctClientId = existingClientId;
 
         // If the clientId has changed we need to invalidate the settings data
-        if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
+        if (StringUtil.isNullOrEmpty(storedClientId) || (StringUtil.exists(existingClientId) && !StringUtil.equals(storedClientId, existingClientId))) {
 
             LOGGER.debug("ClientId has changed, resetting client id in settings store");
 
             settingsStore.clear();
 
-            if (signalProvider != null && signalProvider.getClientId() != null) {
-                settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
+            correctClientId = existingClientId;
+
+            if (existingClientId != null) {
+                settingsStore.put(SettingsStore.Keys.CLIENT_ID, existingClientId);
             }
-        }
-
-        // If the sessionKey has changed we need to invalidate the settings data
-        if (StringUtil.exists(connection.getSessionKey()) && !connection.getSessionKey().equals(settingsStore.get(SettingsStore.Keys.SESSION_KEY))) {
-
-            LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
-
-            settingsStore.clear();
-
-            settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
+            // put back the 'correct session key' since we just cleared it
+            settingsStore.put(SettingsStore.Keys.SESSION_KEY, correctSessionKey);
         }
 
         // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(settingsStore.get(SettingsStore.Keys.CLIENT_ID), versionsStore.get(), presence);
+        return signalProvider.connect(correctClientId, versionsStore.get(), presence);
     }
 
     @Override
@@ -915,7 +924,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public boolean saveTinyUrl(String key, String mimeType, File file) throws Exception {
-
         if (StringUtil.isNullOrEmpty(key)) {
             throw new IllegalArgumentException("A storage key is required to save.");
         }
@@ -932,13 +940,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
 
         ServerResponse response = executeSync(TINY_URL_SAVE, params, Collections.singletonList(file));
-        return response.isSuccess();
 
+        return response.isSuccess();
     }
 
     @Override
     protected void onDestroy() {
 
     }
-
 }
