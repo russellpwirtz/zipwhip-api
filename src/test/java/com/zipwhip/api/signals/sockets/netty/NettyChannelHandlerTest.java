@@ -176,7 +176,7 @@ public class NettyChannelHandlerTest {
     public void testExceptionCaught() throws Exception {
 
         ExceptionEvent event = new ExceptionEvent() {
-            public Throwable getCause() {return null;}
+            public Throwable getCause() {return new Throwable("EXCEPTION");}
             public Channel getChannel() {return null;}
             public ChannelFuture getFuture() {return null;}
             public String toString() {return "EXCEPTION";}
