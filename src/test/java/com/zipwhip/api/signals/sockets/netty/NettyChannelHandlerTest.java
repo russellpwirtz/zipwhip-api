@@ -143,8 +143,8 @@ public class NettyChannelHandlerTest {
             public ChannelFuture getFuture() {return null;}
         };
 
-        delegate.isConnected = false;
-        Assert.assertFalse(delegate.isConnected());
+//        delegate.isConnected = false;
+//        Assert.assertFalse(delegate.isConnected());
 
         mockChannel.connected = false;
         Assert.assertFalse(mockChannel.isConnected());
@@ -203,7 +203,6 @@ public class NettyChannelHandlerTest {
         Command receiveEventCommand;
         String exceptionString;
 
-
         public MockSignalConnectionDelegate() {
             super(null);
         }
@@ -212,11 +211,6 @@ public class NettyChannelHandlerTest {
         public void disconnect(Boolean network) {
             isConnected = false;
             isNetwork = network;
-        }
-
-        @Override
-        public boolean isConnected() {
-            return isConnected;
         }
 
         @Override
@@ -236,9 +230,10 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public synchronized void notifyException(Object sender, String result) {
+        public synchronized void notifyExceptionAndDisconnect(Object sender, String result) {
             exceptionCount++;
             exceptionString = result;
+            disconnect(true);
         }
 
         @Override
