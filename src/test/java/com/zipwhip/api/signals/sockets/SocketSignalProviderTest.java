@@ -228,8 +228,6 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnMuchHigherVersionReceived() throws Exception {
 
-        BasicConfigurator.configure();
-
         SignalObserver signalObserver = new SignalObserver();
         provider.onSignalReceived(signalObserver);
 
@@ -280,8 +278,6 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnMuchHigherVersionReceivedAfterInit() throws Exception {
-
-        BasicConfigurator.configure();
 
         Map<String, Long> versions = new HashMap<String, Long>();
         versions.put("key", 200001l);

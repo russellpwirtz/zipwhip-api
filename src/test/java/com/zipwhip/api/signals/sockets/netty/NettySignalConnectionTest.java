@@ -5,7 +5,6 @@ import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.TestRawSocketIoChannelPipelineFactory;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.BasicConfigurator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +27,6 @@ public class NettySignalConnectionTest {
 
     @Before
     public void setUp() throws Exception {
-        BasicConfigurator.configure();
         connection = new NettySignalConnection();
     }
 

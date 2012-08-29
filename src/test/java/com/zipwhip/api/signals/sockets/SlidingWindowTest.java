@@ -2,7 +2,6 @@ package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.events.Observer;
 import junit.framework.Assert;
-import org.apache.log4j.BasicConfigurator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -449,8 +448,6 @@ public class SlidingWindowTest {
 
     @Test
     public void testReceive_NEGATIVE_HOLE_OnInit() throws Exception {
-
-        BasicConfigurator.configure();
 
         List<Long> results = new ArrayList<Long>();
         window.setIndexSequence(200000l);

@@ -27,6 +27,21 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
     }
 
     @Override
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        Object object = e.getMessage();
+
+        if (object instanceof PingPongCommand) {
+            delegate.notifyPingEvent(this, PingEvent.PING_SENT);
+        }
+
+        if (ctx == null) {
+            // in our unit tests it's null and we don't want to create a Mock context
+            return;
+        }
+        super.writeRequested(ctx, e);
+    }
+
+    @Override
     public void messageReceived(final ChannelHandlerContext ctx, MessageEvent event) throws Exception {
         if (delegate.isPaused()) {
             LOGGER.error("Paused so ignoring messageReceived?!?!");
@@ -36,13 +51,12 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         Object msg = event.getMessage();
 
         if (!(msg instanceof Command)) {
-
             LOGGER.warn("Received a message that was not a command!");
+
             return;
-
         } else if (msg instanceof PingPongCommand) {
-
             delegate.receivePong((PingPongCommand) msg);
+
             return;
         } else if (msg instanceof SignalCommand) {
             if (((SignalCommand) msg).getSignal() != null){
@@ -89,15 +103,10 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
                 } catch (IllegalStateException e) {
                     LOGGER.warn("IllegalStateException on send" , e);
                     // We were probably disconnected
-                    return;
                 }  catch (Exception e) {
                     LOGGER.warn("Tried to send a PING but got an exception" , e);
                     delegate.disconnect(Boolean.TRUE);
-                    return;
                 }
-
-                delegate.notifyPingEvent(this, PingEvent.PING_SENT);
-
             } else {
                 LOGGER.error("Time to send a PING but the channel is not writable, closing channel...");
                 delegate.disconnect(Boolean.TRUE);

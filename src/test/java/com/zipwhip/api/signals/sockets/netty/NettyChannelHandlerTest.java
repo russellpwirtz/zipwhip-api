@@ -11,6 +11,7 @@ import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
@@ -128,6 +129,7 @@ public class NettyChannelHandlerTest {
         // SEND PING
         Assert.assertNotNull(delegate.sentCommand);
         Assert.assertTrue(delegate.sentCommand instanceof PingPongCommand);
+
         // NOTIFY PING
         Assert.assertEquals(1, delegate.pingEventCount);
         Assert.assertTrue(delegate.isConnected);
@@ -216,6 +218,12 @@ public class NettyChannelHandlerTest {
         @Override
         public synchronized void send(SerializingCommand command) {
             sentCommand = command;
+            try {
+                nettyChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
         }
 
         @Override
