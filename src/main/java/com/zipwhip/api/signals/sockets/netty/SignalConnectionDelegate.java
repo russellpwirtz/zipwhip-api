@@ -39,7 +39,7 @@ public class SignalConnectionDelegate extends DestroyableBase {
      *
      * @param network
      */
-    public void disconnect(final Boolean network) {
+    public void disconnectAsyncIfActive(final Boolean network) {
         runIfActive(new Runnable() {
             @Override
             public void run() {

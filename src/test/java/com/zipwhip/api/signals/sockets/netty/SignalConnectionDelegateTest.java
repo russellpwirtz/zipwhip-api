@@ -51,7 +51,7 @@ public class SignalConnectionDelegateTest {
         assertTrue(connection.isConnected());
 
         // Disconnect fails because we are destroyed
-        delegate.disconnect(true);
+        delegate.disconnectAsyncIfActive(true);
         assertTrue(connection.isConnected());
     }
 
@@ -64,7 +64,7 @@ public class SignalConnectionDelegateTest {
         assertTrue(connection.isConnected());
 
         // Network
-        delegate.disconnect(true);
+        delegate.disconnectAsyncIfActive(true);
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
@@ -79,7 +79,7 @@ public class SignalConnectionDelegateTest {
         assertTrue(connection.isConnected());
 
         // Non-network
-        delegate.disconnect(false);
+        delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
@@ -92,7 +92,7 @@ public class SignalConnectionDelegateTest {
         assertTrue(connection.isConnected());
         assertFalse(delegate.isDestroyed());
 
-        delegate.disconnect(false);
+        delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
         assertFalse(connection.isConnected());
