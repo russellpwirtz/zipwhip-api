@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.ApiConnectionConfiguration;
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
@@ -38,9 +39,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
 
-    private String host = "69.46.44.181";
-    //    private String host = "74.209.177.242";
-    private int port = 80;
+    private String host = ApiConnectionConfiguration.SIGNALS_HOST;
+    private int port = ApiConnectionConfiguration.SIGNALS_PORT;
+
     private int connectionTimeoutSeconds = DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
     protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();

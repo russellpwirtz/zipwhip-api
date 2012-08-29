@@ -31,7 +31,7 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
     private static final Logger LOGGER = Logger.getLogger(HttpConnection.class);
 
     private String apiVersion = "/";
-    private String host = DEFAULT_HOST;
+    private String host = ApiConnectionConfiguration.API_HOST;
 
     private String sessionKey;
     private SignTool authenticator;

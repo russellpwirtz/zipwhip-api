@@ -34,7 +34,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
 
     private String apiVersion = DEFAULT_API_VERSION;
-    private String host = DEFAULT_HOST;
+    private String host = ApiConnectionConfiguration.API_HOST;
 
     private String sessionKey;
     private SignTool authenticator;
