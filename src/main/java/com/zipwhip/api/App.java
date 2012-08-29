@@ -8,7 +8,6 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceBuilder;
 import com.zipwhip.signals.presence.PresenceCategory;
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.Future;
@@ -29,7 +28,7 @@ public class App {
     public static void main(String[] args) {
 
         // Configure basic console logging
-        BasicConfigurator.configure();
+//        BasicConfigurator.configure();
 
         try {
             startApp();
