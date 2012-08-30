@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.sockets.ChannelStateManagerFactory;
 import com.zipwhip.api.signals.sockets.StateManager;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
@@ -13,7 +14,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import java.net.SocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,7 +46,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * Independently keep track of the state of the connection.
      */
     protected final StateManager<ChannelState> stateManager;
-    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper"));
+    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
     private SignalConnectionBase connection;
 
     /**
@@ -80,7 +80,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
             delegate.resume();
         } catch (InterruptedException e) {
-
             if (!future.isDone()) {
                 future.cancel();
                 // Subsequent calls to close have no effect
@@ -164,10 +163,10 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
     }
 
-    public synchronized Future<Boolean> write(Object message) {
+    public synchronized ObservableFuture<Boolean> write(Object message) {
         assertConnected();
 
-        return FutureUtil.execute(executor,
+        return FutureUtil.execute(executor, null,
                 new WriteOnChannelSafelyCallable(this, message));
     }
 

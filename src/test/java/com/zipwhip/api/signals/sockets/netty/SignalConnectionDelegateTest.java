@@ -7,6 +7,8 @@ import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import org.junit.Before;
@@ -203,9 +205,9 @@ public class SignalConnectionDelegateTest {
         }
 
         @Override
-        public Future<Boolean> send(SerializingCommand command) {
+        public ObservableFuture<Boolean> send(SerializingCommand command) {
             sent.add(command);
-            return new FakeFuture<Boolean>(true);
+            return FutureUtil.execute(null, this, new FakeFuture<Boolean>(true));
         }
 
         @Override
@@ -236,6 +238,11 @@ public class SignalConnectionDelegateTest {
         @Override
         public void removeOnConnectObserver(Observer<Boolean> observer) {
             connectEvent.remove(observer);
+        }
+
+        @Override
+        public void removeOnMessageReceivedObserver(Observer<Command> observer) {
+            //To change body of implemented methods use File | Settings | File Templates.
         }
 
         @Override

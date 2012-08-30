@@ -31,6 +31,9 @@ public class SignalProviderStateManagerFactory implements Factory<StateManager<S
         directory.add(SignalProviderState.DISCONNECTING, SignalProviderState.DISCONNECTED);
 
         directory.add(SignalProviderState.DISCONNECTED, SignalProviderState.CONNECTING);
+
+        // this one is for the reconnect due to ReconnectStrategy (ie: not started by us)
+        directory.add(SignalProviderState.DISCONNECTED, SignalProviderState.CONNECTED);
     }
 
     private static final Factory<StateManager<SignalProviderState>> INSTANCE = new SignalProviderStateManagerFactory();

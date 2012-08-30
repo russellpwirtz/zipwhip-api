@@ -8,7 +8,6 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +36,7 @@ public class SocketSignalProviderTest {
     public void setUp() throws Exception {
         connection = new MockSignalConnection();
         provider = new SocketSignalProvider(connection);
+
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
     }

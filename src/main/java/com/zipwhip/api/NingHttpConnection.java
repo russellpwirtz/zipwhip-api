@@ -52,7 +52,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     /**
      * Create a new {@code NingHttpConnection}
      *
-     * @param workerExecutor This executor is what your code will execute in. Our recommendation is that it's large
+     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
      *                       because we have no idea how slow your code will be.
      * @param authenticator  A {@code SignTool} to use for signing request URLs.
      */
@@ -65,7 +65,7 @@ public class NingHttpConnection extends DestroyableBase implements ApiConnection
     /**
      * Create a new {@code NingHttpConnection}
      *
-     * @param workerExecutor This executor is what your code will execute in. Our recommendation is that it's large
+     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
      *                       because we have no idea how slow your code will be.
      */
     public NingHttpConnection(Executor workerExecutor) {

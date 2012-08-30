@@ -12,7 +12,7 @@ import java.util.concurrent.*;
  */
 public class FutureUtil {
 
-//    private static final Executor EVENTS = Executors.newSingleThreadExecutor(new NamedThreadFactory("FutureUtil-events"));
+    private static final Executor EVENTS = Executors.newSingleThreadExecutor(new NamedThreadFactory("FutureUtil-events"));
 
     public static <T> Future<T> execute(Executor executor, Callable<T> callable) {
         if (executor == null){
@@ -52,11 +52,17 @@ public class FutureUtil {
     }
 
     public static <T> ObservableFuture<T> execute(Executor executor, final Object sender, final Future<T> future) {
+        return execute(executor, null, sender, future);
+    }
+
+    public static <T> ObservableFuture<T> execute(Executor executor, Executor eventExecutor, final Object sender, final Future<T> future) {
+
         if (executor == null){
-            throw new IllegalArgumentException("The executor can't be null!");
+            // TODO: Change this to SimpleExecutor.getInstance() when we update our local code.
+            executor = EVENTS;
         }
 
-        final ObservableFuture<T> result = new DefaultObservableFuture<T>(sender);
+        final ObservableFuture<T> result = new DefaultObservableFuture<T>(sender, eventExecutor);
 
         executor.execute(new Runnable() {
             @Override

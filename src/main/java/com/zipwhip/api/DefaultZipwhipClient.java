@@ -9,8 +9,14 @@ import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.ConnectCommand;
+import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.api.signals.important.subscription.SignalsConnectTask;
+import com.zipwhip.api.signals.important.subscription.SignalsConnectWorker;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
@@ -18,6 +24,7 @@ import com.zipwhip.util.StringUtil;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -28,6 +35,9 @@ import java.util.*;
  * the "Zipwhip" class.
  */
 public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements ZipwhipClient {
+
+    protected ImportantTaskExecutor importantTaskExecutor;
+    protected long signalsConnectTimeoutInSeconds = 30;
 
     /**
      * Create a new DefaultZipwhipClient with out a {@code SignalProvider}
@@ -45,7 +55,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      * @param signalProvider The connection client for Zipwhip SignalServer.
      */
     public DefaultZipwhipClient(ApiConnection connection, SignalProvider signalProvider) {
-
         super(connection, signalProvider);
 
         // Start listening to provider events that interest us
@@ -54,21 +63,33 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     private void initSignalProviderEvents() {
 
+        signalProvider.onCommandReceived(new Observer<Command>() {
+            @Override
+            public void notify(Object sender, Command item) {
+                if (item instanceof ConnectCommand) {
+
+                }
+            }
+        });
+
         signalProvider.onNewClientIdReceived(new Observer<String>() {
             @Override
             public void notify(Object sender, String newClientId) {
 
-                if (StringUtil.isNullOrEmpty(newClientId)) {
-                    LOGGER.warn("Received CONNECT without clientId");
-                    return;
-                }
+                // NOTE: we need to allow this in order to do a clean reset
+//                if (StringUtil.isNullOrEmpty(newClientId)) {
+//                    LOGGER.warn("Received CONNECT without clientId");
+//                    return;
+//                }
 
-                if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
+                // NOTE: when we do a reset, we're going to get a new clientId that is null
+                if (StringUtil.isNullOrEmpty(newClientId)) {
                     settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
                     return;
                 }
 
                 String oldClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+                final String sessionKey = connection.getSessionKey();
 
                 if (StringUtil.exists(oldClientId)) {
 
@@ -77,34 +98,16 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
                         settingsStore.clear();
 
+                        settingsStore.put(SettingsStore.Keys.SESSION_KEY, sessionKey);
                         settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
 
                         // Do a disconnect then connect
-                        Map<String, Object> disconnectParams = new HashMap<String, Object>();
-                        disconnectParams.put("clientId", oldClientId);
-                        disconnectParams.put("sessions", connection.getSessionKey());
+                        Map<String, Object> params = new HashMap<String, Object>();
+                        params.put("clientId", oldClientId);
+                        params.put("sessions", sessionKey);
+                        executeSyncSucceedOrDisconnect(SIGNALS_DISCONNECT, params);
 
-
-                        Map<String, Object> connectParams = new HashMap<String, Object>();
-                        connectParams.put("clientId", newClientId);
-                        connectParams.put("sessions", connection.getSessionKey());
-
-                        Presence presence = signalProvider.getPresence();
-
-                        if (presence != null) {
-                            connectParams.put("category", presence.getCategory());
-                            disconnectParams.put("category", presence.getCategory());
-                        }
-
-                        try {
-                            // Un-subscribe the old clientId, OK if this fails
-                            executeSync(SIGNALS_DISCONNECT, disconnectParams);
-                        } catch (Exception e) {
-                            LOGGER.error("Error calling signals/disconnect, continue to calling signals/connect", e);
-                        }
-
-                        // New clientId, safely try to call signals/connect
-                        executeSyncSucceedOrDisconnect(SIGNALS_CONNECT, connectParams);
+                        executeSignalsConnect(newClientId, sessionKey);
                     }
                 } else {
                     settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
@@ -112,7 +115,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                     // lets do a signals connect!
                     Map<String, Object> params = new HashMap<String, Object>();
                     params.put("clientId", newClientId);
-                    params.put("sessions", connection.getSessionKey());
+                    params.put("sessions", sessionKey);
 
                     Presence presence = signalProvider.getPresence();
 
@@ -120,8 +123,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
                         params.put("category", presence.getCategory());
                     }
 
-                    // New clientId, safely try to call signals/connect
-                    executeSyncSucceedOrDisconnect(SIGNALS_CONNECT, params);
+                    executeSignalsConnect(newClientId, sessionKey);
                 }
             }
         });
@@ -133,6 +135,84 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             }
         });
 
+    }
+
+    /**
+     * Execute a /signals/connect webcall s
+     *
+     * @param clientId
+     * @param sessionKey
+     * @return
+     */
+    private synchronized ObservableFuture<SubscriptionCompleteCommand> executeSignalsConnect(final String clientId, String sessionKey) {
+        final ObservableFuture<SubscriptionCompleteCommand> future = importantTaskExecutor.enqueue(new SignalsConnectTask(sessionKey, clientId, signalsConnectTimeoutInSeconds));
+
+        future.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+
+            /**
+             * This method will fire when the future completes either by failure/success/cancellation. Technically
+             * the cancel won't stop the process from processing, however it will terminate/teardown this future and
+             * if the process finishes later (or times out again) we're already destroyed and wont be called again.
+             * This method will be called once and only once no matter how many times you call .cancel() or .setSuccess();
+             *
+             * The thread of this notify method is the
+             *
+             * @param sender
+             * @param item
+             */
+            @Override
+            public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
+                if (!future.isSuccess()) {
+                    if (future.getCause() instanceof TimeoutException) {
+                        LOGGER.error("Timeout on receiving the SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
+
+                        // we are in the Timer thread (pub sub if Timer is Intent based).
+                        // hashwheel otherwise.
+                        // TODO: we need to be 100% certain that this signalProvider is the SAME exact connection that we started with.
+
+                        // we've decided to clear the clientId when the signals/connect doesn't work
+                        final String sessionKey = connection.getSessionKey();
+
+                        signalProvider.runIfActive(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                LOGGER.debug("signalProvider.runIfActive() hit. We're going to tear down this connection. We can trust that it wont change during this method.");
+
+                                // This thread is the connection thread (deadlock if block on connect / disconnect)
+
+                                // we need to synchronize on the CONNECTION in order to guarantee that no one can change
+                                // the sessionKey while we're working on it.
+                                synchronized (connection) {
+                                    if (!StringUtil.equals(sessionKey, connection.getSessionKey())) {
+                                        LOGGER.warn("The sessionKey changed from underneath us. Just quitting");
+                                        return;
+                                    } else if (!StringUtil.equals(clientId, signalProvider.getClientId())) {
+                                        LOGGER.warn("The clientId changed from underneath us. Just quitting");
+                                        return;
+                                    }
+
+                                    try {
+                                        LOGGER.debug("We're safely in the same connection as we were before, so we're going to tear down the connection since we missed a SubscriptionCompleteCommand");
+                                        signalProvider.resetAndReconnect();
+                                    } catch (Exception e) {
+                                        LOGGER.error("");
+                                    }
+                                }
+                            }
+                        });
+                    } else if (future.isCancelled()) {
+                        // potentially we would be in the CALLER thread.
+                        LOGGER.warn("Cancelled our /signals/connect web call future?!?");
+                    } else {
+                        // guess it succeeded, do we care?
+                        LOGGER.debug("Successfully got a SubscriptionCompleteCommand from the server! " + item.getResult());
+                    }
+                }
+            }
+        });
+
+        return future;
     }
 
     @Override
@@ -942,6 +1022,28 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         ServerResponse response = executeSync(TINY_URL_SAVE, params, Collections.singletonList(file));
 
         return response.isSuccess();
+    }
+
+    public ImportantTaskExecutor getImportantTaskExecutor() {
+        return importantTaskExecutor;
+    }
+
+    public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
+        if (this.importantTaskExecutor != null) {
+            this.importantTaskExecutor.unregister(SignalsConnectWorker.REQUEST_TYPE);
+        }
+        this.importantTaskExecutor = importantTaskExecutor;
+        if (this.importantTaskExecutor != null) {
+            this.importantTaskExecutor.register(SignalsConnectWorker.REQUEST_TYPE, new SignalsConnectWorker(this.connection, this.signalProvider));
+        }
+    }
+
+    public long getSignalsConnectTimeoutInSeconds() {
+        return signalsConnectTimeoutInSeconds;
+    }
+
+    public void setSignalsConnectTimeoutInSeconds(long signalsConnectTimeoutInSeconds) {
+        this.signalsConnectTimeoutInSeconds = signalsConnectTimeoutInSeconds;
     }
 
     @Override

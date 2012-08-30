@@ -120,7 +120,14 @@ public interface SignalProvider extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<Void> disconnect(Boolean causedByNetwork) throws Exception;
+    ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception;
+
+    /**
+     * Will reset the state, followed by a disconnect, followed by an immediate reconnect.
+     *
+     * @throws Exception
+     */
+    void resetAndReconnect() throws Exception;
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions
@@ -221,5 +228,22 @@ public interface SignalProvider extends Destroyable {
      * @param observer an Observer of type Command indicating the command that was sent.
      */
     void onCommandReceived(Observer<Command> observer);
+
+    /**
+     * Run on the connection thread if and only if by the time it actually runs the connection
+     * has not changed state (ie: same clientId, etc). It also adds synchronization so that
+     * the underlying connection cannot be changed while you are running. So PLEASE run very quickly.
+     * No one can send/receive events or disconnect/reconnect while you are running.
+     *
+     * Be careful not to block within this method on any synchronization keywords. It would cause
+     * deadlocks. IE: anything like future.get() on the disconnect/connect methods.
+     *
+     * @param runnable
+     */
+    void runIfActive(Runnable runnable);
+
+    void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer);
+
+    void removeOnConnectionChangedObserver(Observer<Boolean> observer);
 
 }

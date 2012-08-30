@@ -28,7 +28,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     protected VersionStore versionsStore = new SettingsVersionStore(settingsStore);
 
     public ClientZipwhipNetworkSupport(ApiConnection connection, SignalProvider signalProvider) {
-
         super(connection);
 
         if (signalProvider != null) {
@@ -36,7 +35,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             link(signalProvider);
         }
     }
-
 
     public SignalProvider getSignalProvider() {
         return signalProvider;

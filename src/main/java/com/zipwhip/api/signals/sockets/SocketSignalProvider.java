@@ -2,6 +2,8 @@ package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.api.signals.important.connect.ConnectCommandTask;
+import com.zipwhip.api.signals.important.connect.ConnectCommandWorker;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
@@ -9,10 +11,12 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
@@ -44,15 +48,16 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
-    private CountDownLatch connectLatch;
     private final SignalConnection connection;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-"));
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("SocketSignalProvider-scheduler-"));
-    private ExecutorService eventExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-events-"));
-
+//    private ExecutorService eventExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-events-"));
+//    private final ImportantTaskExecutor taskExecutor;
     private final AuthenticationKeyChain authenticationKeyChain = new AuthenticationKeyChain();
 
     private final StateManager<SignalProviderState> stateManager;
+
+    private ImportantTaskExecutor importantTaskExecutor;
 
     private String clientId;
     private String originalClientId; //So we can detect change
@@ -63,6 +68,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Presence presence;
     private Map<String, Long> versions = new HashMap<String, Long>();
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
+    private ObservableFuture<Boolean> connectingFuture;
 
 
     public SocketSignalProvider() {
@@ -70,12 +76,21 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     public SocketSignalProvider(SignalConnection conn) {
+        this(conn, null);
+    }
+
+    public SocketSignalProvider(SignalConnection conn, ImportantTaskExecutor executor) {
         if (conn == null) {
             this.connection = new NettySignalConnection();
         } else {
             this.connection = conn;
         }
 
+        if (executor == null){
+            executor = new ImportantTaskExecutor();
+        }
+
+        this.setImportantTaskExecutor(executor);
         this.link(connection);
         this.link(authenticationKeyChain);
         this.link(pingEvent);
@@ -97,7 +112,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             m = null;
         }
         stateManager = m;
-        if (m == null){
+        if (m == null) {
             throw new RuntimeException("Failed to setup factory");
         }
 
@@ -184,6 +199,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                      */
                 if (connected) {
                     stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
+                    if (isConnecting()) {
+                        return;
+                    }
+
                     writeConnectCommand();
                 }
             }
@@ -212,8 +231,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             @Override
             public void notify(Object sender, Boolean causedByNetwork) {
                 // Ensure that the latch is in a good state for reconnect
-                releaseLatch();
-
                 connectionNegotiated = false;
 
                 stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
@@ -321,10 +338,12 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 	 * This method allows us to decouple connection.connect() from provider.connect() for
 	 * cases when we have been notified by the connection that it has a successful connection.
 	 */
-    private void writeConnectCommand() {
-        if ((connectLatch == null) || (connectLatch.getCount() == 0)) {
-            connection.send(new ConnectCommand(clientId, versions));
-        }
+    private ObservableFuture<ConnectCommand> writeConnectCommand() {
+        return writeConnectCommand(clientId, versions);
+    }
+
+    private ObservableFuture<ConnectCommand> writeConnectCommand(String clientId, Map<String, Long> versions) {
+        return importantTaskExecutor.enqueue(new ConnectCommandTask(clientId, versions));
     }
 
     private void notifyConnected(boolean connected) {
@@ -383,13 +402,13 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     @Override
     public synchronized ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
 
-        if (isConnected() || ((connectLatch != null) && (connectLatch.getCount() > 0))) {
-            LOGGER.debug(String.format("Connect requested but already connected or connecting... negotiating(%b)connectLatch(%d)isConnected(%b)", !connectionNegotiated, connectLatch == null ? -1 : connectLatch.getCount(), connection.isConnected()));
+        if (isConnected()) {
             return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
         }
 
-        // This will help us do the connect synchronously
-        connectLatch = new CountDownLatch(1);
+        if (connectingFuture != null) {
+            return connectingFuture;
+        }
 
         // keep track of the original one, so we can detect change
         if (StringUtil.exists(clientId)) {
@@ -406,49 +425,53 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         // Connect our TCP socket
-        final Future<Boolean> connectFuture;
+        final Future<Boolean> socketConnectFuture;
 
-        try {
-            stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
-            connectFuture = connection.connect();
-        } catch (Exception e) {
-            // oh shit, we crashed!
-            connectLatch.countDown();
-            connectLatch = null;
-            LOGGER.warn("Fixed the connectLatch deadlock bug. Killed the latch because got exception connecting.");
-            throw e;
-        }
+//        try {
+        stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
+        socketConnectFuture = connection.connect();
+//        } catch (Exception e) {
+        // oh shit, we crashed!
+//            LOGGER.warn("Fixed the connectLatch deadlock bug. Killed the latch because got exception connecting.");
+//            throw e;
+//        }
 
-        return FutureUtil.execute(executor, this, new Callable<Boolean>() {
+        return this.connectingFuture = FutureUtil.execute(executor, this, new Callable<Boolean>() {
+
             @Override
-            public Boolean call() {
+            public Boolean call() throws Exception {
 
                 try {
                     // Block until the TCP connection connects or times out
-                    connectFuture.get(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+                    socketConnectFuture.get(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
                     if (connection.isConnected()) {
-                        connection.send(new ConnectCommand(originalClientId, SocketSignalProvider.this.versions));
+                        // send in the connect command
+                        ObservableFuture<ConnectCommand> sendConnectCommandFuture = writeConnectCommand(originalClientId, SocketSignalProvider.this.versions);
 
-                        // block while the signal server is thinking/hanging.
-                        boolean countedDown = connectLatch.await(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+                        boolean finished = sendConnectCommandFuture.await(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+                        Asserts.assertTrue(finished, "Since our await timeout is longer");
 
-                        // If we timed out the latch might still blocking other threads
-                        if (!countedDown) {
-                            connectLatch.countDown();
+                        if (sendConnectCommandFuture.isSuccess()) {
+                            // we don't have to handle it, because it already came in on the IO thread.
+//                            handleConnectCommand(sendConnectCommandFuture.getResult());
+                        } else if (sendConnectCommandFuture.isCancelled()) {
+                            // we are in the "never arrived" case
+                        } else if (sendConnectCommandFuture.getCause() != null) {
+                            if (sendConnectCommandFuture.getCause() instanceof TimeoutException) {
+                                // we are in the "never arrived" case
+                            } else {
+                                // some other mysteroius error?
+                            }
+
+                            throw new Exception(sendConnectCommandFuture.getCause());
                         }
-                    } else {
-                        // Need to make sure we always count down
-                        connectLatch.countDown();
                     }
                 } catch (Exception e) {
                     LOGGER.error("Exception in connecting..." + e, e.getCause());
 
-                    // Need to make sure we always count down
-                    connectLatch.countDown();
-
                     // Cancel the execution of connection.connect()
-                    connectFuture.cancel(true);
+                    socketConnectFuture.cancel(true);
 
                     stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
                 }
@@ -460,6 +483,11 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
     @Override
     public synchronized ObservableFuture<Void> disconnect() throws Exception {
+        return disconnect(false);
+    }
+
+    @Override
+    public ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception {
         if (isConnecting()) {
             // this is an unsafe operation, we're already trying to connect!
             // TODO: probably the best action is to tear everything down
@@ -471,23 +499,65 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             throw new IllegalStateException("We are not connected and you tried to call disconnect..");
         }
 
-        // i think we're safe to do the disconnect operation.
-
-        for (String key : slidingWindows.keySet()) {
-            slidingWindows.get(key).destroy();
-        }
-        slidingWindows.clear();
-
-        return FutureUtil.execute(eventExecutor, this, connection.disconnect(false));
+        return FutureUtil.execute(executor, this, connection.disconnect(causedByNetwork));
     }
 
-    @Override
-    public ObservableFuture<Void> disconnect(Boolean causedByNetwork) throws Exception {
-        if (causedByNetwork) {
-            return disconnect();
-        } else {
-            return FutureUtil.execute(eventExecutor, this, connection.disconnect(false));
+    public void runIfActive(final Runnable runnable){
+        final String clientId = this.clientId;
+
+        connection.runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                // dont let the clientId be changed while we compare.
+                synchronized (SocketSignalProvider.this) {
+                    if (!isConnected()) {
+                        LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
+                        return;
+                    } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
+                        LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                        return;
+                    }
+
+                    runnable.run();
+                }
+            }
+        });
+    }
+
+    // TODO: who calls this because it could be a deadlock
+    public synchronized void resetAndReconnect() throws Exception {
+        final String c = clientId = originalClientId = StringUtil.EMPTY_STRING;
+        versions.clear();
+
+        synchronized (slidingWindows) {
+            for (String key : slidingWindows.keySet()) {
+                slidingWindows.get(key).reset();
+            }
         }
+
+        newClientIdEvent.notifyObservers(this, c);
+
+        disconnect(false).addObserver(new Observer<ObservableFuture<Void>>() {
+
+            /**
+             * The thread of the notify method will be the connection thread
+             * @param sender
+             * @param item
+             */
+            @Override
+            public void notify(Object sender, ObservableFuture<Void> item) {
+                if (!StringUtil.equals(clientId, c)) {
+                    throw new RuntimeException("Something happened in between my disconnect and reconnect cycle and the clientIds don't match.");
+                }
+
+                try {
+                    // NOTE: if you block on connect, you will deadlock the connection thread
+                    connect(c);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to connect during reconnect operation.");
+                }
+            }
+        });
     }
 
     @Override
@@ -546,20 +616,36 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     @Override
+    public void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer){
+        subscriptionCompleteEvent.removeObserver(observer);
+    }
+
+    @Override
+    public void removeOnConnectionChangedObserver(Observer<Boolean> observer) {
+        connectionChangedEvent.removeObserver(observer);
+    }
+
+    @Override
     public void onCommandReceived(Observer<Command> observer) {
         commandReceivedEvent.addObserver(observer);
     }
 
     @Override
     protected void onDestroy() {
-        eventExecutor.shutdownNow();
+//        eventExecutor.shutdownNow();
         scheduler.shutdownNow();
         executor.shutdownNow();
     }
 
-    private void handleConnectCommand(ConnectCommand command) {
+    private synchronized void handleConnectCommand(ConnectCommand command) {
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
+
+        if (this.connectingFuture != null) {
+            ObservableFuture<Boolean> c = connectingFuture;
+            this.connectingFuture = null;
+            c.setSuccess(true);
+        }
 
         boolean newClientId = false;
 
@@ -583,16 +669,14 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             // TODO: consider firing a disconnected event or forcing a disconnect here?
         }
 
-        releaseLatch();
-
         if (command.isSuccessful()) {
+            notifyConnected(true);
+
             if (newClientId) {
                 // not the same, lets announce
                 // announce on a separate thread
                 newClientIdEvent.notifyObservers(this, clientId);
             }
-
-            notifyConnected(true);
 
             if (versions != null) {
                 // Send a BackfillCommand for each version key - in practice
@@ -604,18 +688,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     }
 
-    private void releaseLatch() {
-        if (connectLatch != null) {
-            // we need to countDown the latch, when it hits zero (after this
-            // call)
-            // the connect ObservableFuture will complete. This gives the caller
-            // a way to block on our connection
-            connectLatch.countDown();
-        }
-    }
-
     private boolean isConnecting() {
-        return (connectLatch != null) && (connectLatch.getCount() > 0);
+        return connectingFuture != null && !connectingFuture.isDone();
     }
 
     private void handleDisconnectCommand(DisconnectCommand command) {
@@ -773,4 +847,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
+    public ImportantTaskExecutor getImportantTaskExecutor() {
+        return importantTaskExecutor;
+    }
+
+    public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
+        if (this.importantTaskExecutor != null){
+            this.importantTaskExecutor.unregister(ConnectCommandWorker.REQUEST_TYPE);
+        }
+        this.importantTaskExecutor = importantTaskExecutor;
+        if (this.importantTaskExecutor != null){
+            this.importantTaskExecutor.register(ConnectCommandWorker.REQUEST_TYPE, new ConnectCommandWorker(this.connection));
+        }
+    }
 }

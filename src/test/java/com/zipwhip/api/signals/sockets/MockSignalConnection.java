@@ -7,6 +7,8 @@ import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
+import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
 import org.apache.log4j.Logger;
@@ -55,10 +57,6 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
                     o.notify(this, isConnected);
                 }
 
-                for (Observer<Command> o : receiveEvent) {
-                    o.notify(this, new ConnectCommand("1234-5678-1234-5678", null));
-                }
-
                 return isConnected;
             }
         });
@@ -99,14 +97,21 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     }
 
     @Override
-    public Future<Boolean> send(SerializingCommand command) {
+    public ObservableFuture<Boolean> send(SerializingCommand command) {
         LOG.debug("Request received to send to server " + command);
         sent.add(command);
+
+        if (command instanceof ConnectCommand) {
+            for (Observer<Command> o : receiveEvent) {
+                o.notify(this, new ConnectCommand("1234-5678-1234-5678", null));
+            }
+        }
+
         // This doesnt appear to be the right place to send to
         //for (Observer<Command> o : receiveEvent) {
         //    o.notify(this, new SignalCommand(new JsonSignal(SIGNAL_JSON)));
         //}
-        return new FakeFuture<Boolean>(true);
+        return FutureUtil.execute(null, this, new FakeFuture<Boolean>(true));
     }
 
     @Override
@@ -137,6 +142,11 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     @Override
     public void removeOnConnectObserver(Observer<Boolean> observer) {
         connectEvent.remove(observer);
+    }
+
+    @Override
+    public void removeOnMessageReceivedObserver(Observer<Command> observer) {
+        //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override

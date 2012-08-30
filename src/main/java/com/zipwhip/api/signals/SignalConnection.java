@@ -3,6 +3,7 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 
@@ -57,7 +58,7 @@ public interface SignalConnection extends Destroyable {
      * @param command the Command to send
      * @return a {@code Future} of type boolean where true is a successful send.
      */
-    Future<Boolean> send(SerializingCommand command);
+    ObservableFuture<Boolean> send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected
@@ -95,6 +96,13 @@ public interface SignalConnection extends Destroyable {
      * @param observer An observer to stop receiving callbacks on.
      */
     void removeOnConnectObserver(Observer<Boolean> observer);
+
+    /**
+     * Allows you to stop observing the connection trying to connect.
+     *
+     * @param observer An observer to stop receiving callbacks on.
+     */
+    void removeOnMessageReceivedObserver(Observer<Command> observer);
 
     /**
      * Allows you to stop observing the disconnection trying to connect.
@@ -175,5 +183,15 @@ public interface SignalConnection extends Destroyable {
      * @return The current setting for a connection time out in seconds.
      */
     int getConnectTimeoutSeconds();
+
+    /**
+     * Runs the specified runnable on the core connection thread. It will only run if-only-if the
+     * current channel on enqueue matches the current channel on execution. This allows you to do
+     * such things as call disconnect on the current connection ensuring with 100% certainty that
+     * you are connecting the right channel instead of a new one.
+     *
+     * @param runnable
+     */
+    public void runIfActive(Runnable runnable);
 
 }

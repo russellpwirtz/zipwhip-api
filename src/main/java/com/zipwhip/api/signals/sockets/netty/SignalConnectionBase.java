@@ -8,6 +8,7 @@ import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
@@ -39,7 +40,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
 
     private String host = "69.46.44.181";
-    //    private String host = "74.209.177.242";
+//        private String host = "74.209.177.242";
     private int port = 80;
     private int connectionTimeoutSeconds = DEFAULT_CONNECTION_TIMEOUT_SECONDS;
 
@@ -275,7 +276,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
-    public synchronized Future<Boolean> send(final SerializingCommand command) throws IllegalStateException {
+    public synchronized ObservableFuture<Boolean> send(final SerializingCommand command) throws IllegalStateException {
 
         validateConnected();
 
@@ -285,6 +286,16 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             // send this over the wire.
             return w.write(command);
         }
+    }
+
+    /**
+     *
+     * @param runnable
+     */
+    public synchronized void runIfActive(final Runnable runnable) {
+        final ChannelWrapper channelWrapper = this.wrapper;
+
+        runIfActive(channelWrapper, runnable);
     }
 
     /**
@@ -511,5 +522,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     public boolean isActive(ChannelWrapper channelWrapper) {
         final ChannelWrapper w = this.wrapper;
         return w == channelWrapper;
+    }
+
+    @Override
+    public void removeOnMessageReceivedObserver(Observer<Command> observer) {
+        receiveEvent.removeObserver(observer);
     }
 }
