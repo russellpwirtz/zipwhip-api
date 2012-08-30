@@ -22,7 +22,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
     private ResponseParser responseParser = new JsonResponseParser();
 
-    private String host = ApiConnection.DEFAULT_HOST;
+    private String host = ApiConnectionConfiguration.API_HOST;
     private String apiVersion = ApiConnection.DEFAULT_API_VERSION;
     private String username;
     private String password;

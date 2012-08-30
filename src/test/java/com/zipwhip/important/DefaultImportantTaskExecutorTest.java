@@ -1,18 +1,18 @@
 package com.zipwhip.important;
 
 import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
-import com.zipwhip.api.signals.important.connect.ConnectCommandTask;
-import com.zipwhip.api.signals.important.connect.ConnectCommandWorker;
+import com.zipwhip.api.signals.sockets.ConnectCommandTask;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.important.tasks.SimpleImportantTask;
-import com.zipwhip.important.workers.AlwaysSucceedWorker;
-import com.zipwhip.util.DateUtil;
+import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.util.FutureDateUtil;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.*;
@@ -35,15 +35,18 @@ public class DefaultImportantTaskExecutorTest {
     public void setUp() throws Exception {
         ImportantTaskExecutor importantTaskExecutor = new ImportantTaskExecutor();
 
-        importantTaskExecutor.register("test", new AlwaysSucceedWorker());
-
         this.importantTaskExecutor = importantTaskExecutor;
     }
 
     @Test
     public void testExecuteNow() throws Exception {
         // the SimpleTaskRequest is synchronous
-        ObservableFuture future = importantTaskExecutor.enqueue(new SimpleImportantTask("test", null));
+        ObservableFuture<Boolean> future = importantTaskExecutor.enqueue(new Callable<ObservableFuture<Boolean>>() {
+            @Override
+            public ObservableFuture<Boolean> call() throws Exception {
+                return new FakeObservableFuture<Boolean>(this, true);
+            }
+        });
 
         assertTrue(future.isSuccess());
     }
@@ -53,16 +56,18 @@ public class DefaultImportantTaskExecutorTest {
 
         connection = new NettySignalConnection();
 
-        ((ImportantTaskExecutor) importantTaskExecutor).register("connect", new ConnectCommandWorker(connection));
-
         connection.connect().get(5, TimeUnit.SECONDS);
 
-        ObservableFuture<String> future = importantTaskExecutor.enqueue(new ConnectCommandTask(null));
+        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(new ConnectCommandTask(connection, null, null, null));
 
         // actually it could happen really damn fast.
 //        assertFalse(future.isDone());
 
-        future.await(5, TimeUnit.SECONDS);
+        if (!future.await(5, TimeUnit.SECONDS)) {
+            // i want to pause
+            System.out.println("Hmm, it didnt complete in time. Do you have a break point and you're screwing with my futures?");
+//            fail("Future didn't complete in time!");
+        }
 
         if (future.isDone() && !future.isSuccess()) {
             throw future.getCause();
@@ -82,11 +87,9 @@ public class DefaultImportantTaskExecutorTest {
             }
         };
 
-        ((ImportantTaskExecutor) importantTaskExecutor).register("connect", new ConnectCommandWorker(connection));
+        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(new ConnectCommandTask(connection, null, null, null), FutureDateUtil.in1Second());
 
-        ObservableFuture<String> future = importantTaskExecutor.enqueue(new ConnectCommandTask(null, DateUtil.inFuture(1, TimeUnit.SECONDS)));
-
-        boolean finished = future.await(5, TimeUnit.SECONDS);
+        boolean finished = future.await(10, TimeUnit.SECONDS);
 
         assertTrue("Didn't finish like expected!", finished);
 

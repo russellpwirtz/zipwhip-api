@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.important.connect;
+package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
@@ -6,47 +6,35 @@ import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import com.zipwhip.important.Worker;
+import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
-import org.apache.log4j.Logger;
 
-import java.lang.Boolean;import java.lang.Exception;import java.lang.Long;import java.lang.Object;import java.lang.Override;import java.lang.RuntimeException;import java.lang.String;import java.util.Map;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Russ
- * Date: 8/29/12
- * Time: 11:18 AM
- */
-public class ConnectCommandWorker implements Worker<ConnectCommandParameters, ConnectCommand> {
+* Created by IntelliJ IDEA.
+* User: Russ
+* Date: 8/30/12
+* Time: 3:53 PM
+*/
+public class ConnectCommandTask implements Callable<ObservableFuture<ConnectCommand>> {
 
-    private static final Logger LOGGER = Logger.getLogger(ConnectCommandWorker.class);
+    private final String clientId;
+    private final Presence presence;
+    private final Map<String, Long> versions;
+    private final SignalConnection connection;
 
-    public static final String REQUEST_TYPE = "connect";
-
-    private SignalConnection connection;
-
-    public ConnectCommandWorker() {
-
-    }
-
-    public ConnectCommandWorker(SignalConnection connection) {
-        this();
+    public ConnectCommandTask(SignalConnection connection, String clientId, Map<String, Long> versions, Presence presence) {
         this.connection = connection;
-        if (this.connection == null){
-            throw new IllegalArgumentException("The connection cannot be null");
-        }
+        this.clientId = clientId;
+        this.presence = presence;
+        this.versions = versions;
     }
 
     @Override
-    public ObservableFuture<ConnectCommand> execute(final ConnectCommandParameters parameters) throws Exception {
-
-        String clientId = parameters.getClientId();
-        String sessionKey = parameters.getSessionKey();
-        Map<String, Long> versions = parameters.getVersions();
-        Presence presence = parameters.getPresence();
-
-        final ObservableFuture<java.lang.Boolean> future;
+    public ObservableFuture<ConnectCommand> call() throws Exception {
+        final ObservableFuture<Boolean> future;
 
         final ObservableFuture<ConnectCommand> result = new DefaultObservableFuture<ConnectCommand>(connection);
         final Observer<Boolean>[] onDisconnectObserver = new Observer[1];
@@ -73,8 +61,20 @@ public class ConnectCommandWorker implements Worker<ConnectCommandParameters, Co
             }
         };
 
+        result.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ConnectCommand> item) {
+                connection.removeOnMessageReceivedObserver(onMessageReceivedObserver);
+                connection.removeOnDisconnectObserver(onDisconnectObserver[0]);
+            }
+        });
+
         connection.onDisconnect(onDisconnectObserver[0]);
         connection.onMessageReceived(onMessageReceivedObserver);
+
+        if (presence != null && clientId != null){
+            presence.setAddress(new ClientAddress(clientId));
+        }
 
         future = connection.send(new ConnectCommand(clientId, versions, presence));
 
@@ -92,22 +92,6 @@ public class ConnectCommandWorker implements Worker<ConnectCommandParameters, Co
             }
         });
 
-        result.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<ConnectCommand> item) {
-                connection.removeOnMessageReceivedObserver(onMessageReceivedObserver);
-                connection.removeOnDisconnectObserver(onDisconnectObserver[0]);
-            }
-        });
-
         return result;
-    }
-
-    public SignalConnection getConnection() {
-        return connection;
-    }
-
-    public void setConnection(SignalConnection connection) {
-        this.connection = connection;
     }
 }

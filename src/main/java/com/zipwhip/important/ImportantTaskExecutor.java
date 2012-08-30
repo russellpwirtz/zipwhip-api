@@ -1,14 +1,20 @@
 package com.zipwhip.important;
 
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.schedulers.HashedWheelScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.util.FutureDateUtil;
 import org.apache.log4j.Logger;
 
-import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -21,11 +27,14 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
     private static final Logger LOGGER = Logger.getLogger(ImportantTaskExecutor.class);
 
-    private final Map<String, Worker> executorMap = Collections.synchronizedMap(new HashMap<String, Worker>());
     private final Map<String, ScheduledRequest> queuedRequests = Collections.synchronizedMap(new HashMap<String, ScheduledRequest>());
     private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());
 
     private Scheduler scheduler;
+    private Executor executor = new SimpleExecutor();
+
+    private long timeout = 0;
+    private TimeUnit units = TimeUnit.SECONDS;
 
     public ImportantTaskExecutor() {
         this(null);
@@ -41,70 +50,117 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         }
     }
 
-    public <T extends Serializable, TResponse> ObservableFuture<TResponse> enqueue(ImportantTask<T> request) {
-        Worker<T, TResponse> executor = executorMap.get(request.getRequestType());
-        ObservableFuture<TResponse> requestFuture = null;
+    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request) {
+        return enqueue(request, null);
+    }
 
-        // TODO: consider a default expiration
-        scheduler.schedule(request.getRequestId(), request.getExpirationDate());
+    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request, long timeoutInSeconds) {
+        return enqueue(request, FutureDateUtil.inFuture(timeoutInSeconds, TimeUnit.SECONDS));
+    }
 
-        ObservableFuture<TResponse> parentFuture = null;
-        ScheduledRequest scheduledRequest = null;
-        if (request.getExpirationDate() != null) {
-            parentFuture = createObservableFuture();
-            scheduledRequest = new ScheduledRequest(parentFuture, request);
+    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request, Date expirationDate) {
+        final String requestId = UUID.randomUUID().toString();
 
-            // in case it times out
-            queuedRequests.put(request.getRequestId(), scheduledRequest);
-        }
+        // we're returning this value.
+        final ObservableFuture<T> parentFuture = createObservableFuture();
+
+        /**
+         * Schedule a timeout in the future if it has an expirationDate.
+         */
+        final ScheduledRequest<T> scheduledRequest = createScheduledRequestIfExpiring(parentFuture, requestId, expirationDate, request);
 
         try {
-            executingRequests.add(request.getRequestId());
-            requestFuture = executor.execute(request.getParameters());
-            if (scheduledRequest != null){
-                scheduledRequest.setRequestFuture(requestFuture);
-            }
-        } catch (java.lang.Exception e) {
-            requestFuture = new DefaultObservableFuture<TResponse>(this);
-            requestFuture.setFailure(e);
-            return requestFuture;
-        } finally {
-            executingRequests.remove(request.getRequestId());
-            // check for abortion
-            if (parentFuture != null && parentFuture.isDone()) {
-                // it finished late.
-                LOGGER.error("The parent future is already done? Did it finish late?");
-            }
-        }
+            executor.execute(new Runnable() {
 
-        if (parentFuture != null && requestFuture != null){
-            final ObservableFuture<TResponse> finalParentFuture = parentFuture;
-            requestFuture.addObserver(new Observer<ObservableFuture<TResponse>>() {
                 @Override
-                public void notify(Object sender, ObservableFuture<TResponse> item) {
-                    if (item.isCancelled()) {
-                        finalParentFuture.cancel();
-                    } else if (!item.isSuccess()) {
-                        finalParentFuture.setFailure(item.getCause());
-                    } else if (item.isSuccess()) {
-                        finalParentFuture.setSuccess(item.getResult());
+                public void run() {
+                    synchronized (request) {
+                        try {
+                            // immediately check to see if the parentFuture was cancelled.
+                            // the scheduler could have timed us out before we got here.
+                            if (parentFuture.isDone()) {
+                                // someone cancelled our shit or we timed out.
+                                return;
+                            }
+
+                            final ObservableFuture<T> requestFuture = request.call();
+
+                            // sync over the requestFuture to the parentFuture.
+                            // ie: if the requestFuture is already done then cascade that over.
+                            NestedObservableFuture.syncState(parentFuture, requestFuture);
+                            NestedObservableFuture.syncState(requestFuture, parentFuture);
+
+                            // NOTE: We are doing it twice on purpose. If someone uses an ObservableFuture
+                            // that is asynchronous, then we will exit this method with the wrong state.
+                            // we have to do it both ways.
+                            if (!parentFuture.isDone() || !requestFuture.isDone()) {
+                                requestFuture.addObserver(new Observer<ObservableFuture<T>>() {
+                                    @Override
+                                    public void notify(Object sender, ObservableFuture<T> item) {
+                                        // sync over the requestFuture to the parentFuture.
+                                        // ie: if the requestFuture is already done then cascade that over.
+                                        NestedObservableFuture.syncState(requestFuture, parentFuture);
+                                    }
+                                });
+
+                                parentFuture.addObserver(new Observer<ObservableFuture<T>>() {
+                                    @Override
+                                    public void notify(Object sender, ObservableFuture<T> item) {
+                                        // sync over the requestFuture to the parentFuture.
+                                        // ie: if the requestFuture is already done then cascade that over.
+                                        NestedObservableFuture.syncState(parentFuture, requestFuture);
+                                    }
+                                });
+                            }
+
+                            if (parentFuture.isDone() || requestFuture.isDone()) {
+                                return;
+                            }
+
+                            // if we have something scheduled, we need set it up.
+                            if (scheduledRequest != null) {
+                                scheduledRequest.setRequestFuture(requestFuture);
+                            }
+                        } catch (Exception e) {
+                            parentFuture.setFailure(e);
+                        } finally {
+                            LOGGER.debug("Finished execution for task " + request);
+                        }
                     }
                 }
             });
+
+        } catch (Exception e) {
+            return new FakeFailingObservableFuture<T>(this, e);
+        } finally {
+            LOGGER.debug("Queued up task " + request);
         }
 
-        return parentFuture != null ? parentFuture : requestFuture;
+        return parentFuture;
     }
 
-    public void register(String requestType, Worker executor) {
-        if (executorMap.containsKey(requestType)) {
-            throw new IllegalStateException("Already have an executor for type " + requestType);
+    private <T> ScheduledRequest<T> createScheduledRequestIfExpiring(ObservableFuture<T> parentFuture, String requestId, Date expirationDate, Callable<ObservableFuture<T>> request) {
+        ScheduledRequest<T> scheduledRequest = null;
+        expirationDate = getExpirationDate(expirationDate);
+        if (expirationDate != null) {
+            scheduledRequest = new ScheduledRequest(requestId, request, parentFuture, expirationDate);
+
+            // in case it times out
+            queuedRequests.put(requestId, scheduledRequest);
+
+            scheduler.schedule(requestId, expirationDate);
         }
-        executorMap.put(requestType, executor);
+
+        return scheduledRequest;
     }
 
-    public void unregister(String requestType) {
-        executorMap.remove(requestType);
+    private Date getExpirationDate(Date expirationDate) {
+        if (expirationDate == null) {
+            if (timeout != 0) {
+                expirationDate = FutureDateUtil.inFuture(timeout, units);
+            }
+        }
+        return expirationDate;
     }
 
     private final Observer<String> onTimerScheduleComplete = new Observer<String>() {
@@ -123,14 +179,14 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                 return;
             }
 
-            ImportantTask request = scheduledRequest.getRequest();
-            Date expirationDate = request.getExpirationDate();
+            Callable<ObservableFuture<?>> request = scheduledRequest.getRequest();
+            Date expirationDate = scheduledRequest.getExpirationDate();
             if (expirationDate != null && nowIsAfterThisDate(expirationDate)) {
-                queuedRequests.remove(scheduledRequest.getRequest().getRequestId());
+                queuedRequests.remove(scheduledRequest.getRequestId());
 
                 // was the initial future even finished yet?
                 ObservableFuture f = scheduledRequest.getRequestFuture();
-                if (f == null){
+                if (f == null) {
                     // it took too long to even make the request. Wow.
                     scheduledRequest.getParentFuture().setFailure(new TimeoutException("Too late? " + expirationDate));
                 } else {
@@ -146,7 +202,9 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             throw new IllegalArgumentException("The date can't be null!");
         }
 
-        return System.currentTimeMillis() - date.getTime() < 1000;
+        long diff =  System.currentTimeMillis() - date.getTime();
+
+        return diff > 0;
     }
 
     private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture() {
@@ -171,7 +229,6 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
     @Override
     protected void onDestroy() {
-        executorMap.clear();
         queuedRequests.clear();
         executingRequests.clear();
     }
@@ -182,31 +239,44 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
      * Date: 8/29/12
      * Time: 12:09 PM
      */
-    public static class ScheduledRequest<TRequest extends Serializable, TResponse> {
+    public static class ScheduledRequest<T> {
 
-        private final ObservableFuture<TResponse> parentFuture;
-        private final ImportantTask<TRequest> request;
-        private ObservableFuture<TResponse> requestFuture;
+        private final Callable<ObservableFuture<T>> request;
+        private final ObservableFuture<T> parentFuture;
+        private final String requestId;
+        private final Date expirationDate;
 
-        public ScheduledRequest(ObservableFuture<TResponse> parentFuture, ImportantTask<TRequest> request) {
+        private ObservableFuture<T> requestFuture;
+
+        public ScheduledRequest(String requestId, Callable<ObservableFuture<T>> request, ObservableFuture<T> parentFuture, Date expirationDate) {
+            this.requestId = requestId;
             this.parentFuture = parentFuture;
             this.request = request;
+            this.expirationDate = expirationDate;
         }
 
-        public ObservableFuture<TResponse> getParentFuture() {
+        public ObservableFuture<T> getParentFuture() {
             return parentFuture;
         }
 
-        public ImportantTask<TRequest> getRequest() {
+        public Callable<ObservableFuture<T>> getRequest() {
             return request;
         }
 
-        public void setRequestFuture(ObservableFuture<TResponse> requestFuture) {
+        public void setRequestFuture(ObservableFuture<T> requestFuture) {
             this.requestFuture = requestFuture;
         }
 
-        public ObservableFuture<TResponse> getRequestFuture() {
+        public ObservableFuture<T> getRequestFuture() {
             return requestFuture;
+        }
+
+        public Date getExpirationDate() {
+            return expirationDate;
+        }
+
+        public String getRequestId() {
+            return requestId;
         }
     }
 }

@@ -1,9 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.ApiConnectionFactory;
-import com.zipwhip.api.DefaultZipwhipClient;
-import com.zipwhip.api.ZipwhipClient;
-import com.zipwhip.api.ZipwhipClientFactory;
+import com.zipwhip.api.*;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
@@ -35,15 +32,16 @@ public class SocketSignalProviderIntegrationTest {
 
 //    private String sessionKey = "6c20b056-6843-404d-9fb4-b492d54efe75:142584301"; // evo 3d
 //    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
-    private String host = "http://staging.zipwhip.com";
 //    private String host = "http://network.zipwhip.com";
 
     ZipwhipClient client;
 
     @Before
     public void setUp() throws Exception {
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance()
-                .host(host);
+        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
+        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
+
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance();
 //                .sessionKey(sessionKey);
 
 //        connectionFactory.setUsername("9139802972");
@@ -69,7 +67,8 @@ public class SocketSignalProviderIntegrationTest {
         Boolean success =  client.connect().get(100, TimeUnit.SECONDS);
         assertNotNull("connecting returned null?", success);
 
-        ((DefaultZipwhipClient)client).setSignalsConnectTimeoutInSeconds(1);
+//        ((DefaultZipwhipClient)client).setSignalsConnectTimeoutInSeconds(1);
+
         String sessionKey = client.getConnection().getSessionKey();
 //        assertEquals(client.getConnection().getSessionKey(), sessionKey);
         assertTrue(client.getSignalProvider().getClientId() != null);

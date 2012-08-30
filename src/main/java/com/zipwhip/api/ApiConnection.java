@@ -14,11 +14,15 @@ public interface ApiConnection extends Connection {
     /**
      * The default Zipwhip domain
      */
-//    public static final String DEFAULT_HOST = "http://network.zipwhip.com";
-    public static final String DEFAULT_HOST = "http://staging.zipwhip.com";
+    public static final String DEFAULT_HOST = "http://network.zipwhip.com";
 
     /**
-     * The Zipwhip staing domain
+     * The default Zipwhip HTTPS domain
+     */
+    public static final String DEFAULT_HTTPS_HOST = "https://network.zipwhip.com";
+
+    /**
+     * The Zipwhip staging domain
      */
     public static final String STAGING_HOST = "http://staging.zipwhip.com";
 
@@ -28,15 +32,39 @@ public interface ApiConnection extends Connection {
     public static final String TEST_HOST = "http://test.zipwhip.com";
 
     /**
-     * The Zipwhip dev domain
+     * Signal Server staging host
      */
-    public static final String DEVELOPMENT_HOST = "http://office.zipwhip.com:6092";
+    public static final String DEFAULT_SIGNALS_HOST = "74.209.177.242";
 
     /**
-     * The default Zipwhip HTTPS domain
+     * Signal Server test host
      */
-//    public static final String DEFAULT_HTTPS_HOST = "https://network.zipwhip.com";
-    public static final String DEFAULT_HTTPS_HOST = "https://staging.zipwhip.com";
+    public static final String TEST_SIGNALS_HOST = "74.209.177.241";
+
+    /**
+     * Signal Server staging host
+     */
+    public static final String STAGING_SIGNALS_HOST = "69.46.44.181";
+
+    /**
+     * Signal Server port 80
+     */
+    public static final int PORT_80 = 80;
+
+    /**
+     * Signal Server port 443
+     */
+    public static final int PORT_443 = 443;
+
+    /**
+     * Signal Server port 3000
+     */
+    public static final int PORT_3000 = 3000;
+
+    /**
+     * Signal Server port 8080
+     */
+    public static final int PORT_8080 = 8080;
 
     /**
      * The default Zipwhip API version

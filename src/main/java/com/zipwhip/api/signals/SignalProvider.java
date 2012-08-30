@@ -92,7 +92,7 @@ public interface SignalProvider extends Destroyable {
     ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
 
     /**
-     * Tell it to connect.
+     * Tell it to connect. The future will unblock when {action:"CONNECT"} comes back
      *
      * @param clientId
      *        Pass in null if you don't have one.

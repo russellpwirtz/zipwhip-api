@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
  * Date: 8/29/12
  * Time: 1:11 PM
  */
-public class DateUtil {
+public class FutureDateUtil {
 
     public static Date in1Second(){
         return inFuture(1, TimeUnit.SECONDS);
@@ -20,6 +20,10 @@ public class DateUtil {
     }
 
     public static Date inFuture(long amount, TimeUnit unit) {
+        if (amount == 0){
+            return new Date();
+        }
+
         long millis = unit.toMillis(amount);
         return new Date(System.currentTimeMillis() + millis);
     }

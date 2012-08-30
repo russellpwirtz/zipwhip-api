@@ -9,11 +9,10 @@ import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.api.signals.important.subscription.SignalsConnectTask;
-import com.zipwhip.api.signals.important.subscription.SignalsConnectWorker;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.important.ImportantTaskExecutor;
@@ -24,7 +23,7 @@ import com.zipwhip.util.StringUtil;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -38,14 +37,16 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     protected ImportantTaskExecutor importantTaskExecutor;
     protected long signalsConnectTimeoutInSeconds = 30;
-
+    protected ObservableFuture<Boolean> connectingFuture;
+    protected CountDownLatch subscriptionCompleteCommandReceivedLatch;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("DefaultZipwhipClient-"));
     /**
      * Create a new DefaultZipwhipClient with out a {@code SignalProvider}
      *
      * @param connection The connection to Zipwhip API
      */
     public DefaultZipwhipClient(ApiConnection connection) {
-        super(connection, null);
+        this(connection, null);
     }
 
     /**
@@ -61,167 +62,17 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         initSignalProviderEvents();
     }
 
-    private void initSignalProviderEvents() {
-
-        signalProvider.onCommandReceived(new Observer<Command>() {
-            @Override
-            public void notify(Object sender, Command item) {
-                if (item instanceof ConnectCommand) {
-
-                }
-            }
-        });
-
-        signalProvider.onNewClientIdReceived(new Observer<String>() {
-            @Override
-            public void notify(Object sender, String newClientId) {
-
-                // NOTE: we need to allow this in order to do a clean reset
-//                if (StringUtil.isNullOrEmpty(newClientId)) {
-//                    LOGGER.warn("Received CONNECT without clientId");
-//                    return;
-//                }
-
-                // NOTE: when we do a reset, we're going to get a new clientId that is null
-                if (StringUtil.isNullOrEmpty(newClientId)) {
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-                    return;
-                }
-
-                String oldClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
-                final String sessionKey = connection.getSessionKey();
-
-                if (StringUtil.exists(oldClientId)) {
-
-                    // clientId changed, unsubscribe the old one, and sub the new one
-                    if (!oldClientId.equals(newClientId)) {
-
-                        settingsStore.clear();
-
-                        settingsStore.put(SettingsStore.Keys.SESSION_KEY, sessionKey);
-                        settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-
-                        // Do a disconnect then connect
-                        Map<String, Object> params = new HashMap<String, Object>();
-                        params.put("clientId", oldClientId);
-                        params.put("sessions", sessionKey);
-                        executeSyncSucceedOrDisconnect(SIGNALS_DISCONNECT, params);
-
-                        executeSignalsConnect(newClientId, sessionKey);
-                    }
-                } else {
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-
-                    // lets do a signals connect!
-                    Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("clientId", newClientId);
-                    params.put("sessions", sessionKey);
-
-                    Presence presence = signalProvider.getPresence();
-
-                    if (presence != null) {
-                        params.put("category", presence.getCategory());
-                    }
-
-                    executeSignalsConnect(newClientId, sessionKey);
-                }
-            }
-        });
-
-        signalProvider.onVersionChanged(new Observer<VersionMapEntry>() {
-            @Override
-            public void notify(Object sender, VersionMapEntry item) {
-                versionsStore.set(item.getKey(), item.getValue());
-            }
-        });
-
-    }
-
-    /**
-     * Execute a /signals/connect webcall s
-     *
-     * @param clientId
-     * @param sessionKey
-     * @return
-     */
-    private synchronized ObservableFuture<SubscriptionCompleteCommand> executeSignalsConnect(final String clientId, String sessionKey) {
-        final ObservableFuture<SubscriptionCompleteCommand> future = importantTaskExecutor.enqueue(new SignalsConnectTask(sessionKey, clientId, signalsConnectTimeoutInSeconds));
-
-        future.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
-
-            /**
-             * This method will fire when the future completes either by failure/success/cancellation. Technically
-             * the cancel won't stop the process from processing, however it will terminate/teardown this future and
-             * if the process finishes later (or times out again) we're already destroyed and wont be called again.
-             * This method will be called once and only once no matter how many times you call .cancel() or .setSuccess();
-             *
-             * The thread of this notify method is the
-             *
-             * @param sender
-             * @param item
-             */
-            @Override
-            public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
-                if (!future.isSuccess()) {
-                    if (future.getCause() instanceof TimeoutException) {
-                        LOGGER.error("Timeout on receiving the SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
-
-                        // we are in the Timer thread (pub sub if Timer is Intent based).
-                        // hashwheel otherwise.
-                        // TODO: we need to be 100% certain that this signalProvider is the SAME exact connection that we started with.
-
-                        // we've decided to clear the clientId when the signals/connect doesn't work
-                        final String sessionKey = connection.getSessionKey();
-
-                        signalProvider.runIfActive(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                LOGGER.debug("signalProvider.runIfActive() hit. We're going to tear down this connection. We can trust that it wont change during this method.");
-
-                                // This thread is the connection thread (deadlock if block on connect / disconnect)
-
-                                // we need to synchronize on the CONNECTION in order to guarantee that no one can change
-                                // the sessionKey while we're working on it.
-                                synchronized (connection) {
-                                    if (!StringUtil.equals(sessionKey, connection.getSessionKey())) {
-                                        LOGGER.warn("The sessionKey changed from underneath us. Just quitting");
-                                        return;
-                                    } else if (!StringUtil.equals(clientId, signalProvider.getClientId())) {
-                                        LOGGER.warn("The clientId changed from underneath us. Just quitting");
-                                        return;
-                                    }
-
-                                    try {
-                                        LOGGER.debug("We're safely in the same connection as we were before, so we're going to tear down the connection since we missed a SubscriptionCompleteCommand");
-                                        signalProvider.resetAndReconnect();
-                                    } catch (Exception e) {
-                                        LOGGER.error("");
-                                    }
-                                }
-                            }
-                        });
-                    } else if (future.isCancelled()) {
-                        // potentially we would be in the CALLER thread.
-                        LOGGER.warn("Cancelled our /signals/connect web call future?!?");
-                    } else {
-                        // guess it succeeded, do we care?
-                        LOGGER.debug("Successfully got a SubscriptionCompleteCommand from the server! " + item.getResult());
-                    }
-                }
-            }
-        });
-
-        return future;
-    }
-
     @Override
     public ObservableFuture<Boolean> connect() throws Exception {
         return connect(null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(Presence presence) throws Exception {
+    public synchronized ObservableFuture<Boolean> connect(Presence presence) throws Exception {
+
+        if (connectingFuture != null) {
+            return connectingFuture;
+        }
 
         // we need to determine if we're authenticated enough
         if (!connection.isConnected() || !connection.isAuthenticated()) {
@@ -262,13 +113,47 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             settingsStore.put(SettingsStore.Keys.SESSION_KEY, correctSessionKey);
         }
 
+        NestedObservableFuture<Boolean> resultFuture = new NestedObservableFuture<Boolean>(this);
+        this.connectingFuture = resultFuture;
+
+        boolean expecting = expectingSubscriptionCompleteCommand();
+
         // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(correctClientId, versionsStore.get(), presence);
+        final ObservableFuture<Boolean> f = signalProvider.connect(correctClientId, versionsStore.get(), presence);
+
+        if (expecting) {
+            final CountDownLatch latch = subscriptionCompleteCommandReceivedLatch = new CountDownLatch(1);
+
+            return FutureUtil.execute(executor, this, new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    try {
+                        // block up to 45 seconds or crash.
+                        f.get(45, TimeUnit.SECONDS);
+                        // block until we get a SubscriptionComplete
+                        return latch.await(45, TimeUnit.SECONDS);
+                    } finally {
+                        synchronized (DefaultZipwhipClient.this) {
+                            DefaultZipwhipClient.this.connectingFuture = null;
+                        }
+                    }
+                }
+            });
+        } else {
+            resultFuture.setNestedFuture(f);
+        }
+
+        return f;
+    }
+
+    private boolean expectingSubscriptionCompleteCommand() {
+        // if we do not currently have a clientId then we expect a SubscriptionCompleteCommand
+        String clientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+        return StringUtil.isNullOrEmpty(clientId);
     }
 
     @Override
     public ObservableFuture<Void> disconnect() throws Exception {
-
         if (!connection.isConnected()) {
             throw new Exception("The connection is not connected!");
         }
@@ -456,7 +341,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
 
-
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception {
         if (StringUtil.isNullOrEmpty(fingerprint)) {
@@ -471,6 +355,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
+
 
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception {
@@ -611,7 +496,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
-
     @Override
     public List<Presence> getPresence(PresenceCategory category) throws Exception {
 
@@ -623,6 +507,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
+
 
     @Override
     public void sendSignal(String scope, String channel, String event, String payload) throws Exception {
@@ -747,7 +632,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
     }
 
-
     @Override
     public String sessionChallenge(String mobileNumber, String portal) throws Exception {
 
@@ -766,6 +650,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
 
     }
+
 
     @Override
     public String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception {
@@ -1029,13 +914,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
-        if (this.importantTaskExecutor != null) {
-            this.importantTaskExecutor.unregister(SignalsConnectWorker.REQUEST_TYPE);
-        }
         this.importantTaskExecutor = importantTaskExecutor;
-        if (this.importantTaskExecutor != null) {
-            this.importantTaskExecutor.register(SignalsConnectWorker.REQUEST_TYPE, new SignalsConnectWorker(this.connection, this.signalProvider));
-        }
     }
 
     public long getSignalsConnectTimeoutInSeconds() {
@@ -1044,6 +923,316 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     public void setSignalsConnectTimeoutInSeconds(long signalsConnectTimeoutInSeconds) {
         this.signalsConnectTimeoutInSeconds = signalsConnectTimeoutInSeconds;
+    }
+
+    private void initSignalProviderEvents() {
+        signalProvider.onConnectionChanged(releaseLatchOnConnectionChanged);
+        signalProvider.onSubscriptionComplete(releaseLatchOnSubscriptionComplete);
+        signalProvider.onNewClientIdReceived(executeSignalsConnectOnNewClientIdReceived);
+        signalProvider.onVersionChanged(updateVersionsStoreOnVersionChanged);
+    }
+
+    private final Observer<Boolean> releaseLatchOnConnectionChanged = new Observer<Boolean>() {
+        @Override
+        public void notify(Object sender, Boolean connected) {
+            // if we are waiting for the subscriptionCompleteCommand to occur and we lose
+            // the connection then just unbind the latch.
+            if (Boolean.FALSE.equals(connected) && subscriptionCompleteCommandReceivedLatch != null) {
+                subscriptionCompleteCommandReceivedLatch.countDown();
+            }
+        }
+    };
+
+    private final Observer<SubscriptionCompleteCommand> releaseLatchOnSubscriptionComplete = new Observer<SubscriptionCompleteCommand>() {
+        @Override
+        public void notify(Object sender, SubscriptionCompleteCommand item) {
+            if (subscriptionCompleteCommandReceivedLatch != null) {
+                synchronized (DefaultZipwhipClient.this) {
+                    if (subscriptionCompleteCommandReceivedLatch != null) {
+                        subscriptionCompleteCommandReceivedLatch.countDown();
+                        subscriptionCompleteCommandReceivedLatch = null;
+                    }
+                }
+            }
+        }
+    };
+
+    private Observer<VersionMapEntry> updateVersionsStoreOnVersionChanged = new Observer<VersionMapEntry>() {
+        @Override
+        public void notify(Object sender, VersionMapEntry item) {
+            versionsStore.set(item.getKey(), item.getValue());
+        }
+    };
+
+    private final Observer<String> executeSignalsConnectOnNewClientIdReceived = new Observer<String>() {
+        @Override
+        public void notify(Object sender, String newClientId) {
+
+            // NOTE: we need to allow this in order to do a clean reset
+            //                if (StringUtil.isNullOrEmpty(newClientId)) {
+            //                    LOGGER.warn("Received CONNECT without clientId");
+            //                    return;
+            //                }
+
+            // NOTE: when we do a reset, we're going to get a new clientId that is null
+            if (StringUtil.isNullOrEmpty(newClientId)) {
+                settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
+                return;
+            }
+
+            String oldClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
+            final String sessionKey = connection.getSessionKey();
+
+            if (StringUtil.exists(oldClientId)) {
+
+                // clientId changed, unsubscribe the old one, and sub the new one
+                if (!oldClientId.equals(newClientId)) {
+
+                    settingsStore.clear();
+
+                    settingsStore.put(SettingsStore.Keys.SESSION_KEY, sessionKey);
+                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
+
+                    // Do a disconnect then connect
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put("clientId", oldClientId);
+                    params.put("sessions", sessionKey);
+                    executeSyncSucceedOrDisconnect(SIGNALS_DISCONNECT, params);
+
+                    executeSignalsConnect(newClientId, sessionKey);
+                }
+            } else {
+                settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
+
+                // lets do a signals connect!
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("clientId", newClientId);
+                params.put("sessions", sessionKey);
+
+                Presence presence = signalProvider.getPresence();
+
+                if (presence != null) {
+                    params.put("category", presence.getCategory());
+                }
+
+                executeSignalsConnect(newClientId, sessionKey);
+            }
+        }
+    };
+
+    /**
+     * Execute a /signals/connect webcall s
+     *
+     * @param clientId
+     * @param sessionKey
+     * @return
+     */
+    private synchronized ObservableFuture<SubscriptionCompleteCommand> executeSignalsConnect(final String clientId, String sessionKey) {
+        final ObservableFuture<SubscriptionCompleteCommand> future =
+                importantTaskExecutor.enqueue(new SignalsConnectTask(sessionKey, clientId), signalsConnectTimeoutInSeconds);
+
+        future.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+
+            /**
+             * This method will fire when the future completes either by failure/success/cancellation. Technically
+             * the cancel won't stop the process from processing, however it will terminate/teardown this future and
+             * if the process finishes later (or times out again) we're already destroyed and wont be called again.
+             * This method will be called once and only once no matter how many times you call .cancel() or .setSuccess();
+             *
+             * The thread of this notify method is the
+             *
+             * @param sender
+             * @param item
+             */
+            @Override
+            public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
+                if (!future.isSuccess()) {
+                    if (future.getCause() instanceof TimeoutException) {
+                        LOGGER.error("Timeout on receiving the SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
+
+                        // we are in the Timer thread (pub sub if Timer is Intent based).
+                        // hashwheel otherwise.
+                        // TODO: we need to be 100% certain that this signalProvider is the SAME exact connection that we started with.
+
+                        // we've decided to clear the clientId when the signals/connect doesn't work
+                        final String sessionKey = connection.getSessionKey();
+
+                        signalProvider.runIfActive(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                LOGGER.debug("signalProvider.runIfActive() hit. We're going to tear down this connection. We can trust that it wont change during this method.");
+
+                                // This thread is the connection thread (deadlock if block on connect / disconnect)
+
+                                // we need to synchronize on the CONNECTION in order to guarantee that no one can change
+                                // the sessionKey while we're working on it.
+                                synchronized (connection) {
+                                    if (!StringUtil.equals(sessionKey, connection.getSessionKey())) {
+                                        LOGGER.warn("The sessionKey changed from underneath us. Just quitting");
+                                        return;
+                                    } else if (!StringUtil.equals(clientId, signalProvider.getClientId())) {
+                                        LOGGER.warn("The clientId changed from underneath us. Just quitting");
+                                        return;
+                                    }
+
+                                    try {
+                                        LOGGER.debug("We're safely in the same connection as we were before, so we're going to tear down the connection since we missed a SubscriptionCompleteCommand");
+                                        signalProvider.resetAndReconnect();
+                                    } catch (Exception e) {
+                                        LOGGER.error("");
+                                    }
+                                }
+                            }
+                        });
+                    } else if (future.isCancelled()) {
+                        // potentially we would be in the CALLER thread.
+                        LOGGER.warn("Cancelled our /signals/connect web call future?!?");
+                    } else if (future.getCause() != null) {
+                        LOGGER.error("Problem executing /signals/connect", future.getCause());
+                        if (signalProvider.isConnected()) {
+                            try {
+                                signalProvider.disconnect(true);
+                            } catch (Exception e) {
+                                // TODO: do we retry or are we an orphaned whale now?
+                                LOGGER.error("Even tried to execute provider.disconnect() and got an error!", e);
+                            }
+                        }
+                    } else {
+                        // guess it succeeded, do we care?
+                        LOGGER.debug("Successfully got a SubscriptionCompleteCommand from the server! " + item.getResult());
+                    }
+                }
+            }
+        });
+
+//        future.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+//            @Override
+//            public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
+//                latch.countDown();
+//            }
+//        });
+
+        return future;
+    }
+
+    private class SignalsConnectTask implements Callable<ObservableFuture<SubscriptionCompleteCommand>> {
+
+        private final String sessionKey;
+        private final String clientId;
+
+        private SignalsConnectTask(String sessionKey, String clientId) {
+            this.sessionKey = sessionKey;
+            this.clientId = clientId;
+        }
+
+        @Override
+        public ObservableFuture<SubscriptionCompleteCommand> call() throws Exception {
+            Map<String, Object> params = new HashMap<String, Object>();
+
+            params.put("sessions", sessionKey);
+            params.put("clientId", clientId);
+
+            final ObservableFuture<SubscriptionCompleteCommand> resultFuture = new DefaultObservableFuture<SubscriptionCompleteCommand>(this);
+
+            final Observer<Boolean>[] onDisconnectObserver = new Observer[1];
+
+            final Observer<SubscriptionCompleteCommand> onSubscriptionCompleteObserver = new Observer<SubscriptionCompleteCommand>() {
+                @Override
+                public void notify(Object sender, SubscriptionCompleteCommand item) {
+                    signalProvider.removeOnSubscriptionCompleteObserver(this);
+                    signalProvider.removeOnConnectionChangedObserver(onDisconnectObserver[0]);
+
+                    LOGGER.debug("Successing");
+                    resultFuture.setSuccess(item);
+                }
+            };
+
+            onDisconnectObserver[0] = new Observer<Boolean>() {
+                @Override
+                public void notify(Object sender, Boolean item) {
+                    // on any kind of connection change, we need to just abort
+                    signalProvider.removeOnSubscriptionCompleteObserver(onSubscriptionCompleteObserver);
+                    signalProvider.removeOnConnectionChangedObserver(onDisconnectObserver[0]);
+
+                    LOGGER.debug("Failing (disconected)");
+                    resultFuture.setFailure(new Exception("Disconnected while waiting for SubscriptionCompleteCommand to come in! " + item));
+                }
+            };
+
+            signalProvider.onConnectionChanged(onDisconnectObserver[0]);
+            signalProvider.onSubscriptionComplete(onSubscriptionCompleteObserver);
+
+            if (resultFuture.isDone()) {
+                // wow it finished already?
+                return resultFuture;
+            }
+
+            ServerResponse response = null;
+            try {
+                response = executeSync(ZipwhipNetworkSupport.SIGNALS_CONNECT, params);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to execute request: " + e);
+            }
+
+            if (response == null) {
+                LOGGER.error("The response from zipwhip was null!?");
+                resultFuture.setFailure(new NullPointerException("The executeSync() response was null"));
+
+                return resultFuture;
+            }
+
+            if (!response.isSuccess()) {
+                resultFuture.setFailure(new Exception(response.getRaw()));
+
+                return resultFuture;
+            }
+
+            resultFuture.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+
+                @Override
+                public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
+                    signalProvider.removeOnConnectionChangedObserver(onDisconnectObserver[0]);
+                    signalProvider.removeOnSubscriptionCompleteObserver(onSubscriptionCompleteObserver);
+                }
+            });
+
+            LOGGER.debug("/signals/connect executed successfully. You should get back a SubscriptionCompleteCommand any time now. (Maybe already?)");
+
+
+//            sendFuture.addObserver(new Observer<ObservableFuture<String>>() {
+//
+//                @Override
+//                public void notify(Object sender, ObservableFuture<String> item) {
+//                    if (!item.isSuccess()) {
+//                        signalProvider.removeOnConnectionChangedObserver(onDisconnectObserver[0]);
+//                        signalProvider.removeOnSubscriptionCompleteObserver(onSubscriptionCompleteObserver);
+//
+//                        LOGGER.debug("Failing (send failed?)");
+//                        if (item.isCancelled()) {
+//                            resultFuture.cancel();
+//                        } else if (item.getCause() != null) {
+//                            resultFuture.setFailure(item.getCause());
+//                        }
+//                    } else {
+//                        String response = item.getResult();
+//                        try {
+//                            ServerResponse serverResponse = responseParser.parse(response);
+//                            if (serverResponse.isSuccess()) {
+//                                // let the other signal coming in do the success for us.
+//                                LOGGER.debug("/signals/connect executed successfully. You should get back a SubscriptionCompleteCommand any time now.");
+//                            } else {
+//                                resultFuture.setFailure(new Exception(serverResponse.getRaw()));
+//                            }
+//                        } catch (Exception e) {
+//                            resultFuture.setFailure(e);
+//                        }
+//                    }
+//                }
+//            });
+
+            return resultFuture;
+        }
     }
 
     @Override

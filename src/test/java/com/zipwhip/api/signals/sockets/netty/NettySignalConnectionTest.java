@@ -1,11 +1,11 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.commands.ConnectCommand;
+import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.TestRawSocketIoChannelPipelineFactory;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.StringUtil;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,12 +30,16 @@ public class NettySignalConnectionTest {
         connection = new NettySignalConnection();
     }
 
-    @After
-    public void tearDown() throws Exception {
-//        if (connection != null) {
-//            connection.destroy();
-//            connection = null;
-//        }
+    /**
+     * This test should start to fail when we figure out how to detect that a write is going into the ether because the
+     * local network has gone down on the client.
+     */
+    @Test
+    public void testWritingIntoChannelWithNetworkDownThrowsNoException() throws Exception {
+        Future<Boolean> connectFuture = connection.connect();
+        assertTrue(connectFuture.get());
+        Future<Boolean> sendFuture = connection.send(PingPongCommand.getShortformInstance());
+        assertTrue(sendFuture.get());
     }
 
     // this was a bug we caught. if the channel was closed abruptly we didn't clean up nicely.
@@ -63,9 +67,6 @@ public class NettySignalConnectionTest {
         assertFalse(connection.isConnected());
         assertNull("After a close, the wrapper should be null", connection.wrapper);
         assertTrue(disconnectCalled[0]);
-//        Thread.sleep(10000);
-//        assertFalse(connection.wrapper.isConnected());
-//        assertFalse(connection.wrapper.channel.isConnected());
     }
 
     @Test

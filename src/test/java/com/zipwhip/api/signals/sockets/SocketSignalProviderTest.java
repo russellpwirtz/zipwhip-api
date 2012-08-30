@@ -39,6 +39,7 @@ public class SocketSignalProviderTest {
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
+
     }
 
     @Test
@@ -338,6 +339,7 @@ public class SocketSignalProviderTest {
 
         {
             Presence newPresence = provider.getPresence();
+            assertNotNull("It seems that the API requires that this gets modified", newPresence.getAddress());
             assertEquals(originalClientId, newPresence.getAddress().getClientId());
         }
 

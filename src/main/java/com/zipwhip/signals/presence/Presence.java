@@ -1,9 +1,9 @@
 package com.zipwhip.signals.presence;
 
+import com.zipwhip.signals.address.ClientAddress;
+
 import java.io.Serializable;
 import java.util.Date;
-
-import com.zipwhip.signals.address.ClientAddress;
 
 /**
  * Created by IntelliJ IDEA.
@@ -27,7 +27,6 @@ public class Presence implements Serializable {
      */
 
     protected Presence(PresenceBuilder builder) {
-
         ip = builder.ip;
         address = builder.address;
         category = builder.category;

@@ -3,14 +3,11 @@
  */
 package com.zipwhip.api.signals.commands;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.signals.message.Action;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * @author jdinsel

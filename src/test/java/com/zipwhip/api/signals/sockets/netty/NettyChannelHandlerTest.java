@@ -2,7 +2,10 @@ package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.api.signals.commands.Command;
+import com.zipwhip.api.signals.commands.PingPongCommand;
+import com.zipwhip.api.signals.commands.SerializingCommand;
+import com.zipwhip.api.signals.commands.SignalCommand;
 import junit.framework.Assert;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.ChannelState;

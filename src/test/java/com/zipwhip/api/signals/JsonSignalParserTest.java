@@ -1,18 +1,15 @@
 package com.zipwhip.api.signals;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import junit.framework.Assert;
-
-import org.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.zipwhip.api.dto.Contact;
 import com.zipwhip.api.dto.Conversation;
 import com.zipwhip.api.dto.Device;
 import com.zipwhip.api.dto.Message;
+import junit.framework.Assert;
+import org.json.JSONObject;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Created by IntelliJ IDEA.

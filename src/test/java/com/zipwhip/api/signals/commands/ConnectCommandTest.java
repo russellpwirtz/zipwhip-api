@@ -1,11 +1,10 @@
 package com.zipwhip.api.signals.commands;
 
+import junit.framework.Assert;
+import org.junit.Test;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import junit.framework.Assert;
-
-import org.junit.Test;
 
 /**
  * Created by IntelliJ IDEA.

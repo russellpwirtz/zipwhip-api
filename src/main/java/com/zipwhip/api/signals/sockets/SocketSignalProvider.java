@@ -1,9 +1,8 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
-import com.zipwhip.api.signals.important.connect.ConnectCommandTask;
-import com.zipwhip.api.signals.important.connect.ConnectCommandWorker;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
@@ -18,6 +17,7 @@ import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
+import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
@@ -343,7 +343,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     private ObservableFuture<ConnectCommand> writeConnectCommand(String clientId, Map<String, Long> versions) {
-        return importantTaskExecutor.enqueue(new ConnectCommandTask(clientId, versions));
+        return importantTaskExecutor.enqueue(
+                new ConnectCommandTask(connection, clientId, versions, presence), FutureDateUtil.inFuture(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS));
     }
 
     private void notifyConnected(boolean connected) {
@@ -418,6 +419,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         // Hold onto these objects for internal reconnect attempts
         if (presence != null) {
             this.presence = presence;
+            sanitizePresence(this.presence);
         }
 
         if (CollectionUtil.exists(versions)) {
@@ -427,16 +429,23 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         // Connect our TCP socket
         final Future<Boolean> socketConnectFuture;
 
-//        try {
-        stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
-        socketConnectFuture = connection.connect();
-//        } catch (Exception e) {
-        // oh shit, we crashed!
-//            LOGGER.warn("Fixed the connectLatch deadlock bug. Killed the latch because got exception connecting.");
-//            throw e;
-//        }
+        // If the connection (connection.connect()) happens too fast, then we get a race condition where we
+        // try to send in a ConnectCommand twice. We need to set this.connectingFuture to non-null (but really a real future)
+        // first, and THEN attach the execute() future to it.
+        NestedObservableFuture<Boolean> nestedObservableFuture = new NestedObservableFuture<Boolean>(this);
+        this.connectingFuture = nestedObservableFuture;
 
-        return this.connectingFuture = FutureUtil.execute(executor, this, new Callable<Boolean>() {
+        try {
+            stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
+            socketConnectFuture = connection.connect();
+        } catch (Exception e) {
+            this.connectingFuture = null;
+        // oh shit, we crashed!
+            LOGGER.warn("Fixed the connectLatch deadlock bug. Killed the latch because got exception connecting.");
+            throw e;
+        }
+
+        ObservableFuture<Boolean> future = FutureUtil.execute(executor, this, new Callable<Boolean>() {
 
             @Override
             public Boolean call() throws Exception {
@@ -479,6 +488,16 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 return isConnected();
             }
         });
+
+        nestedObservableFuture.setNestedFuture(future);
+
+        Asserts.assertTrue(nestedObservableFuture == this.connectingFuture, "Make sure no one changed the code later");
+
+        return this.connectingFuture;
+    }
+
+    private void sanitizePresence(Presence presence) {
+
     }
 
     @Override
@@ -637,15 +656,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         executor.shutdownNow();
     }
 
-    private synchronized void handleConnectCommand(ConnectCommand command) {
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
-
+    private void succeedTheConnectingFuture() {
         if (this.connectingFuture != null) {
             ObservableFuture<Boolean> c = connectingFuture;
             this.connectingFuture = null;
             c.setSuccess(true);
         }
+    }
+
+    private synchronized void handleConnectCommand(ConnectCommand command) {
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
 
         boolean newClientId = false;
 
@@ -677,6 +698,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 // announce on a separate thread
                 newClientIdEvent.notifyObservers(this, clientId);
             }
+
+            succeedTheConnectingFuture();
 
             if (versions != null) {
                 // Send a BackfillCommand for each version key - in practice
@@ -810,12 +833,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
     private boolean sendPresence(Presence presence) {
         if (presence != null) {
-            if (presence.getAddress() == null) {
-                presence.setAddress(new ClientAddress());
-            }
-
             // Set our clientId in case its not already there
-            presence.getAddress().setClientId(clientId);
+            presence.setAddress(new ClientAddress(clientId));
 
             // TODO handle send future
             connection.send(new PresenceCommand(Collections.singletonList(presence)));
@@ -852,12 +871,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
-        if (this.importantTaskExecutor != null){
-            this.importantTaskExecutor.unregister(ConnectCommandWorker.REQUEST_TYPE);
-        }
         this.importantTaskExecutor = importantTaskExecutor;
-        if (this.importantTaskExecutor != null){
-            this.importantTaskExecutor.register(ConnectCommandWorker.REQUEST_TYPE, new ConnectCommandWorker(this.connection));
-        }
     }
+
 }
