@@ -109,7 +109,7 @@ public class SocketSignalProviderIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
-        ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HOST;
+        ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HTTPS_HOST;
         ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
     }
 }
