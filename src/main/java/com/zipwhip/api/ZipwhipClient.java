@@ -657,6 +657,15 @@ public interface ZipwhipClient extends Destroyable {
     ObservableFuture<Void> disconnect() throws Exception;
 
     /**
+     * Tell the SignalProvider to disconnect from the server.  If causedByNetwork, the reconnect strategy will
+     * still be enabled.
+     *
+     * @return an event that tells you its complete
+     * @throws Exception if an I/O happens while disconnecting
+     */
+    ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception;
+
+    /**
      * Listen for signals. This is a convenience method
      *
      * @param observer An observer object to receive callbacks on

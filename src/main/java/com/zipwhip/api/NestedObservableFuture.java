@@ -29,7 +29,7 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
         return nestedFuture;
     }
 
-    public synchronized void setNestedFuture(ObservableFuture<T> nestedFuture) {
+    public synchronized void setNestedFuture(final ObservableFuture<T> nestedFuture) {
         this.nesting = true;
         if (this.nestedFuture != null) {
             throw new RuntimeException("We were lazy and didnt implement this scenario.");
@@ -37,14 +37,22 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
 
         this.nestedFuture = nestedFuture;
 
-        syncState(this.nestedFuture, this);
-        syncState(this, this.nestedFuture);
+        synchronized (nestedFuture) {
+            this.nestedFuture.addObserver(new CopyFutureStatusToNestedFuture<T>(this));
+            this.addObserver(new CopyFutureStatusToNestedFuture<T>(this.nestedFuture));
+
+            // Note: we believe that even if the observableFutures are asynchronous, the above lines
+            // are sufficient.
+//            syncState(this.nestedFuture, this);
+//            syncState(this, this.nestedFuture);
+        }
+
         this.nesting = false;
         this.alreadySyncedStateWithNestedFuture = true;
     }
 
     @Override
-    public boolean setFailure(Throwable cause) {
+    public synchronized boolean setFailure(Throwable cause) {
         boolean wasAChange = super.setFailure(cause);
 
         if (wasAChange && this.alreadySyncedStateWithNestedFuture) {
@@ -56,7 +64,7 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
     }
 
     @Override
-    public boolean setSuccess(T result) {
+    public synchronized boolean setSuccess(T result) {
         boolean wasAChange = super.setSuccess(result);
 
         if (wasAChange && this.alreadySyncedStateWithNestedFuture) {

@@ -198,16 +198,21 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             return;
         }
 
+        LOGGER.debug("Expecting subscriptionComplete: " + expectingSubscriptionCompleteCommand);
         if (expectingSubscriptionCompleteCommand) {
             // only run the "reset connectingFuture" observable if this initial internet request fails (timeout, socket exception, etc).
-            requestFuture.addObserver(new OnlyRunIfFailedObserverAdapter<Boolean>(new CopyFutureStatusToNestedFuture(this, finalConnectingFuture)));
+            requestFuture.addObserver(new OnlyRunIfFailedObserverAdapter<Boolean>(new CopyFutureStatusToNestedFuture(finalConnectingFuture)));
             // if this requestFuture succeeds, we need to let the onSubscriptionCompleteCommand finish the "connectingFuture"
         } else {
-            requestFuture.addObserver(new CopyFutureStatusToNestedFuture(this, finalConnectingFuture));
+            requestFuture.addObserver(new CopyFutureStatusToNestedFuture(finalConnectingFuture));
         }
     }
 
     public synchronized ObservableFuture<Void> disconnect() throws Exception {
+        return disconnect(false);
+    }
+
+    public synchronized ObservableFuture<Void> disconnect(final boolean causedByNetwork) throws Exception {
         if (!connection.isConnected()) {
             return new FakeFailingObservableFuture<Void>(this, new Exception("Not currently connected, no session?"));
         } else if (!signalProvider.isConnected()) {
@@ -239,7 +244,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                 ObservableFuture<Void> requestFuture;
 
                 try {
-                    requestFuture = signalProvider.disconnect();
+                    requestFuture = signalProvider.disconnect(causedByNetwork);
                 } catch (Exception e) {
                     result.setFailure(e);
                     disconnectFuture = null;
@@ -247,6 +252,21 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                 }
 
                 // the nesting will help coordinate the two futures. (parent/child)
+                requestFuture.addObserver(new Observer<ObservableFuture<Void>>() {
+                    @Override
+                    public void notify(Object sender, ObservableFuture<Void> item) {
+                        LOGGER.error("Request future called.");
+                    }
+                });
+
+                // the nesting will help coordinate the two futures. (parent/child)
+                result.addObserver(new Observer<ObservableFuture<Void>>() {
+                    @Override
+                    public void notify(Object sender, ObservableFuture<Void> item) {
+                        LOGGER.error("Request future called.");
+                    }
+                });
+
                 result.setNestedFuture(requestFuture);
             }
         });
@@ -513,25 +533,25 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         final String clientId = provider.getClientId();
         final String sessionKey = conn.getSessionKey();
 
+        LOGGER.debug("runIfActive called for runnable: " + runnable);
         // NOTE: due to deadlocks we cannot "synchronized" in this method on the ZipwhipClient.
         // we will do a bunch of syncronizing in the runnable.
-        executor.execute(new Runnable() {
+        runSafely(new Runnable() {
             @Override
             public void run() {
-                synchronized (ClientZipwhipNetworkSupport.this) {
-                    synchronized (provider) {
-                        synchronized (conn) {
-                            if (!StringUtil.equals(sessionKey, conn.getSessionKey())) {
-                                LOGGER.warn("The sessionKey changed while we were waiting to run. Not running runnable: " + runnable);
-                                return;
-                            } else if (!StringUtil.equals(clientId, provider.getClientId())) {
-                                LOGGER.warn(String.format("The clientId changed while we were waiting to run. [%s->%s]. Not running runnable: %s", clientId, provider.getClientId(), runnable));
-                                return;
-                            }
-
-                            // you are now safe to run padiwan.
-                            runnable.run();
+                synchronized (provider) {
+                    synchronized (conn) {
+                        if (!StringUtil.equals(sessionKey, conn.getSessionKey())) {
+                            LOGGER.warn("The sessionKey changed while we were waiting to run. Not running runnable: " + runnable);
+                            return;
+                        } else if (!StringUtil.equals(clientId, provider.getClientId())) {
+                            LOGGER.warn(String.format("The clientId changed while we were waiting to run. [%s->%s]. Not running runnable: %s", clientId, provider.getClientId(), runnable));
+                            return;
                         }
+
+                        // you are now safe to run padiwan.
+                        LOGGER.debug("(running) runIfActive called for runnable: " + runnable);
+                        runnable.run();
                     }
                 }
             }
@@ -629,26 +649,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     }
 
     /**
-     * When the future finishes, if it's the current "connectingFuture" clean up the references.
-     */
-    private static class CopyFutureStatusToNestedFuture implements Observer<ObservableFuture<Boolean>> {
-
-        final ObservableFuture<Boolean> finalConnectingFuture;
-        final ClientZipwhipNetworkSupport client;
-
-        private CopyFutureStatusToNestedFuture(ClientZipwhipNetworkSupport client, ObservableFuture<Boolean> finalConnectingFuture) {
-            this.finalConnectingFuture = finalConnectingFuture;
-            this.client = client;
-        }
-
-        @Override
-        public void notify(Object sender, ObservableFuture<Boolean> future) {
-            // notify people that care.
-            NestedObservableFuture.syncState(future, finalConnectingFuture);
-        }
-    }
-
-    /**
      * So we can do conditionals with constructors
      *
      * @param <T>
@@ -665,6 +665,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         public void notify(Object sender, ObservableFuture<T> item) {
             if (!item.isSuccess()) {
                 observer.notify(sender, item);
+            } else {
+                LOGGER.debug("Did not notify observer because not successful. " + item);
             }
         }
     }
@@ -679,12 +681,19 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
         @Override
         public void notify(Object sender, ObservableFuture<Void> item) {
+            LOGGER.debug("Our disconnectFuture has finished, so we are going to reset it (only 'if active').");
             // this will only run if the state hasn't changed between enqueue and execute.
             // otherwise it will log/return.
             client.runIfActive(new Runnable() {
                 @Override
                 public void run() {
+                    LOGGER.debug("Resetting the disconnectFuture so that other people can call disconnect.");
                     client.disconnectFuture = null;
+                }
+
+                @Override
+                public String toString() {
+                    return "ResetDisconnectFutureObserverRunnable";
                 }
             });
         }
