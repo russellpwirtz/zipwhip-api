@@ -63,7 +63,7 @@ public class DefaultImportantTaskExecutorTest {
         // actually it could happen really damn fast.
 //        assertFalse(future.isDone());
 
-        if (!future.await(5, TimeUnit.SECONDS)) {
+        if (!future.await(10, TimeUnit.SECONDS)) {
             // i want to pause
             System.out.println("Hmm, it didnt complete in time. Do you have a break point and you're screwing with my futures?");
 //            fail("Future didn't complete in time!");

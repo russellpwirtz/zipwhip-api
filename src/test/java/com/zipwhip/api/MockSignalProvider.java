@@ -7,14 +7,18 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.util.StringUtil;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MockSignalProvider implements SignalProvider {
 
@@ -32,6 +36,8 @@ public class MockSignalProvider implements SignalProvider {
     private final ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
     private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
+
+    private Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
 
     @Override
     public boolean isConnected() {
@@ -67,7 +73,7 @@ public class MockSignalProvider implements SignalProvider {
 
     @Override
     public ObservableFuture<Boolean> connect() throws Exception {
-        clientId = "1234567890";
+        this.clientId = "1234567890";
         isConnected = true;
         connectionChangedEvent.notify(this, Boolean.TRUE);
         newClientIdEvent.notify(this, clientId);
@@ -75,42 +81,42 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String clientId) throws Exception {
-        clientId = "1234567890";
+    public ObservableFuture<Boolean> connect(String c) throws Exception {
+        this.clientId = "1234567890";
         isConnected = true;
         connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, clientId);
+        newClientIdEvent.notify(this, this.clientId);
         return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
-        clientId = "1234567890";
+    public ObservableFuture<Boolean> connect(String c, Map<String, Long> versions) throws Exception {
+        this.clientId = "1234567890";
         isConnected = true;
         connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, clientId);
+        newClientIdEvent.notify(this, this.clientId);
         return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
-        clientId = "1234567890";
+    public ObservableFuture<Boolean> connect(String c, Map<String, Long> versions, Presence presence) throws Exception {
+        this.clientId = "1234567890";
         isConnected = true;
         connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, clientId);
+        newClientIdEvent.notify(this, this.clientId);
         return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
     }
 
     @Override
     public ObservableFuture<Void> disconnect() throws Exception {
         isConnected = false;
-        connectionChangedEvent.notify(this, Boolean.FALSE);
+        connectionChangedEvent.notifyObservers(this, Boolean.FALSE);
         return new FakeObservableFuture<Void>(this, null);
     }
 
     @Override
-    public void resetAndReconnect() throws Exception {
-        //To change body of implemented methods use File | Settings | File Templates.
+    public void resetAndDisconnect() throws Exception {
+        disconnect();
     }
 
     @Override
@@ -180,8 +186,26 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public void runIfActive(Runnable runnable) {
-        runnable.run();
+    public void runIfActive(final Runnable runnable) {
+        final String clientId = this.clientId;
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                // dont let the clientId be changed while we compare.
+                synchronized (MockSignalProvider.this) {
+                    if (!isConnected()) {
+//                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
+                        return;
+                    } else if (!StringUtil.equals(MockSignalProvider.this.getClientId(), clientId)) {
+//                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                        return;
+                    }
+
+                    runnable.run();
+                }
+            }
+        });
     }
 
     @Override

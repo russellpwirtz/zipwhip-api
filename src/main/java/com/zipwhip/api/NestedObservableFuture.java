@@ -103,4 +103,16 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
         }
     }
 
+    public static <T> void syncStateBoolean(ObservableFuture<T> source, ObservableFuture<Boolean> destination) {
+        if (source.isDone()) {
+            if (source.isCancelled()) {
+                destination.cancel();
+            } else if (source.isSuccess()) {
+                destination.setSuccess(Boolean.TRUE);
+            } else {
+                destination.setFailure(source.getCause());
+            }
+        }
+    }
+
 }

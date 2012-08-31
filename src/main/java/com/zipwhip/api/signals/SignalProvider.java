@@ -127,7 +127,7 @@ public interface SignalProvider extends Destroyable {
      *
      * @throws Exception
      */
-    void resetAndReconnect() throws Exception;
+    void resetAndDisconnect() throws Exception;
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions

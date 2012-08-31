@@ -79,6 +79,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                             // immediately check to see if the parentFuture was cancelled.
                             // the scheduler could have timed us out before we got here.
                             if (parentFuture.isDone()) {
+                                LOGGER.warn("The parentFuture is already done, so we're just going to quit. Did we time out?");
                                 // someone cancelled our shit or we timed out.
                                 return;
                             }
@@ -114,6 +115,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                             }
 
                             if (parentFuture.isDone() || requestFuture.isDone()) {
+                                LOGGER.debug("Since either the parentFuture and requestFuture were done, we are not going to attach the future to the scheduledRequest for cancellation/timeout.");
                                 return;
                             }
 
@@ -124,7 +126,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                         } catch (Exception e) {
                             parentFuture.setFailure(e);
                         } finally {
-                            LOGGER.debug("Finished execution for task " + request);
+                            LOGGER.debug(String.format("Finished synchronous execution portion for task %s, future: %s", request, parentFuture));
                         }
                     }
                 }
@@ -133,7 +135,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         } catch (Exception e) {
             return new FakeFailingObservableFuture<T>(this, e);
         } finally {
-            LOGGER.debug("Queued up task " + request);
+            LOGGER.debug(String.format("Queued up task %s. Expiration: %s", request, expirationDate));
         }
 
         return parentFuture;
@@ -169,6 +171,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         public void notify(Object sender, String requestId) {
             synchronized (ImportantTaskExecutor.this) {
                 if (isDestroyed()) {
+                    LOGGER.error("We were destroyed, but the onTimerScheduleComplete hit. Did you forget to shut down the executor?");
                     return;
                 }
             }
@@ -176,10 +179,11 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             ScheduledRequest scheduledRequest = queuedRequests.get(requestId);
             if (scheduledRequest == null) {
                 // must be a reboot of the service.
+                LOGGER.warn("The timeout hit on request, though it was not found in the store: " + requestId);
                 return;
             }
 
-            Callable<ObservableFuture<?>> request = scheduledRequest.getRequest();
+//            Callable<ObservableFuture<?>> request = scheduledRequest.getRequest();
             Date expirationDate = scheduledRequest.getExpirationDate();
             if (expirationDate != null && nowIsAfterThisDate(expirationDate)) {
                 queuedRequests.remove(scheduledRequest.getRequestId());
@@ -193,6 +197,8 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                     // it just simply timed out normally
                     scheduledRequest.getRequestFuture().setFailure(new TimeoutException("Too late? " + expirationDate));
                 }
+            } else {
+                LOGGER.warn(String.format("The expiration was too early?!?!! expires: %s", expirationDate));
             }
         }
     };
@@ -204,7 +210,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
         long diff =  System.currentTimeMillis() - date.getTime();
 
-        return diff > 0;
+        return diff > -1000;
     }
 
     private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture() {

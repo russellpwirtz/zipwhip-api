@@ -544,7 +544,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     // TODO: who calls this because it could be a deadlock
-    public synchronized void resetAndReconnect() throws Exception {
+    public synchronized void resetAndDisconnect() throws Exception {
         final String c = clientId = originalClientId = StringUtil.EMPTY_STRING;
         versions.clear();
 
@@ -556,27 +556,29 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         newClientIdEvent.notifyObservers(this, c);
 
-        disconnect(false).addObserver(new Observer<ObservableFuture<Void>>() {
+//        disconnect(false).addObserver(new Observer<ObservableFuture<Void>>() {
+//
+//            /**
+//             * The thread of the notify method will be the connection thread
+//             * @param sender
+//             * @param item
+//             */
+//            @Override
+//            public void notify(Object sender, ObservableFuture<Void> item) {
+//                if (!StringUtil.equals(clientId, c)) {
+//                    throw new RuntimeException("Something happened in between my disconnect and reconnect cycle and the clientIds don't match.");
+//                }
+//
+//                try {
+//                    // NOTE: if you block on connect, you will deadlock the connection thread
+//                    connect(c);
+//                } catch (Exception e) {
+//                    LOGGER.error("Failed to connect during reconnect operation.");
+//                }
+//            }
+//        });
 
-            /**
-             * The thread of the notify method will be the connection thread
-             * @param sender
-             * @param item
-             */
-            @Override
-            public void notify(Object sender, ObservableFuture<Void> item) {
-                if (!StringUtil.equals(clientId, c)) {
-                    throw new RuntimeException("Something happened in between my disconnect and reconnect cycle and the clientIds don't match.");
-                }
-
-                try {
-                    // NOTE: if you block on connect, you will deadlock the connection thread
-                    connect(c);
-                } catch (Exception e) {
-                    LOGGER.error("Failed to connect during reconnect operation.");
-                }
-            }
-        });
+        disconnect(true);
     }
 
     @Override
