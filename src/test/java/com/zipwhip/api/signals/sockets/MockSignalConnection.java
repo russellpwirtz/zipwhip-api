@@ -39,6 +39,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 //            return "MockSignalConnectionExecutor";
 //        }
 //    };
+
     protected Executor executor = new DebuggingExecutor(SimpleExecutor.getInstance()) {
         @Override
         public String toString() {
@@ -92,9 +93,6 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
         FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-
-//                executor.shutdownNow();
-                executor = null;
 
                 disconnectEvent.notifyObservers(this, requestReconnect);
 
