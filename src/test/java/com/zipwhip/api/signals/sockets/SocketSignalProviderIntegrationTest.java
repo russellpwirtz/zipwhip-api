@@ -9,6 +9,7 @@ import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.DownloadURL;
 import org.apache.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,6 +47,8 @@ public class SocketSignalProviderIntegrationTest {
 
 //        connectionFactory.setUsername("9139802972");
 //        connectionFactory.setPassword("asdfasdf");
+
+        // staging
         connectionFactory.setPassword("pistons456");
         connectionFactory.setUsername("2062513225");
 
@@ -102,5 +105,11 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue("Latch didn't finish?", latch.await(50, TimeUnit.SECONDS));
 
         assertNotNull(verifySignal[0]);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HOST;
+        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
     }
 }
