@@ -9,7 +9,7 @@ import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.TimerTask;
 
-import java.lang.Exception;import java.lang.Override;import java.lang.String;import java.lang.System;import java.util.Date;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,8 +20,20 @@ import java.util.concurrent.TimeUnit;
  */
 public class HashedWheelScheduler extends DestroyableBase implements Scheduler {
 
-    HashedWheelTimer timer = new HashedWheelTimer(new NamedThreadFactory("TimerManager-"), 1, TimeUnit.SECONDS);
+    final HashedWheelTimer timer;
     ObservableHelper<String> observableHelper = new ObservableHelper<String>();
+
+    public HashedWheelScheduler() {
+        this(null);
+    }
+
+    public HashedWheelScheduler(String name) {
+        if (name == null) {
+            timer = new HashedWheelTimer(new NamedThreadFactory("TimerManager-"), 1, TimeUnit.SECONDS);
+        } else {
+            timer = new HashedWheelTimer(new NamedThreadFactory("TimerManager-" + name + "-"), 1, TimeUnit.SECONDS);
+        }
+    }
 
     @Override
     public void schedule(final String requestId, Date exitTime) {

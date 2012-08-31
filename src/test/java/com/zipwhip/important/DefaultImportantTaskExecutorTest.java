@@ -41,7 +41,7 @@ public class DefaultImportantTaskExecutorTest {
     @Test
     public void testExecuteNow() throws Exception {
         // the SimpleTaskRequest is synchronous
-        ObservableFuture<Boolean> future = importantTaskExecutor.enqueue(new Callable<ObservableFuture<Boolean>>() {
+        ObservableFuture<Boolean> future = importantTaskExecutor.enqueue(null, new Callable<ObservableFuture<Boolean>>() {
             @Override
             public ObservableFuture<Boolean> call() throws Exception {
                 return new FakeObservableFuture<Boolean>(this, true);
@@ -58,7 +58,7 @@ public class DefaultImportantTaskExecutorTest {
 
         connection.connect().get(5, TimeUnit.SECONDS);
 
-        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(new ConnectCommandTask(connection, null, null, null));
+        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(null, new ConnectCommandTask(connection, null, null, null));
 
         // actually it could happen really damn fast.
 //        assertFalse(future.isDone());
@@ -87,7 +87,7 @@ public class DefaultImportantTaskExecutorTest {
             }
         };
 
-        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(new ConnectCommandTask(connection, null, null, null), FutureDateUtil.in1Second());
+        ObservableFuture<ConnectCommand> future = importantTaskExecutor.enqueue(null, new ConnectCommandTask(connection, null, null, null), FutureDateUtil.in1Second());
 
         boolean finished = future.await(10, TimeUnit.SECONDS);
 

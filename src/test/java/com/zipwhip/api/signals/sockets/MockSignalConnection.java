@@ -9,13 +9,19 @@ import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.DebuggingExecutor;
 import com.zipwhip.executors.FakeFuture;
+import com.zipwhip.executors.SimpleExecutor;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 /**
  * Created by IntelliJ IDEA.
@@ -27,12 +33,23 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 
     private static final Logger LOG = Logger.getLogger(MockSignalConnection.class);
 
-    protected ExecutorService executor;
+//    protected Executor executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalConnection-"))) {
+//        @Override
+//        public String toString() {
+//            return "MockSignalConnectionExecutor";
+//        }
+//    };
+    protected Executor executor = new DebuggingExecutor(SimpleExecutor.getInstance()) {
+        @Override
+        public String toString() {
+            return "MockSignalConnectionExecutor";
+        }
+    };
 
     // We need these to block for testing
-    protected final List<Observer<Command>> receiveEvent = new ArrayList<Observer<Command>>();
-    protected final List<Observer<Boolean>> connectEvent = new ArrayList<Observer<Boolean>>();
-    protected final List<Observer<Boolean>> disconnectEvent = new ArrayList<Observer<Boolean>>();
+    protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>(executor);
+    protected final ObservableHelper<Boolean> connectEvent = new ObservableHelper<Boolean>(executor);
+    protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>(executor);
 
     protected final List<Command> sent = new ArrayList<Command>();
 
@@ -53,17 +70,12 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
             public Boolean call() throws Exception {
                 isConnected = true;
 
-                for (Observer<Boolean> o : connectEvent) {
-                    o.notify(this, isConnected);
-                }
+                connectEvent.notifyObservers(this, isConnected);
 
                 return isConnected;
             }
         });
 
-        if (executor == null) {
-            executor = Executors.newSingleThreadExecutor();
-        }
         executor.execute(task);
 
         return task;
@@ -81,12 +93,10 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
             @Override
             public Void call() throws Exception {
 
-                executor.shutdownNow();
+//                executor.shutdownNow();
                 executor = null;
 
-                for (Observer<Boolean> o : disconnectEvent) {
-                    o.notify(this, requestReconnect);
-                }
+                disconnectEvent.notifyObservers(this, requestReconnect);
 
                 return null;
             }
@@ -102,9 +112,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
         sent.add(command);
 
         if (command instanceof ConnectCommand) {
-            for (Observer<Command> o : receiveEvent) {
-                o.notify(this, new ConnectCommand("1234-5678-1234-5678", null));
-            }
+            receiveEvent.notifyObservers(this, new ConnectCommand("1234-5678-1234-5678", null));
         }
 
         // This doesnt appear to be the right place to send to
@@ -126,22 +134,22 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 
     @Override
     public void onMessageReceived(Observer<Command> observer) {
-        receiveEvent.add(observer);
+        receiveEvent.addObserver(observer);
     }
 
     @Override
     public void onConnect(Observer<Boolean> observer) {
-        connectEvent.add(observer);
+        connectEvent.addObserver(observer);
     }
 
     @Override
     public void onDisconnect(Observer<Boolean> observer) {
-        disconnectEvent.add(observer);
+        disconnectEvent.addObserver(observer);
     }
 
     @Override
     public void removeOnConnectObserver(Observer<Boolean> observer) {
-        connectEvent.remove(observer);
+        connectEvent.removeObserver(observer);
     }
 
     @Override
@@ -151,7 +159,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
 
     @Override
     public void removeOnDisconnectObserver(Observer<Boolean> observer) {
-        disconnectEvent.remove(observer);
+        disconnectEvent.removeObserver(observer);
     }
 
     @Override
@@ -196,10 +204,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
     public void mockReceive(Command<?> command) {
         LOG.debug("notify observers of " + command);
 
-        for (Observer<Command> o : receiveEvent) {
-            LOG.debug("  observer: " + o);
-            o.notify(this, command);
-        }
+        receiveEvent.notifyObservers(this, command);
     }
 
     /**

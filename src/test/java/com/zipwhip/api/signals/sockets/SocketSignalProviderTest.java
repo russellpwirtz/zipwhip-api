@@ -5,6 +5,7 @@ import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -35,11 +36,10 @@ public class SocketSignalProviderTest {
     @Before
     public void setUp() throws Exception {
         connection = new MockSignalConnection();
-        provider = new SocketSignalProvider(connection);
+        provider = new SocketSignalProvider(connection, SimpleExecutor.getInstance(), null, null);
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
-
     }
 
     @Test

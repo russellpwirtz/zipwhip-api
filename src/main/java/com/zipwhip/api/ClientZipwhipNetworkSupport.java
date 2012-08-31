@@ -223,7 +223,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             return disconnectFuture;
         }
 
-        final NestedObservableFuture<Void> result = new NestedObservableFuture<Void>(this);
+        final NestedObservableFuture<Void> result = new NestedObservableFuture<Void>(this, executor);
         disconnectFuture = result;
 
         // if the future finishes, clean up the global reference.
@@ -255,6 +255,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                 requestFuture.addObserver(new Observer<ObservableFuture<Void>>() {
                     @Override
                     public void notify(Object sender, ObservableFuture<Void> item) {
+                        // this is the Connection thread
                         LOGGER.error("Request future called.");
                     }
                 });
@@ -263,6 +264,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                 result.addObserver(new Observer<ObservableFuture<Void>>() {
                     @Override
                     public void notify(Object sender, ObservableFuture<Void> item) {
+                        // this is the executor thread.
                         LOGGER.error("Request future called.");
                     }
                 });
@@ -393,7 +395,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
          * to run the scheduling.
          */
         final ObservableFuture<SubscriptionCompleteCommand> future =
-                importantTaskExecutor.enqueue(new SignalsConnectTask(sessionKey, clientId), signalsConnectTimeoutInSeconds);
+                importantTaskExecutor.enqueue(executor, new SignalsConnectTask(sessionKey, clientId), signalsConnectTimeoutInSeconds);
 
 //        final String sessionKey = connection.getSessionKey();
 
@@ -405,7 +407,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
              * if the process finishes later (or times out again) we're already destroyed and wont be called again.
              * This method will be called once and only once no matter how many times you call .cancel() or .setSuccess();
              *
-             * The thread of this notify method is the
+             * The thread of this notify method is the future.executor
+             *          (which is either HashWheelTimer, Intent/pubsub, OR the
              *
              * @param sender
              * @param item
@@ -492,7 +495,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
 
     private ObservableFuture<Boolean> createConnectingFuture() {
-        final ObservableFuture<Boolean> result = new DefaultObservableFuture<Boolean>(this);
+        final ObservableFuture<Boolean> result = new DefaultObservableFuture<Boolean>(this, executor);
 
         result.addObserver(new Observer<ObservableFuture<Boolean>>() {
 
@@ -504,14 +507,11 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
              */
             @Override
             public void notify(Object sender, ObservableFuture<Boolean> item) {
-                runSafely(new Runnable() {
-                    @Override
-                    public void run() {
-                        Asserts.assertTrue(result == connectingFuture, "Odd that the two futures were not identical. Race condition?");
+                synchronized (ClientZipwhipNetworkSupport.this) {
+                    Asserts.assertTrue(result == connectingFuture, "Odd that the two futures were not identical. Race condition?");
 
-                        connectingFuture = null;
-                    }
-                });
+                    connectingFuture = null;
+                }
             }
         });
 
@@ -519,7 +519,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     }
 
     private void runSafely(final Runnable runnable) {
-
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -687,18 +686,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             LOGGER.debug("Our disconnectFuture has finished, so we are going to reset it (only 'if active').");
             // this will only run if the state hasn't changed between enqueue and execute.
             // otherwise it will log/return.
-            client.runIfActive(new Runnable() {
-                @Override
-                public void run() {
+            synchronized (client) {
                     LOGGER.debug("Resetting the disconnectFuture so that other people can call disconnect.");
                     client.disconnectFuture = null;
-                }
-
-                @Override
-                public String toString() {
-                    return "ResetDisconnectFutureObserverRunnable";
-                }
-            });
+            }
         }
     }
 

@@ -31,7 +31,6 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());
 
     private Scheduler scheduler;
-    private Executor executor = new SimpleExecutor();
 
     private long timeout = 0;
     private TimeUnit units = TimeUnit.SECONDS;
@@ -50,19 +49,23 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         }
     }
 
-    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request) {
-        return enqueue(request, null);
+    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request) {
+        return enqueue(executor, request, null);
     }
 
-    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request, long timeoutInSeconds) {
-        return enqueue(request, FutureDateUtil.inFuture(timeoutInSeconds, TimeUnit.SECONDS));
+    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, long timeoutInSeconds) {
+        return enqueue(executor, request, FutureDateUtil.inFuture(timeoutInSeconds, TimeUnit.SECONDS));
     }
 
-    public <T> ObservableFuture<T> enqueue(final Callable<ObservableFuture<T>> request, Date expirationDate) {
+    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, Date expirationDate) {
+        if (executor == null){
+            executor = SimpleExecutor.getInstance();
+        }
+
         final String requestId = UUID.randomUUID().toString();
 
         // we're returning this value.
-        final ObservableFuture<T> parentFuture = createObservableFuture();
+        final ObservableFuture<T> parentFuture = createObservableFuture(executor);
 
         /**
          * Schedule a timeout in the future if it has an expirationDate.
@@ -213,8 +216,8 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         return diff > -1000;
     }
 
-    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture() {
-        return new DefaultObservableFuture<TResponse>(this);
+    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture(Executor executor) {
+        return new DefaultObservableFuture<TResponse>(this, executor);
     }
 
     public Scheduler getScheduler() {
