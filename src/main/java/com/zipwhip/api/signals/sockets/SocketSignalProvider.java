@@ -72,21 +72,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Map<String, Long> versions = new HashMap<String, Long>();
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
     private ObservableFuture<Boolean> connectingFuture;
-    private final Observer<String> updateStateOnNewClientIdReceived = new Observer<String>() {
-                @Override
-                public void notify(Object sender, String newClientId) {
-                    clientId = newClientId;
-                    originalClientId = newClientId;
 
-                    if (presence != null)
-                        presence.setAddress(new ClientAddress(newClientId));
-                }
-
-                @Override
-                public String toString() {
-                    return "onNewClientIdReceived";
-                }
-            };
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
@@ -276,26 +262,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         /*
               Forward disconnect events up to clients
            */
-        connection.onDisconnect(new BlockingExecutorObserver<Boolean>(this, executor, new Observer<Boolean>() {
-            @Override
-            public void notify(Object sender, Boolean causedByNetwork) {
-                // Ensure that the latch is in a good state for reconnect
-                connectionNegotiated = false;
-
-                stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
-
-                // If the state has changed then notify
-                if (connectionStateSwitch) {
-                    connectionStateSwitch = false;
-                    connectionChangedEvent.notifyObservers(sender, Boolean.FALSE);
-                }
-            }
-        }) {
-            @Override
-            public String toString() {
-                return "onDisconnectEvent";
-            }
-        });
+        connection.onDisconnect(notifyObserversIfConnectionChangedObserver);
 
         connection.onPingEvent(new BlockingExecutorObserver<PingEvent>(this, this.executor, pingEvent) {
             @Override
@@ -314,9 +281,45 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
          * Observe our own version changed events so we can stay in sync internally
          */
         onVersionChanged(updateVersionsOnVersionChanged);
-
         onNewClientIdReceived(updateStateOnNewClientIdReceived);
     }
+
+    private Observer<Boolean> notifyObserversIfConnectionChangedObserver = new BlockingExecutorObserver<Boolean>(this, executor, new Observer<Boolean>() {
+        @Override
+        public void notify(Object sender, Boolean causedByNetwork) {
+            // Ensure that the latch is in a good state for reconnect
+            connectionNegotiated = false;
+
+            stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
+
+            // If the state has changed then notify
+            if (connectionStateSwitch) {
+                connectionStateSwitch = false;
+                connectionChangedEvent.notifyObservers(sender, Boolean.FALSE);
+            }
+        }
+    }) {
+        @Override
+        public String toString() {
+            return "onDisconnectEvent";
+        }
+    };
+
+    private final Observer<String> updateStateOnNewClientIdReceived = new Observer<String>() {
+        @Override
+        public void notify(Object sender, String newClientId) {
+            clientId = newClientId;
+            originalClientId = newClientId;
+
+            if (presence != null)
+                presence.setAddress(new ClientAddress(newClientId));
+        }
+
+        @Override
+        public String toString() {
+            return "onNewClientIdReceived";
+        }
+    };
 
     private final Observer<ObservableFuture<ConnectCommand>> transitionStateOnSendFailure = new Observer<ObservableFuture<ConnectCommand>>() {
         /**
