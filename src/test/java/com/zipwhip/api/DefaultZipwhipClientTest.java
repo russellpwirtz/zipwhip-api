@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -42,10 +43,7 @@ public class DefaultZipwhipClientTest {
     public void setUp() throws Exception {
         apiConnection = new MockApiConnection();
         client = new DefaultZipwhipClient(apiConnection, new MockSignalProvider());
-
         ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 1;
-//        ((DefaultZipwhipClient)client).executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ZipwhipClient-"));
-
         ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
         client.setSettingsStore(new MemorySettingStore());
     }
@@ -54,6 +52,78 @@ public class DefaultZipwhipClientTest {
     public void tearDown() {
         client.getSettingsStore().clear();
     }
+
+    @Test
+    public void testDisconnectConnectDisconnect() throws Exception{
+
+        ObservableFuture<Boolean> connectFuture1 = client.connect();
+        assertTrue(connectFuture1.get());
+        assertTrue(connectFuture1.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture1 = client.disconnect();
+        disconnectFuture1.await();
+        assertTrue(disconnectFuture1.isSuccess());
+
+        ObservableFuture<Boolean> connectFuture2 = client.connect();
+        assertFalse(connectFuture1 == connectFuture2);
+        assertTrue(connectFuture2.get());
+        assertTrue(connectFuture2.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture2 = client.disconnect();
+        assertFalse(disconnectFuture1 == disconnectFuture2);
+        disconnectFuture2.await();
+        assertTrue(disconnectFuture2.isSuccess());
+    }
+
+    // connect
+    // callback
+    // latch
+    // close channel (close from bottom up)
+    // result: all client events fire in client executor
+    // result:
+
+    @Test
+    public void testConnectDisconnectNoDeadlock() throws Exception {
+
+        class ConnectOrDisconnectBasedOnIterationNumberRunnable implements Runnable {
+
+            int iteration;
+
+            public ConnectOrDisconnectBasedOnIterationNumberRunnable(Integer iteration) {
+                this.iteration = iteration;
+            }
+
+            @Override
+            public void run() {
+                if (iteration % 2 == 0) {
+                    try {
+                        System.out.println("Connecting at iteration " + iteration);
+                        ObservableFuture<Boolean> connectFuture = client.connect();
+                        connectFuture.await();
+                    } catch (Exception e) {
+                        fail("Failed to connect! " + e.getMessage());
+                    }
+                } else {
+                    try {
+                        System.out.println("Disconnecting at iteration " + iteration);
+                        ObservableFuture<Void> disconnectFuture = client.disconnect();
+                        disconnectFuture.await();
+                    } catch (Exception e) {
+                        fail("Failed to disconnect! " + e.getMessage());
+                    }
+                }
+            }
+        }
+
+        ExecutorService executor = Executors.newCachedThreadPool();
+
+        for (int i = 0; i < 100; i++) {
+            executor.execute(new ConnectOrDisconnectBasedOnIterationNumberRunnable(i));
+        }
+
+        executor.shutdown();
+    }
+
 
     @Test
     public void testConnect() throws Exception {
@@ -148,6 +218,17 @@ public class DefaultZipwhipClientTest {
         assertFalse(client.getSignalProvider().isConnected());
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
+    }
+
+    @Test
+    public void testConnectSignalConnectTwoTimesQuicklyReturnsSameFuture() throws Exception {
+
+        assertFalse(client.getSignalProvider().isConnected());
+
+        ObservableFuture<Boolean> future1 = client.connect();
+        ObservableFuture<Boolean> future2 = client.connect();
+
+        assertTrue(future1 == future2);
     }
 
     @Test
