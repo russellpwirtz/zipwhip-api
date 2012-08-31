@@ -3,14 +3,13 @@
  */
 package com.zipwhip.api.signals.commands;
 
-import static org.junit.Assert.assertEquals;
+import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.signals.message.Action;
+import org.junit.Test;
 
 import java.util.List;
 
-import org.junit.Test;
-
-import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.signals.message.Action;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author jdinsel

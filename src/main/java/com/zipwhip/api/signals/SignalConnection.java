@@ -3,6 +3,7 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 
@@ -47,20 +48,6 @@ public interface SignalConnection extends Destroyable {
     Future<Void> disconnect(boolean network) throws Exception;
 
     /**
-     * By default the connection will send a keepalive packet to the SignalServer periodically.
-     * If {@code stopKeepalives} has been called this will restart them.
-     * Otherwise it will have no effect.
-     */
-    void startKeepalives();
-
-    /**
-     * By default the connection will send a keepalive packet to the SignalServer periodically.
-     * If this has not been called since {@code startKeepalives} was last called then any
-     * pending keepalives will be cancelled and no future ones will be scheduled.
-     */
-    void stopKeepalives();
-
-    /**
      * Cancel any pending network keepalives and fire one immediately.
      */
     void keepalive();
@@ -69,8 +56,9 @@ public interface SignalConnection extends Destroyable {
      * Send something to the SignalServer
      *
      * @param command the Command to send
+     * @return a {@code Future} of type boolean where true is a successful send.
      */
-    Future<Boolean> send(SerializingCommand command);
+    ObservableFuture<Boolean> send(SerializingCommand command);
 
     /**
      * Determines if the socket is currently connected
@@ -108,6 +96,13 @@ public interface SignalConnection extends Destroyable {
      * @param observer An observer to stop receiving callbacks on.
      */
     void removeOnConnectObserver(Observer<Boolean> observer);
+
+    /**
+     * Allows you to stop observing the connection trying to connect.
+     *
+     * @param observer An observer to stop receiving callbacks on.
+     */
+    void removeOnMessageReceivedObserver(Observer<Command> observer);
 
     /**
      * Allows you to stop observing the disconnection trying to connect.
@@ -161,38 +156,6 @@ public interface SignalConnection extends Destroyable {
     void setPort(int port);
 
     /**
-     * Get the time to wait after the connection has been inactive
-     * before sending a PING to the SignalServer. Time unit is milliseconds
-     *
-     * @return The time in milliseconds to wait before sending an inactive PING.
-     */
-    int getPingTimeout();
-
-    /**
-     * Set the time to wait after the connection has been inactive
-     * before sending a PING to the SignalServer. Time unit is milliseconds
-     *
-     * @param pingTimeout The time in milliseconds to wait before sending an inactive PING.
-     */
-    void setPingTimeout(int pingTimeout);
-
-    /**
-     * Get the time to wait for a PONG response after a PING has been sent.
-     * Time unit is milliseconds
-     *
-     * @return The time in milliseconds to wait for a PONG after a PING has been sent.
-     */
-    int getPongTimeout();
-
-    /**
-     * Set the time to wait for a PONG response after a PING has been sent.
-     * Time unit is milliseconds
-     *
-     * @param pongTimeout The time in milliseconds to wait for a PONG after a PING has been sent.
-     */
-    void setPongTimeout(int pongTimeout);
-
-    /**
      * Get the current reconnection strategy for the connection.
      *
      * @return the current reconnection strategy for the connection.
@@ -205,5 +168,30 @@ public interface SignalConnection extends Destroyable {
      * @param strategy the strategy to use when reconnecting
      */
     void setReconnectStrategy(ReconnectStrategy strategy);
+
+
+    /**
+     * Set the current setting for a connection time out in seconds.
+     *
+     * @param connectTimeoutSeconds The setting for a connection time out in seconds.
+     */
+    void setConnectTimeoutSeconds(int connectTimeoutSeconds);
+
+    /**
+     * Get the current setting for a connection time out in seconds.
+     *
+     * @return The current setting for a connection time out in seconds.
+     */
+    int getConnectTimeoutSeconds();
+
+    /**
+     * Runs the specified runnable on the core connection thread. It will only run if-only-if the
+     * current channel on enqueue matches the current channel on execution. This allows you to do
+     * such things as call disconnect on the current connection ensuring with 100% certainty that
+     * you are connecting the right channel instead of a new one.
+     *
+     * @param runnable
+     */
+    public void runIfActive(Runnable runnable);
 
 }

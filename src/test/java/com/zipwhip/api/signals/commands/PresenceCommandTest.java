@@ -1,24 +1,17 @@
 package com.zipwhip.api.signals.commands;
 
-import java.util.Collections;
-import java.util.List;
-
+import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.signals.address.ClientAddress;
+import com.zipwhip.signals.message.Action;
+import com.zipwhip.signals.presence.*;
 import junit.framework.Assert;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.zipwhip.api.signals.PresenceUtil;
-import com.zipwhip.signals.address.ClientAddress;
-import com.zipwhip.signals.message.Action;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.signals.presence.PresenceStatus;
-import com.zipwhip.signals.presence.Product;
-import com.zipwhip.signals.presence.ProductLine;
-import com.zipwhip.signals.presence.UserAgent;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.

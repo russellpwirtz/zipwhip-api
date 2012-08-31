@@ -3,21 +3,15 @@
  */
 package com.zipwhip.api.signals.reconnect;
 
-import static org.junit.Assert.assertTrue;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.BasicConfigurator;
+import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.zipwhip.api.signals.sockets.MockSignalConnection;
+import java.util.concurrent.*;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author jdinsel
@@ -35,7 +29,6 @@ public class ExponentialBackoffReconnectStrategyTest {
 		strategy = new ExponentialBackoffReconnectStrategy();
 		strategy.setSignalConnection(new CannotConnectSignalConnection());
 		strategy.setDelayUnits(TimeUnit.MILLISECONDS);
-		BasicConfigurator.configure();
 		Logger.getRootLogger().setLevel(Level.DEBUG);
 	}
 

@@ -2,6 +2,7 @@ package com.zipwhip.api;
 
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.util.Factory;
 
 /**
@@ -11,14 +12,24 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
 
     private Factory<ApiConnection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
+    private ImportantTaskExecutor importantTaskExecutor;
 
     public ZipwhipClientFactory() {
-
+        this(null, null, null);
     }
 
     public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
+        this(connectionFactory, signalProviderFactory, null);
+    }
+
+    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory, ImportantTaskExecutor importantTaskExecutor) {
         this.connectionFactory = connectionFactory;
         this.signalProviderFactory = signalProviderFactory;
+        this.importantTaskExecutor = importantTaskExecutor;
+
+        if (this.importantTaskExecutor == null){
+            this.importantTaskExecutor = new ImportantTaskExecutor();
+        }
     }
 
     /**
@@ -103,7 +114,12 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() throws Exception {
-        return new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
+        DefaultZipwhipClient client = new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
+
+        // this guy will do our /signals/connect calls with cancellation and timeout support.
+        client.setImportantTaskExecutor(importantTaskExecutor);
+
+        return client;
     }
 
 }

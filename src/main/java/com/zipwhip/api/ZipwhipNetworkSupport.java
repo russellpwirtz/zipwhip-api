@@ -113,8 +113,8 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     };
 
     /**
-     * This executor really matters. This is the executor that runs client code. I mean, the guys that call us.
-     * They are observing our web calls via this executor. If it's too small, and they are too slow, it'll backlog.
+     * This importantTaskExecutor really matters. This is the importantTaskExecutor that runs client code. I mean, the guys that call us.
+     * They are observing our web calls via this importantTaskExecutor. If it's too small, and they are too slow, it'll backlog.
      */
     private Executor callbackExecutor = Executors.newSingleThreadExecutor();
 
@@ -200,7 +200,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
             /**
              * This code will execute in the "workerExecutor" of the connection.
-             * If you pass in a bogus/small executor to him, our code will lag.
+             * If you pass in a bogus/small importantTaskExecutor to him, our code will lag.
              *
              * @param sender The sender might not be the same object every time.
              * @param item Rich object representing the notification.

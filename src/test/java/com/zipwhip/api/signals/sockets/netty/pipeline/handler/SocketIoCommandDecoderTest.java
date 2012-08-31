@@ -1,13 +1,10 @@
 package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class SocketIoCommandDecoderTest {
 

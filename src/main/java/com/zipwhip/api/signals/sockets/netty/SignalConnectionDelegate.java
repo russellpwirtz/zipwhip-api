@@ -1,13 +1,11 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
-import com.zipwhip.events.ObservableHelper;
+import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.lifecycle.DestroyableBase;
-import org.jboss.netty.util.Timer;
-
-import java.util.Observable;
-import java.util.concurrent.Callable;
+import org.apache.log4j.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,20 +24,114 @@ import java.util.concurrent.Callable;
  */
 public class SignalConnectionDelegate extends DestroyableBase {
 
-    final SignalConnectionBase connection;
+    private static final Logger LOGGER = Logger.getLogger(SignalConnectionDelegate.class);
+
+    protected final SignalConnectionBase connection;
+    protected ChannelWrapper channelWrapper;
+    private boolean paused = false;
 
     public SignalConnectionDelegate(SignalConnectionBase connection) {
         this.connection = connection;
     }
 
-    public synchronized void receivePong(PingPongCommand msg) {
-        ensureValid();
+    /**
+     * Synchronizing this method causes a deadlock.
+     *
+     * @param network
+     */
+    public void disconnectAsyncIfActive(final Boolean network) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                if (network) {
+                    LOGGER.debug(toString() + ": Calling disconnect() blindly without checking isConnected()");
+                    connection.disconnect(true);
+                } else {
+                    if (connection.isConnected()) {
+                        LOGGER.debug(toString() + ": Calling disconnect() because connected");
+                        connection.disconnect(false);
+                    } else {
+                        LOGGER.debug(toString() + ": We didn't call disconnect because we were not connected!");
+                    }
+                }
+            }
+        });
+    }
 
-        connection.receivePong(msg);
+    private void runIfActive(Runnable runnable) {
+        if (paused) {
+            LOGGER.debug("Paused so quitting.");
+            return;
+        }
+        // return without crashing
+        if (isDestroyed()) {
+            LOGGER.debug(toString() + ": Returning silently for runIfActive. We were destroyed.");
+            return;
+        }
+
+        synchronized (this) {
+            if (isDestroyed()) {
+                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed!");
+                return;
+            }
+
+            connection.runIfActive(channelWrapper, runnable);
+        }
+    }
+
+    public int getConnectTimeoutSeconds() {
+        return connection.getConnectTimeoutSeconds();
+    }
+
+    public void send(final SerializingCommand command) {
+        // prevent destruction between these two lines via sync block
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.send(command);
+            }
+        });
+    }
+
+    public void receivePong(final PingPongCommand command) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.receivePong(command);
+            }
+        });
+    }
+
+    public void notifyReceiveEvent(final NettyChannelHandler handler, final Command command) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.receiveEvent.notifyObservers(handler, command);
+            }
+        });
+    }
+
+    public void notifyExceptionAndDisconnect(final Object sender, final String result) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.exceptionEvent.notifyObservers(sender, result);
+                connection.disconnect(Boolean.TRUE);
+            }
+        });
+    }
+
+    public synchronized void notifyPingEvent(final Object sender, final PingEvent event) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                connection.pingEvent.notify(sender, event);
+            }
+        });
     }
 
     /**
-     * The decision was to throw rather than return false
+     * Throw rather than return false
      */
     private synchronized void ensureValid() {
         if (isDestroyed()) {
@@ -47,59 +139,28 @@ public class SignalConnectionDelegate extends DestroyableBase {
         }
     }
 
-    /**
-     * The caller (a ChannelHandler) will want to talk to the connection. We need to only forward the requests if allowed.
-     *
-     * @param handler
-     * @param command
-     */
-    public void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
-        ensureValid();
-
-        connection.receiveEvent.notifyObservers(handler, command);
-    }
-
-    public void disconnect(Boolean network) {
-        if (connection.isConnected()) {
-            ensureValid();
-
-            connection.disconnect(network);
-        }
-    }
-
-    public void schedulePing(boolean now) {
-        // We have activity on the wire, reschedule the next PING
-        if (connection.doKeepalives) {
-            connection.schedulePing(false);
-        }
-    }
-
-    public synchronized void startReconnectStrategy() {
-        ensureValid();
-
-        connection.reconnectStrategy.start();
-    }
-
-    public synchronized void notifyException(Object sender, String result) {
-        ensureValid();
-
-        connection.exceptionEvent.notifyObservers(sender, result);
-    }
-
-    public void stopReconnectStrategy() {
-        ensureValid();
-
-        connection.reconnectStrategy.stop();
-    }
-
-    public synchronized void notifyDisconnect(Object sender, boolean networkDisconnect) {
-        ensureValid();
-
-        connection.disconnectEvent.notifyObservers(sender, networkDisconnect);
-    }
-
     @Override
     protected synchronized void onDestroy() {
+        channelWrapper = null;
+    }
 
+    public ChannelWrapper getChannelWrapper() {
+        return channelWrapper;
+    }
+
+    public void setChannelWrapper(ChannelWrapper channelWrapper) {
+        this.channelWrapper = channelWrapper;
+    }
+
+    public synchronized void pause() {
+        paused = true;
+    }
+
+    public synchronized void resume() {
+        paused = false;
+    }
+
+    public boolean isPaused() {
+        return paused;
     }
 }

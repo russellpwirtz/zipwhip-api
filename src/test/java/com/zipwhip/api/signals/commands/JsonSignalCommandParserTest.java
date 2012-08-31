@@ -1,13 +1,10 @@
 package com.zipwhip.api.signals.commands;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import junit.framework.Assert;
-
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Created by IntelliJ IDEA. User: jed Date: 8/29/11 Time: 5:47 PM

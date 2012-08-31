@@ -83,7 +83,9 @@ public abstract class ReconnectStrategy extends DestroyableBase {
 
                     // If the disconnect was generated due to a network problem we want to try a reconnect.
                     if (networkGenerated && isStarted) {
+                        LOGGER.debug("Executing the doStrategyWithoutBlocking() method");
                         doStrategyWithoutBlocking();
+                        LOGGER.debug("Done executing strategy!");
                     }
                 }
             };

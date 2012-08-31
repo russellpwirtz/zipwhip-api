@@ -17,9 +17,10 @@ import java.util.concurrent.TimeUnit;
 public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
     private static final Logger LOGGER = Logger.getLogger(WriteOnChannelSafelyCallable.class);
+    private static final int WRITE_TIMEOUT_SECONDS = 30;
 
-    ChannelWrapper wrapper;
-    Object message;
+    final ChannelWrapper wrapper;
+    final Object message;
 
     public WriteOnChannelSafelyCallable(ChannelWrapper wrapper, Object message) {
         this.wrapper = wrapper;
@@ -27,15 +28,21 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
     }
 
     @Override
-    public Boolean call() throws InterruptedException {
+    public Boolean call() throws Exception {
+
         if (!wrapper.isConnected() || wrapper.isDestroyed()) {
             // it seems that we aren't connected?
             return Boolean.FALSE;
         }
 
-        ChannelFuture future = wrapper.channel.write(message);
+        ChannelFuture future;
 
-        boolean finished = future.await(SignalConnectionBase.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        synchronized (wrapper) {
+            // dont let anyone destroy the wrapper (and channel) during access.
+            future = wrapper.channel.write(message);
+        }
+
+        boolean finished = future.await(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         if (!finished) {
             // TODO: this might cause the client to RE-TRANSMIT a request that the server actually did receive.
@@ -46,6 +53,11 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
         if (future.isCancelled()) {
             LOGGER.warn("The future was cancelled.");
+        }
+
+        // TODO: is this the right?
+        if (future.getCause() != null) {
+            throw new Exception(future.getCause());
         }
 
         return future.isSuccess();

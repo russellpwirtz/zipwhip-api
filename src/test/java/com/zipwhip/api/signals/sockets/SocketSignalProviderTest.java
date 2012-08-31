@@ -1,5 +1,19 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.signals.address.ClientAddress;
+import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.signals.presence.PresenceCategory;
+import org.apache.log4j.Logger;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,25 +21,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.PresenceCommand;
-import com.zipwhip.api.signals.commands.SignalCommand;
-import com.zipwhip.api.signals.commands.SignalVerificationCommand;
-import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.events.Observer;
-import com.zipwhip.signals.address.ClientAddress;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.PresenceCategory;
-
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.*;
 
 /**
@@ -42,9 +39,34 @@ public class SocketSignalProviderTest {
     @Before
     public void setUp() throws Exception {
         connection = new MockSignalConnection();
-        provider = new SocketSignalProvider(connection);
+        provider = new SocketSignalProvider(connection, SimpleExecutor.getInstance(), null, null);
+
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
+    }
+
+    @Test
+    public void testDisconnectConnectDisconnect() throws Exception{
+
+        ObservableFuture<Boolean> connectFuture1 = provider.connect();
+        connectFuture1.await();
+        assertTrue(connectFuture1.get());
+        assertTrue(connectFuture1.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture1 = provider.disconnect();
+        disconnectFuture1.await();
+        assertTrue(disconnectFuture1.isSuccess());
+
+        ObservableFuture<Boolean> connectFuture2 = provider.connect();
+        assertFalse(connectFuture1 == connectFuture2);
+        connectFuture2.await();
+        assertTrue(connectFuture2.get());
+        assertTrue(connectFuture2.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture2 = provider.disconnect();
+        assertFalse(disconnectFuture1 == disconnectFuture2);
+        disconnectFuture2.await();
+        assertTrue(disconnectFuture2.isSuccess());
     }
 
     @Test
@@ -234,8 +256,6 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnMuchHigherVersionReceived() throws Exception {
 
-        BasicConfigurator.configure();
-
         SignalObserver signalObserver = new SignalObserver();
         provider.onSignalReceived(signalObserver);
 
@@ -286,8 +306,6 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnMuchHigherVersionReceivedAfterInit() throws Exception {
-
-        BasicConfigurator.configure();
 
         Map<String, Long> versions = new HashMap<String, Long>();
         versions.put("key", 200001l);
@@ -348,6 +366,7 @@ public class SocketSignalProviderTest {
 
         {
             Presence newPresence = provider.getPresence();
+            assertNotNull("It seems that the API requires that this gets modified", newPresence.getAddress());
             assertEquals(originalClientId, newPresence.getAddress().getClientId());
         }
 
@@ -627,7 +646,6 @@ public class SocketSignalProviderTest {
      * @author jed
      */
     private class VersionChangedObserver implements Observer<VersionMapEntry> {
-
         int versionChangedCount;
         List<Long> versions = new ArrayList<Long>();
 

@@ -3,13 +3,13 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/1/11 Time: 4:22 PM
@@ -66,7 +66,7 @@ public interface SignalProvider extends Destroyable {
      * @return a ObservableFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
-    Future<Boolean> connect() throws Exception;
+    ObservableFuture<Boolean> connect() throws Exception;
 
     /**
      * Tell it to connect.
@@ -77,7 +77,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting
      */
-    Future<Boolean> connect(String clientId) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId) throws Exception;
 
     /**
      * Tell it to connect.
@@ -89,10 +89,10 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    Future<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
 
     /**
-     * Tell it to connect.
+     * Tell it to connect. The future will unblock when {action:"CONNECT"} comes back
      *
      * @param clientId
      *        Pass in null if you don't have one.
@@ -102,16 +102,32 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    Future<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
+    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
 
     /**
-     *
      * Tell it to disconnect.
      *
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    Future<Void> disconnect() throws Exception;
+    ObservableFuture<Void> disconnect() throws Exception;
+
+    /**
+     * Tell it to disconnect. Call this with false is equivalent to calling {@code disconnect()}.
+     * Calling it with true will cause the connection to go into reconnect mode once the disconnect happens.
+     *
+     * @param causedByNetwork If the network state caused the disconnect
+     * @return an event that tells you its complete
+     * @throws Exception if an I/O happens while disconnecting
+     */
+    ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception;
+
+    /**
+     * Will reset the state, followed by a disconnect, followed by an immediate reconnect.
+     *
+     * @throws Exception
+     */
+    void resetAndDisconnect() throws Exception;
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions
@@ -120,20 +136,6 @@ public interface SignalProvider extends Destroyable {
      * Calling {@code nudge} will cancel any pending network keepalives and fire one immediately.
      */
     void nudge();
-
-    /**
-     * By default the connection will ping the SignalServer periodically.
-     * If {@code stopPings} has been called this will restart them.
-     * Otherwise it will have no effect.
-     */
-    void startPings();
-
-    /**
-     * By default the connection will ping the SignalServer periodically.
-     * If this has not been called since {@code startPings} was last called then any
-     * pending pings will be cancelled and no future ones will be scheduled.
-     */
-    void stopPings();
 
     /**
      * You can Observe this event to capture signals that come in.
@@ -226,5 +228,22 @@ public interface SignalProvider extends Destroyable {
      * @param observer an Observer of type Command indicating the command that was sent.
      */
     void onCommandReceived(Observer<Command> observer);
+
+    /**
+     * Run on the connection thread if and only if by the time it actually runs the connection
+     * has not changed state (ie: same clientId, etc). It also adds synchronization so that
+     * the underlying connection cannot be changed while you are running. So PLEASE run very quickly.
+     * No one can send/receive events or disconnect/reconnect while you are running.
+     *
+     * Be careful not to block within this method on any synchronization keywords. It would cause
+     * deadlocks. IE: anything like future.get() on the disconnect/connect methods.
+     *
+     * @param runnable
+     */
+    void runIfActive(Runnable runnable);
+
+    void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer);
+
+    void removeOnConnectionChangedObserver(Observer<Boolean> observer);
 
 }

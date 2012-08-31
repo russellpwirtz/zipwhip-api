@@ -1,14 +1,14 @@
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.events.Observer;
+import org.apache.log4j.Logger;
+
 import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.Logger;
-
-import com.zipwhip.events.Observer;
 
 /**
  * This class schedules reconnect attempts in a geometrically increasing (2^X by default) way up to a threshold.
@@ -109,7 +109,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
         }
 
         if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReconnectStrategy-"));
         }
 
         if (reconnectRunnable == null) {

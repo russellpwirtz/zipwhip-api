@@ -1,24 +1,20 @@
 package com.zipwhip.api;
 
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.Future;
-
 import com.zipwhip.api.dto.*;
-import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
-import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+
+import java.io.File;
+import java.util.*;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -36,7 +32,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      * @param connection The connection to Zipwhip API
      */
     public DefaultZipwhipClient(ApiConnection connection) {
-        super(connection, null);
+        this(connection, null);
     }
 
     /**
@@ -46,154 +42,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      * @param signalProvider The connection client for Zipwhip SignalServer.
      */
     public DefaultZipwhipClient(ApiConnection connection, SignalProvider signalProvider) {
-
         super(connection, signalProvider);
-
-        // Start listening to provider events that interest us
-        initSignalProviderEvents();
-    }
-
-    private void initSignalProviderEvents() {
-
-        signalProvider.onNewClientIdReceived(new Observer<String>() {
-            @Override
-            public void notify(Object sender, String newClientId) {
-
-                if (StringUtil.isNullOrEmpty(newClientId)) {
-                    LOGGER.warn("Received CONNECT without clientId");
-                    return;
-                }
-
-                if (StringUtil.isNullOrEmpty(connection.getSessionKey())) {
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-                    return;
-                }
-
-                String oldClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
-
-                if (StringUtil.exists(oldClientId)) {
-
-                    // clientId changed, unsubscribe the old one, and sub the new one
-                    if (!oldClientId.equals(newClientId)) {
-
-                        settingsStore.clear();
-
-                        settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-
-                        // Do a disconnect then connect
-                        Map<String, Object> disconnectParams = new HashMap<String, Object>();
-                        disconnectParams.put("clientId", oldClientId);
-                        disconnectParams.put("sessions", connection.getSessionKey());
-
-
-                        Map<String, Object> connectParams = new HashMap<String, Object>();
-                        connectParams.put("clientId", newClientId);
-                        connectParams.put("sessions", connection.getSessionKey());
-
-                        Presence presence = signalProvider.getPresence();
-
-                        if (presence != null) {
-                            connectParams.put("category", presence.getCategory());
-                            disconnectParams.put("category", presence.getCategory());
-                        }
-
-                        try {
-                            // Old clientId
-                            executeSync(SIGNALS_DISCONNECT, disconnectParams);
-
-                            // New clientId
-                            executeSync(SIGNALS_CONNECT, connectParams);
-
-                        } catch (Exception e) {
-                            LOGGER.error("Error calling signals/connect", e);
-                        }
-                    }
-
-                } else {
-
-                    settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
-
-                    // lets do a signals connect!
-                    Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("clientId", newClientId);
-                    params.put("sessions", connection.getSessionKey());
-
-                    Presence presence = signalProvider.getPresence();
-
-                    if (presence != null) {
-                        params.put("category", presence.getCategory());
-                    }
-
-                    try {
-
-                        executeSync(SIGNALS_CONNECT, params);
-
-                    } catch (Exception e) {
-
-                        LOGGER.error("Error calling signals/connect", e);
-                    }
-                }
-            }
-        });
-
-        signalProvider.onVersionChanged(new Observer<VersionMapEntry>() {
-            @Override
-            public void notify(Object sender, VersionMapEntry item) {
-                versionsStore.set(item.getKey(), item.getValue());
-            }
-        });
-
-    }
-
-    @Override
-    public Future<Boolean> connect() throws Exception {
-        return connect(null);
-    }
-
-    @Override
-    public Future<Boolean> connect(Presence presence) throws Exception {
-
-        // we need to determine if we're authenticated enough
-        if (!connection.isConnected() || !connection.isAuthenticated()) {
-            throw new NotAuthenticatedException("The connection cannot operate at this time");
-        }
-
-        String managedClientId = settingsStore.get(SettingsStore.Keys.CLIENT_ID);
-
-        // If the clientId has changed we need to invalidate the settings data
-        if (StringUtil.isNullOrEmpty(managedClientId) || (StringUtil.exists(signalProvider.getClientId()) && !managedClientId.equals(signalProvider.getClientId()))) {
-
-            LOGGER.debug("ClientId has changed, resetting client id in settings store");
-
-            settingsStore.clear();
-
-            if (signalProvider != null && signalProvider.getClientId() != null) {
-                settingsStore.put(SettingsStore.Keys.CLIENT_ID, signalProvider.getClientId());
-            }
-        }
-
-        // If the sessionKey has changed we need to invalidate the settings data
-        if (StringUtil.exists(connection.getSessionKey()) && !connection.getSessionKey().equals(settingsStore.get(SettingsStore.Keys.SESSION_KEY))) {
-
-            LOGGER.debug("New or changed sessionKey, resetting session key in settings store");
-
-            settingsStore.clear();
-
-            settingsStore.put(SettingsStore.Keys.SESSION_KEY, connection.getSessionKey());
-        }
-
-        // Will NOT block until you're connected it's asynchronous
-        return signalProvider.connect(settingsStore.get(SettingsStore.Keys.CLIENT_ID), versionsStore.get(), presence);
-    }
-
-    @Override
-    public Future<Void> disconnect() throws Exception {
-
-        if (!connection.isConnected()) {
-            throw new Exception("The connection is not connected!");
-        }
-
-        return signalProvider.disconnect();
     }
 
     @Override
@@ -376,7 +225,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
 
-
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int limit) throws Exception {
         if (StringUtil.isNullOrEmpty(fingerprint)) {
@@ -391,6 +239,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
+
 
     @Override
     public List<Message> listMessagesByFingerprint(String fingerprint, int start, int limit) throws Exception {
@@ -531,7 +380,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
-
     @Override
     public List<Presence> getPresence(PresenceCategory category) throws Exception {
 
@@ -543,6 +391,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
+
 
     @Override
     public void sendSignal(String scope, String channel, String event, String payload) throws Exception {
@@ -667,7 +516,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
     }
 
-
     @Override
     public String sessionChallenge(String mobileNumber, String portal) throws Exception {
 
@@ -686,6 +534,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
 
     }
+
 
     @Override
     public String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception {
@@ -924,7 +773,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public boolean saveTinyUrl(String key, String mimeType, File file) throws Exception {
-
         if (StringUtil.isNullOrEmpty(key)) {
             throw new IllegalArgumentException("A storage key is required to save.");
         }
@@ -941,13 +789,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
 
         ServerResponse response = executeSync(TINY_URL_SAVE, params, Collections.singletonList(file));
-        return response.isSuccess();
 
+        return response.isSuccess();
     }
 
     @Override
     protected void onDestroy() {
 
     }
-
 }

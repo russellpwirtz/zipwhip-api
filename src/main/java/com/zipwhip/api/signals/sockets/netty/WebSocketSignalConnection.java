@@ -162,7 +162,7 @@
 //
 //				if (channelFuture != null) {
 //
-//					channelFuture.await(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+//					channelFuture.await(DEFAULT_CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 //					socketConnected = !channelFuture.isCancelled() && channelFuture.isSuccess() && channelFuture.getChannel().isConnected();
 //
 //					networkDisconnect = socketConnected;

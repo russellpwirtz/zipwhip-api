@@ -1,5 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -15,7 +17,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * <p/>
  * Creates "ChannelWrapper" instances "correctly" (NOTE: you still have to call 'connect' manually).
  */
-public class ChannelWrapperFactory implements Factory<ChannelWrapper> {
+public class ChannelWrapperFactory extends DestroyableBase implements Factory<ChannelWrapper> {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
 
@@ -31,19 +33,32 @@ public class ChannelWrapperFactory implements Factory<ChannelWrapper> {
 
     @Override
     public ChannelWrapper create() throws Exception {
+
         // the pipeline is for the protocol (such as Websocket and/or regular sockets)
         ChannelPipeline pipeline = channelPipelineFactory.getPipeline();
 
         // the delegate lets the channel talk to the connection (such as disconnected)
         SignalConnectionDelegate delegate = new SignalConnectionDelegate(connection);
+
         // add the channelHandler to the pipeline
-        pipeline.addLast("connectionInterop", new NettyChannelHandler(delegate));
+        pipeline.addLast("nettyChannelHandler", new NettyChannelHandler(delegate));
 
         // create the channel
         Channel channel = channelFactory.newChannel(pipeline);
 
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
-        return new ChannelWrapper(channel, delegate);
+        ChannelWrapper channelWrapper = new ChannelWrapper(channel, delegate);
+
+        delegate.setChannelWrapper(channelWrapper);
+
+        return channelWrapper;
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (channelPipelineFactory instanceof Destroyable) {
+            ((Destroyable) channelPipelineFactory).destroy();
+        }
     }
 }
