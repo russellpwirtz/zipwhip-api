@@ -19,8 +19,7 @@ public class ApiConnectionConfiguration {
 
     static {
 
-//        String environment = System.getProperty("zw_env", "prod-https");
-        String environment = System.getProperty("zw_env", "staging");
+        String environment = System.getProperty("zw_env", "prod-https");
 
         if (environment.equals("prod-http")) {
 

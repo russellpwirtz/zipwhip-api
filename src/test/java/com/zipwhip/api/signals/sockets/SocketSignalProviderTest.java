@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
@@ -20,6 +21,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.*;
 
 /**
@@ -40,6 +43,30 @@ public class SocketSignalProviderTest {
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
+    }
+
+    @Test
+    public void testDisconnectConnectDisconnect() throws Exception{
+
+        ObservableFuture<Boolean> connectFuture1 = provider.connect();
+        connectFuture1.await();
+        assertTrue(connectFuture1.get());
+        assertTrue(connectFuture1.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture1 = provider.disconnect();
+        disconnectFuture1.await();
+        assertTrue(disconnectFuture1.isSuccess());
+
+        ObservableFuture<Boolean> connectFuture2 = provider.connect();
+        assertFalse(connectFuture1 == connectFuture2);
+        connectFuture2.await();
+        assertTrue(connectFuture2.get());
+        assertTrue(connectFuture2.isSuccess());
+
+        ObservableFuture<Void> disconnectFuture2 = provider.disconnect();
+        assertFalse(disconnectFuture1 == disconnectFuture2);
+        disconnectFuture2.await();
+        assertTrue(disconnectFuture2.isSuccess());
     }
 
     @Test

@@ -304,12 +304,19 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                  * We require that the order is Client -> Provider. Since you can't guarantee what thread you are in or
                  * what lock order you have, we will just do a runIfActive.
                  */
+            final ObservableFuture<Boolean> finalConnectingFuture = connectingFuture;
+
+                if (finalConnectingFuture == null) {
+                    return;
+                }
+
                 runIfActive(new Runnable() {
                     @Override
                     public void run() {
-                        if (connectingFuture != null) {
-                            connectingFuture.setFailure(new Exception("Disconnected"));
+                        if (finalConnectingFuture != connectingFuture) {
+                            return;
                         }
+                        connectingFuture.setFailure(new Exception("Disconnected"));
                     }
                 });
             }
