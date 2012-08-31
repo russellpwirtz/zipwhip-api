@@ -492,7 +492,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
 
     private ObservableFuture<Boolean> createConnectingFuture() {
-        final ObservableFuture<Boolean> result = new DefaultObservableFuture<Boolean>(this, executor);
+        final ObservableFuture<Boolean> result = new DefaultObservableFuture<Boolean>(this);
 
         result.addObserver(new Observer<ObservableFuture<Boolean>>() {
 
@@ -504,11 +504,14 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
              */
             @Override
             public void notify(Object sender, ObservableFuture<Boolean> item) {
-                synchronized (ClientZipwhipNetworkSupport.this) {
-                    Asserts.assertTrue(result == connectingFuture, "Odd that the two futures were not identical. Race condition?");
+                runSafely(new Runnable() {
+                    @Override
+                    public void run() {
+                        Asserts.assertTrue(result == connectingFuture, "Odd that the two futures were not identical. Race condition?");
 
-                    connectingFuture = null;
-                }
+                        connectingFuture = null;
+                    }
+                });
             }
         });
 
@@ -535,7 +538,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
         LOGGER.debug("runIfActive called for runnable: " + runnable);
         // NOTE: due to deadlocks we cannot "synchronized" in this method on the ZipwhipClient.
-        // we will do a bunch of syncronizing in the runnable.
+        // we will do a bunch of synchronizing in the runnable.
         runSafely(new Runnable() {
             @Override
             public void run() {
