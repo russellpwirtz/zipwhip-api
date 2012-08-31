@@ -7,6 +7,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -290,13 +291,12 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     /**
-     *
      * @param runnable
      */
-    public synchronized void runIfActive(final Runnable runnable) {
+    public synchronized ObservableFuture<Void> runIfActive(final Runnable runnable) {
         final ChannelWrapper channelWrapper = this.wrapper;
 
-        runIfActive(channelWrapper, runnable);
+        return runIfActive(channelWrapper, runnable);
     }
 
     /**
@@ -304,7 +304,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
      *
      * @param runnable
      */
-    public void runIfActive(final ChannelWrapper wrapper, final Runnable runnable) {
+    public ObservableFuture<Void> runIfActive(final ChannelWrapper wrapper, final Runnable runnable) {
         // this test here creates a potential deadlock because it allows
         // the Delegate to sync before the TOUCH lock. That's the wrong order.
 //        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
@@ -318,37 +318,56 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 //            }
 //        }
 
-        if (wrapper == null) {
-            throw new IllegalArgumentException("The wrapper cannot be null!");
-        } else if (runnable == null) {
-            throw new IllegalArgumentException("The runnable cannot be null!");
-        }
+        ObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, executor);
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                synchronized (SignalConnectionBase.this) {
-                    synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-                        final ChannelWrapper w = SignalConnectionBase.this.wrapper;
-                        if (w != wrapper) {
-                            // they are not the same instance, they are not active.
-                            // Kick them out.
-                            return;
-                        } else if (w.isDestroyed()) {
-                            // the wrapper is currently in the state of terminating.
-                            return;
+        executeRunIfActive(wrapper, runnable, future);
+
+        return future;
+    }
+
+    private void executeRunIfActive(final ChannelWrapper wrapper, final Runnable runnable, final ObservableFuture<Void> future) {
+        try {
+            if (wrapper == null) {
+                throw new IllegalArgumentException("The wrapper cannot be null!");
+            } else if (runnable == null) {
+                throw new IllegalArgumentException("The runnable cannot be null!");
+            }
+
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (SignalConnectionBase.this) {
+                        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                            final ChannelWrapper w = SignalConnectionBase.this.wrapper;
+                            if (w != wrapper) {
+                                // they are not the same instance, they are not active.
+                                // Kick them out.
+                                future.setFailure(new Exception("The underlying wrappers were not equal! Connection changed while waiting!"));
+                                return;
+                            } else if (w.isDestroyed()) {
+                                // the wrapper is currently in the state of terminating.
+                                future.setFailure(new Exception("Already destroyed!"));
+                                return;
+                            }
+
+                            // the wrapper is not allowed to SELF-DESTRUCT
+                            // so that means that we're able to safely depend on
+                            // WRAPPER BEING TOUCHED LOCK to prevent destruction between
+                            // the test and the run.
+
+                            try {
+                                runnable.run();
+                            } finally {
+                                future.setSuccess(null);
+                            }
                         }
-
-                        // the wrapper is not allowed to SELF-DESTRUCT
-                        // so that means that we're able to safely depend on
-                        // WRAPPER BEING TOUCHED LOCK to prevent destruction between
-                        // the test and the run.
-
-                        runnable.run();
                     }
                 }
-            }
-        });
+            });
+        } catch (RuntimeException e){
+            future.setFailure(e);
+            throw e;
+        }
     }
 
     @Override

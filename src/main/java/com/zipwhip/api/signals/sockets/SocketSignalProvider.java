@@ -4,6 +4,7 @@ import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
+import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -651,32 +652,63 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         return FutureUtil.execute(executor, this, connection.disconnect(causedByNetwork));
     }
 
-    public void runIfActive(final Runnable runnable) {
+    public ObservableFuture<Void> runIfActive(final Runnable runnable) {
         final String clientId = this.clientId;
+        final boolean wasConnected = isConnected();
+        final ObservableFuture<Void> resultFuture = new DefaultObservableFuture<Void>(this, executor);
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                // TODO: check if active.
-                // dont let the clientId be changed while we compare.
-                synchronized (SocketSignalProvider.this) {
-                    if (!isConnected()) {
-                        LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
-                        return;
-                    } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
-                        LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
-                        return;
+        try {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // TODO: check if active.
+                    // dont let the clientId be changed while we compare.
+                    synchronized (SocketSignalProvider.this) {
+                        synchronized (connection) {
+                            boolean connected = isConnected();
+                            if (wasConnected != connected) {
+                                resultFuture.setFailure(new Exception(String.format("the connected state changed while waiting, (%b/%b)", wasConnected, connected)));
+                                LOGGER.warn(String.format("The two connected states disagree (%b/%b), so not going to execute this runnable %s", wasConnected, connected, runnable));
+                                return;
+                            } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
+                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                                resultFuture.setFailure(new Exception("the ClientId changed while waiting"));
+                                return;
+                            }
+
+                            ObservableFuture future = connection.runIfActive(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        runnable.run();
+                                    } finally {
+                                        resultFuture.setSuccess(null);
+                                    }
+                                }
+                            });
+
+                            try {
+                                if (!future.await(60, TimeUnit.SECONDS)) {
+                                    resultFuture.setFailure(new TimeoutException("Future never finished!"));
+                                }
+                            } catch (InterruptedException e) {
+                                resultFuture.setFailure(e);
+                            }
+                        }
                     }
-
-                    runnable.run();
                 }
-            }
 
-            @Override
-            public String toString() {
-                return "signalProvider/runIfActive/" + runnable;
-            }
-        });
+                @Override
+                public String toString() {
+                    return "signalProvider/runIfActive/" + runnable;
+                }
+            });
+        } catch (RuntimeException e) {
+            resultFuture.setFailure(e);
+            throw e;
+        }
+
+        return resultFuture;
     }
 
     // TODO: who calls this because it could be a deadlock
@@ -691,28 +723,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         newClientIdEvent.notifyObservers(this, c);
-
-//        disconnect(false).addObserver(new Observer<ObservableFuture<Void>>() {
-//
-//            /**
-//             * The thread of the notify method will be the connection thread
-//             * @param sender
-//             * @param item
-//             */
-//            @Override
-//            public void notify(Object sender, ObservableFuture<Void> item) {
-//                if (!StringUtil.equals(clientId, c)) {
-//                    throw new RuntimeException("Something happened in between my disconnect and reconnect cycle and the clientIds don't match.");
-//                }
-//
-//                try {
-//                    // NOTE: if you block on connect, you will deadlock the connection thread
-//                    connect(c);
-//                } catch (Exception e) {
-//                    LOGGER.error("Failed to connect during reconnect operation.");
-//                }
-//            }
-//        });
 
         disconnect(true);
     }
@@ -883,23 +893,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
 
             scheduler.schedule(originalClientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
-
-//            scheduler.schedule(new Runnable() {
-//                @Override
-//                public void run() {
-//                    try {
-//
-//                        // Clear the clientId so we will re-up on connect
-//                        originalClientId = StringUtil.EMPTY_STRING;
-//
-//                        LOGGER.debug("Executing the connect that was requested by the server. Nulled out the clientId...");
-//                        connect();
-//
-//                    } catch (Exception e) {
-//                        LOGGER.error("Error connecting", e);
-//                    }
-//                }
-//            }, command.getReconnectDelay(), TimeUnit.SECONDS);
         }
     }
 
@@ -1012,7 +1005,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         signalVerificationEvent.notifyObservers(this, null);
     }
 
-    private Observer<SlidingWindow.HoleRange> signalHoleObserver = new Observer<SlidingWindow.HoleRange>() {
+    private final Observer<SlidingWindow.HoleRange> signalHoleObserver = new Observer<SlidingWindow.HoleRange>() {
         @Override
         public void notify(Object sender, SlidingWindow.HoleRange hole) {
             LOGGER.debug("Signal hole detected, requesting backfill for  " + hole.toString());
@@ -1020,7 +1013,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private Observer<List<Command>> packetReleasedObserver = new Observer<List<Command>>() {
+    private final Observer<List<Command>> packetReleasedObserver = new Observer<List<Command>>() {
         @Override
         public void notify(Object sender, List<Command> commands) {
             LOGGER.warn(commands.size() + " packets released due to timeout, leaving a hole.");

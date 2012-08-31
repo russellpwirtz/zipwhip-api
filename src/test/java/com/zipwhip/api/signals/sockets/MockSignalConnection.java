@@ -94,7 +94,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
             public Void call() throws Exception {
 
 //                executor.shutdownNow();
-                executor = null;
+//                executor = null;
 
                 disconnectEvent.notifyObservers(this, requestReconnect);
 

@@ -240,7 +240,7 @@ public interface SignalProvider extends Destroyable {
      *
      * @param runnable
      */
-    void runIfActive(Runnable runnable);
+    ObservableFuture<Void> runIfActive(Runnable runnable);
 
     void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer);
 

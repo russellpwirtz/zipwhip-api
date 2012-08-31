@@ -11,6 +11,7 @@ import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeFuture;
+import com.zipwhip.executors.FakeObservableFuture;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -141,8 +142,9 @@ public class SignalConnectionDelegateTest {
         }
 
         @Override
-        public void runIfActive(ChannelWrapper wrapper, Runnable runnable) {
+        public ObservableFuture<Void> runIfActive(ChannelWrapper wrapper, Runnable runnable) {
             runnable.run();
+            return new FakeObservableFuture<Void>(this, null);
         }
 
         @Override

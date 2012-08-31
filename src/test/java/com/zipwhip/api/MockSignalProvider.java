@@ -7,6 +7,7 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
@@ -186,26 +187,40 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public void runIfActive(final Runnable runnable) {
+    public ObservableFuture<Void> runIfActive(final Runnable runnable) {
         final String clientId = this.clientId;
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                // dont let the clientId be changed while we compare.
-                synchronized (MockSignalProvider.this) {
-                    if (!isConnected()) {
-//                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
-                        return;
-                    } else if (!StringUtil.equals(MockSignalProvider.this.getClientId(), clientId)) {
-//                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
-                        return;
-                    }
+        final ObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, executor);
 
-                    runnable.run();
+        try {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // dont let the clientId be changed while we compare.
+                    synchronized (MockSignalProvider.this) {
+                        if (!isConnected()) {
+                            future.setFailure(new Exception());
+    //                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
+                            return;
+                        } else if (!StringUtil.equals(MockSignalProvider.this.getClientId(), clientId)) {
+    //                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                            future.setFailure(new Exception());
+                            return;
+                        }
+
+                        try {
+                            runnable.run();
+                        } finally {
+                            future.setSuccess(null);
+                        }
+                    }
                 }
-            }
-        });
+            });
+        } catch (RuntimeException e) {
+            future.setFailure(e);
+        }
+
+        return future;
     }
 
     @Override

@@ -192,6 +192,6 @@ public interface SignalConnection extends Destroyable {
      *
      * @param runnable
      */
-    public void runIfActive(Runnable runnable);
+    public ObservableFuture<Void> runIfActive(Runnable runnable);
 
 }
