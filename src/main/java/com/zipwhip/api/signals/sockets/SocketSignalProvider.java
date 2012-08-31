@@ -73,7 +73,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
     private ObservableFuture<Boolean> connectingFuture;
 
-
     public SocketSignalProvider() {
         this(new NettySignalConnection());
     }
@@ -108,17 +107,73 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             this.executor = executor;
         }
 
-        pingEvent = new ObservableHelper<PingEvent>(this.executor);
-        connectionChangedEvent = new ObservableHelper<Boolean>(this.executor);
-        newClientIdEvent = new ObservableHelper<String>(this.executor);
-        signalEvent = new ObservableHelper<List<Signal>>(this.executor);
-        signalCommandEvent = new ObservableHelper<List<SignalCommand>>(this.executor);
-        exceptionEvent = new ObservableHelper<String>(this.executor);
-        signalVerificationEvent = new ObservableHelper<Void>(this.executor);
-        newVersionEvent = new ObservableHelper<VersionMapEntry>(this.executor);
-        presenceReceivedEvent = new ObservableHelper<Boolean>(this.executor);
-        subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>(this.executor);
-        commandReceivedEvent = new ObservableHelper<Command>(this.executor);
+
+        pingEvent = new ObservableHelper<PingEvent>(this.executor) {
+            @Override
+            public String toString() {
+                return "pingEvent/" + super.toString();
+            }
+        };
+        connectionChangedEvent = new ObservableHelper<Boolean>(this.executor) {
+            @Override
+            public String toString() {
+                return "connectionChangedEvent/" + super.toString();
+            }
+        };
+        newClientIdEvent = new ObservableHelper<String>(this.executor) {
+            @Override
+            public String toString() {
+                return "newClientIdEvent/" + super.toString();
+            }
+        };
+        signalEvent = new ObservableHelper<List<Signal>>(this.executor) {
+            @Override
+            public String toString() {
+                return "signalEvent/" + super.toString();
+            }
+        };
+        signalCommandEvent = new ObservableHelper<List<SignalCommand>>(this.executor) {
+            @Override
+            public String toString() {
+                return "signalCommandEvent/" + super.toString();
+            }
+        };
+        exceptionEvent = new ObservableHelper<String>(this.executor) {
+            @Override
+            public String toString() {
+                return "exceptionEvent/" + super.toString();
+            }
+        };
+        signalVerificationEvent = new ObservableHelper<Void>(this.executor) {
+            @Override
+            public String toString() {
+                return "signalVerificationEvent/" + super.toString();
+            }
+        };
+        newVersionEvent = new ObservableHelper<VersionMapEntry>(this.executor) {
+            @Override
+            public String toString() {
+                return "newVersionEvent/" + super.toString();
+            }
+        };
+        presenceReceivedEvent = new ObservableHelper<Boolean>(this.executor) {
+            @Override
+            public String toString() {
+                return "presenceReceivedEvent/" + super.toString();
+            }
+        };
+        subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>(this.executor) {
+            @Override
+            public String toString() {
+                return "subscriptionCompleteEvent/" + super.toString();
+            }
+        };
+        commandReceivedEvent = new ObservableHelper<Command>(this.executor) {
+            @Override
+            public String toString() {
+                return "commandReceivedEvent/" + super.toString();
+            }
+        };
 
         if (importantTaskExecutor == null) {
             importantTaskExecutor = new ImportantTaskExecutor();
@@ -135,17 +190,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         this.setImportantTaskExecutor(importantTaskExecutor);
         this.link(connection);
-        this.link(pingEvent);
-        this.link(connectionChangedEvent);
-        this.link(newClientIdEvent);
-        this.link(signalEvent);
-        this.link(exceptionEvent);
-        this.link(signalVerificationEvent);
-        this.link(newVersionEvent);
-        this.link(presenceReceivedEvent);
-        this.link(subscriptionCompleteEvent);
-        this.link(signalCommandEvent);
-        this.link(commandReceivedEvent);
 
         StateManager<SignalProviderState> m;
         try {
@@ -158,118 +202,31 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             throw new RuntimeException("Failed to setup factory");
         }
 
-        this.connection.onMessageReceived(new BlockingExecutorObserver<Command>(this, executor, new Observer<Command>() {
-            /**
-             * The NettySignalConnection will call this method when there's an
-             * event from the remote SignalServer.
-             *
-             * @param sender The sender might not be the same object every time.
-             * @param command Rich object representing the command received from the SignalServer.
-             */
-            @Override
-            public void notify(Object sender, Command command) {
+        this.initEvents();
+    }
 
-                // Check if this command has a valid version number associated with it...
-                if (command.getVersion() != null && command.getVersion().getValue() > 0) {
+    private void initEvents() {
+        this.link(pingEvent);
+        this.link(connectionChangedEvent);
+        this.link(newClientIdEvent);
+        this.link(signalEvent);
+        this.link(exceptionEvent);
+        this.link(signalVerificationEvent);
+        this.link(newVersionEvent);
+        this.link(presenceReceivedEvent);
+        this.link(subscriptionCompleteEvent);
+        this.link(signalCommandEvent);
+        this.link(commandReceivedEvent);
 
-                    String versionKey = command.getVersion().getKey();
+        this.connection.onMessageReceived(new BlockingExecutorObserver<Command>(this, executor, onMessageReceived));
+        this.connection.onConnect(new BlockingExecutorObserver<Boolean>(this, executor, sendConnectCommandIfConnected));
 
-                    synchronized (slidingWindows) {
-                        if (!slidingWindows.containsKey(versionKey)) {
+        /**
+         * Forward disconnect events up to clients
+         */
+        connection.onDisconnect(new BlockingExecutorObserver<Boolean>(this, executor, notifyObserversIfConnectionChangedObserver));
 
-                            LOGGER.warn("Creating sliding window for key " + versionKey);
-
-                            SlidingWindow<Command> newWindow = new SlidingWindow<Command>(versionKey);
-                            newWindow.onHoleTimeout(signalHoleObserver);
-                            newWindow.onPacketsReleased(packetReleasedObserver);
-
-                            if (versions != null && versions.get(versionKey) != null) {
-                                LOGGER.debug("Initializing sliding window index sequence to " + versions.get(versionKey));
-                                newWindow.setIndexSequence(versions.get(versionKey));
-                            }
-
-                            slidingWindows.put(versionKey, newWindow);
-                        }
-                    }
-
-                    // This list will be populated with the sequential packets that should be released
-                    List<Command> commandResults = new ArrayList<Command>();
-
-                    LOGGER.debug("Signal version " + command.getVersion().getValue());
-
-                    SlidingWindow.ReceiveResult result = slidingWindows.get(versionKey).receive(command.getVersion().getValue(), command, commandResults);
-
-                    switch (result) {
-                        case EXPECTED_SEQUENCE:
-                            LOGGER.debug("EXPECTED_SEQUENCE");
-                            handleCommands(commandResults);
-                            break;
-                        case HOLE_FILLED:
-                            LOGGER.debug("HOLE_FILLED");
-                            handleCommands(commandResults);
-                            break;
-                        case DUPLICATE_SEQUENCE:
-                            LOGGER.warn("DUPLICATE_SEQUENCE");
-                            break;
-                        case POSITIVE_HOLE:
-                            LOGGER.warn("POSITIVE_HOLE");
-                            break;
-                        case NEGATIVE_HOLE:
-                            LOGGER.debug("NEGATIVE_HOLE");
-                            handleCommands(commandResults);
-                            break;
-                        default:
-                            LOGGER.warn("UNKNOWN_RESULT");
-                    }
-                } else {
-                    // Non versioned command, not windowed
-                    handleCommand(command);
-                }
-            }
-
-            @Override
-            public String toString() {
-                return "onMessageReceived";
-            }
-        }));
-
-        this.connection.onConnect(new BlockingExecutorObserver<Boolean>(this, executor, new Observer<Boolean>() {
-            /*
-                * The NettySignalConnection will call this method when a TCP socket connection is attempted.
-                */
-            @Override
-            public void notify(Object sender, Boolean connected) {
-                /*
-                     * If we have a successful TCP connection then
-                     * check if we need to send the connect command.
-                     */
-                if (connected) {
-                    stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
-                    if (isConnecting()) {
-                        return;
-                    }
-
-                    writeConnectCommand();
-                }
-            }
-        }) {
-            @Override
-            public String toString() {
-                return "onConnectEvent";
-            }
-        });
-
-        /*
-              Forward disconnect events up to clients
-           */
-        connection.onDisconnect(notifyObserversIfConnectionChangedObserver);
-
-        connection.onPingEvent(new BlockingExecutorObserver<PingEvent>(this, this.executor, pingEvent) {
-            @Override
-            public String toString() {
-                return "onPingEvent";
-            }
-        });
+        connection.onPingEvent(new BlockingExecutorObserver<PingEvent>(this, this.executor, pingEvent));
         connection.onExceptionCaught(new BlockingExecutorObserver<String>(this, this.executor, exceptionEvent) {
             @Override
             public String toString() {
@@ -284,7 +241,108 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         onNewClientIdReceived(updateStateOnNewClientIdReceived);
     }
 
-    private Observer<Boolean> notifyObserversIfConnectionChangedObserver = new BlockingExecutorObserver<Boolean>(this, executor, new Observer<Boolean>() {
+    private final Observer<Command> onMessageReceived = new Observer<Command>() {
+        /**
+         * The NettySignalConnection will call this method when there's an
+         * event from the remote SignalServer.
+         *
+         * @param sender The sender might not be the same object every time.
+         * @param command Rich object representing the command received from the SignalServer.
+         */
+        @Override
+        public void notify(Object sender, Command command) {
+
+            // Check if this command has a valid version number associated with it...
+            if (command.getVersion() != null && command.getVersion().getValue() > 0) {
+
+                String versionKey = command.getVersion().getKey();
+
+                synchronized (slidingWindows) {
+                    if (!slidingWindows.containsKey(versionKey)) {
+
+                        LOGGER.warn("Creating sliding window for key " + versionKey);
+
+                        SlidingWindow<Command> newWindow = new SlidingWindow<Command>(versionKey);
+                        newWindow.onHoleTimeout(signalHoleObserver);
+                        newWindow.onPacketsReleased(packetReleasedObserver);
+
+                        if (versions != null && versions.get(versionKey) != null) {
+                            LOGGER.debug("Initializing sliding window index sequence to " + versions.get(versionKey));
+                            newWindow.setIndexSequence(versions.get(versionKey));
+                        }
+
+                        slidingWindows.put(versionKey, newWindow);
+                    }
+                }
+
+                // This list will be populated with the sequential packets that should be released
+                List<Command> commandResults = new ArrayList<Command>();
+
+                LOGGER.debug("Signal version " + command.getVersion().getValue());
+
+                SlidingWindow.ReceiveResult result = slidingWindows.get(versionKey).receive(command.getVersion().getValue(), command, commandResults);
+
+                switch (result) {
+                    case EXPECTED_SEQUENCE:
+                        LOGGER.debug("EXPECTED_SEQUENCE");
+                        handleCommands(commandResults);
+                        break;
+                    case HOLE_FILLED:
+                        LOGGER.debug("HOLE_FILLED");
+                        handleCommands(commandResults);
+                        break;
+                    case DUPLICATE_SEQUENCE:
+                        LOGGER.warn("DUPLICATE_SEQUENCE");
+                        break;
+                    case POSITIVE_HOLE:
+                        LOGGER.warn("POSITIVE_HOLE");
+                        break;
+                    case NEGATIVE_HOLE:
+                        LOGGER.debug("NEGATIVE_HOLE");
+                        handleCommands(commandResults);
+                        break;
+                    default:
+                        LOGGER.warn("UNKNOWN_RESULT");
+                }
+            } else {
+                // Non versioned command, not windowed
+                handleCommand(command);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "onMessageReceived";
+        }
+    };
+
+    private final Observer<Boolean> sendConnectCommandIfConnected = new Observer<Boolean>() {
+        /*
+        * The NettySignalConnection will call this method when a TCP socket connection is attempted.
+        */
+        @Override
+        public void notify(Object sender, Boolean connected) {
+            /*
+            * If we have a successful TCP connection then
+            * check if we need to send the connect command.
+            */
+            if (connected) {
+                stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
+                if (isConnecting()) {
+                    return;
+                }
+
+                writeConnectCommand();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "sendConnectCommandIfConnected";
+        }
+    };
+
+    private final Observer<Boolean> notifyObserversIfConnectionChangedObserver = new Observer<Boolean>() {
         @Override
         public void notify(Object sender, Boolean causedByNetwork) {
             // Ensure that the latch is in a good state for reconnect
@@ -298,10 +356,10 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 connectionChangedEvent.notifyObservers(sender, Boolean.FALSE);
             }
         }
-    }) {
+
         @Override
         public String toString() {
-            return "onDisconnectEvent";
+            return "notifyObserversIfConnectionChangedObserver";
         }
     };
 
@@ -317,7 +375,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         @Override
         public String toString() {
-            return "onNewClientIdReceived";
+            return "updateStateOnNewClientIdReceived";
         }
     };
 
