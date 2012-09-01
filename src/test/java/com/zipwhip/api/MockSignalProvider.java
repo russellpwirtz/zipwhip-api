@@ -8,18 +8,17 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.concurrent.DefaultObservableFuture;
-import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 public class MockSignalProvider implements SignalProvider {
 
@@ -38,7 +37,8 @@ public class MockSignalProvider implements SignalProvider {
     private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
-    private Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
+    private Executor executor = SimpleExecutor.getInstance();
+//    private Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
 
     @Override
     public boolean isConnected() {
@@ -189,7 +189,7 @@ public class MockSignalProvider implements SignalProvider {
     @Override
     public ObservableFuture<Void> runIfActive(final Runnable runnable) {
         final String clientId = this.clientId;
-
+        final boolean connected = isConnected();
         final ObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, executor);
 
         try {
@@ -198,7 +198,8 @@ public class MockSignalProvider implements SignalProvider {
                 public void run() {
                     // dont let the clientId be changed while we compare.
                     synchronized (MockSignalProvider.this) {
-                        if (!isConnected()) {
+                        boolean c = isConnected();
+                        if (connected != c) {
                             future.setFailure(new Exception());
     //                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
                             return;

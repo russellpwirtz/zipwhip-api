@@ -90,10 +90,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         if (executor == null) {
-            this.executor = executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-"))) {
+            this.executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-"))) {
+                @Override
+                public synchronized void execute(Runnable command) {
+                    super.execute(command);    //To change body of overridden methods use File | Settings | File Templates.
+                }
+
                 @Override
                 public String toString() {
-                    return super.toString() + "-SocketSignalProvider)";
+                    return "[executor:SocketSignalProvider running:" + currentItem + " queue:" + runnableSet + "]";
                 }
             };
 
@@ -219,21 +224,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         this.link(signalCommandEvent);
         this.link(commandReceivedEvent);
 
-        this.connection.onMessageReceived(new BlockingExecutorObserver<Command>(this, executor, onMessageReceived));
-        this.connection.onConnect(new BlockingExecutorObserver<Boolean>(this, executor, sendConnectCommandIfConnected));
+        this.connection.onMessageReceived(onMessageReceived);
+        this.connection.onConnect(sendConnectCommandIfConnected);
 
         /**
          * Forward disconnect events up to clients
          */
-        connection.onDisconnect(new BlockingExecutorObserver<Boolean>(this, executor, notifyObserversIfConnectionChangedObserver));
-
-        connection.onPingEvent(new BlockingExecutorObserver<PingEvent>(this, this.executor, pingEvent));
-        connection.onExceptionCaught(new BlockingExecutorObserver<String>(this, this.executor, exceptionEvent) {
-            @Override
-            public String toString() {
-                return "onExceptionCaught";
-            }
-        });
+        this.connection.onDisconnect(notifyObserversIfConnectionChangedObserver);
+        this.connection.onPingEvent(pingEvent);
+        this.connection.onExceptionCaught(exceptionEvent);
 
         /**
          * Observe our own version changed events so we can stay in sync internally
@@ -252,6 +251,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
          */
         @Override
         public void notify(Object sender, Command command) {
+
+//            LOGGER.debug("on message received: /signals/command/received/SIGNAL" + command);
 
             // Check if this command has a valid version number associated with it...
             if (command.getVersion() != null && command.getVersion().getValue() > 0) {
@@ -555,7 +556,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         // Hold onto these objects for internal reconnect attempts
         if (presence != null) {
             this.presence = presence;
-            sanitizePresence(this.presence);
         }
 
         if (CollectionUtil.exists(versions)) {
@@ -582,6 +582,11 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         executor.execute(new Runnable() {
+
+            @Override
+            public String toString() {
+                return "SignalProvider.connect()";
+            }
 
             @Override
             public void run() {
@@ -619,16 +624,13 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                         connectingFuture = null;
                     }
                 }
+
             }
         });
 
 //        Asserts.assertTrue(finalConnectingFuture == this.connectingFuture, "Make sure no one changed the code later");
 
         return finalConnectingFuture;
-    }
-
-    private void sanitizePresence(Presence presence) {
-
     }
 
     @Override
@@ -663,39 +665,28 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 public void run() {
                     // TODO: check if active.
                     // dont let the clientId be changed while we compare.
+                    ObservableFuture future = null;
                     synchronized (SocketSignalProvider.this) {
-                        synchronized (connection) {
-                            boolean connected = isConnected();
-                            if (wasConnected != connected) {
-                                resultFuture.setFailure(new Exception(String.format("the connected state changed while waiting, (%b/%b)", wasConnected, connected)));
-                                LOGGER.warn(String.format("The two connected states disagree (%b/%b), so not going to execute this runnable %s", wasConnected, connected, runnable));
-                                return;
-                            } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
-                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
-                                resultFuture.setFailure(new Exception("the ClientId changed while waiting"));
-                                return;
-                            }
+                        boolean connected = isConnected();
+                        if (wasConnected != connected) {
+                            resultFuture.setFailure(new Exception(String.format("the connected state changed while waiting, (%b/%b)", wasConnected, connected)));
+                            LOGGER.warn(String.format("The two connected states disagree (%b/%b), so not going to execute this runnable %s", wasConnected, connected, runnable));
+                            return;
+                        } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
+                            LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                            resultFuture.setFailure(new Exception("the ClientId changed while waiting"));
+                            return;
+                        }
 
-                            ObservableFuture future = connection.runIfActive(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        runnable.run();
-                                    } finally {
-                                        resultFuture.setSuccess(null);
-                                    }
-                                }
-                            });
-
-                            try {
-                                if (!future.await(60, TimeUnit.SECONDS)) {
-                                    resultFuture.setFailure(new TimeoutException("Future never finished!"));
-                                }
-                            } catch (InterruptedException e) {
-                                resultFuture.setFailure(e);
-                            }
+                        try {
+                            runnable.run();
+                        } catch (RuntimeException e) {
+                            resultFuture.setFailure(e);
+                            throw e;
                         }
                     }
+
+                    resultFuture.setSuccess(null);
                 }
 
                 @Override

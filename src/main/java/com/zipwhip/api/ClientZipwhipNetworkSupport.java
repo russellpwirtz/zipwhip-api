@@ -22,10 +22,7 @@ import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * A base class for future implementation to extend.
@@ -227,7 +224,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         disconnectFuture = result;
 
         // if the future finishes, clean up the global reference.
-        result.addObserver(new ResetDisconnectFutureObserver(this));
+        result.addObserver(new ResetDisconnectFutureObserver(this, disconnectFuture));
 
         /**
          * This method will run later on the core executor thread. The key being that you can only disconnect/connect
@@ -250,24 +247,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     disconnectFuture = null;
                     return;
                 }
-
-                // the nesting will help coordinate the two futures. (parent/child)
-                requestFuture.addObserver(new Observer<ObservableFuture<Void>>() {
-                    @Override
-                    public void notify(Object sender, ObservableFuture<Void> item) {
-                        // this is the Connection thread
-                        LOGGER.error("Request future called.");
-                    }
-                });
-
-                // the nesting will help coordinate the two futures. (parent/child)
-                result.addObserver(new Observer<ObservableFuture<Void>>() {
-                    @Override
-                    public void notify(Object sender, ObservableFuture<Void> item) {
-                        // this is the executor thread.
-                        LOGGER.error("Request future called.");
-                    }
-                });
 
                 result.setNestedFuture(requestFuture);
             }
@@ -304,8 +283,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                  * We require that the order is Client -> Provider. Since you can't guarantee what thread you are in or
                  * what lock order you have, we will just do a runIfActive.
                  */
-            final ObservableFuture<Boolean> finalConnectingFuture = connectingFuture;
-
+                final ObservableFuture<Boolean> finalConnectingFuture = connectingFuture;
                 if (finalConnectingFuture == null) {
                     return;
                 }
@@ -441,31 +419,25 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                         signalProvider.runIfActive(new Runnable() {
 
+                            // This thread is the provider thread (deadlock if block on connect / disconnect)
                             @Override
                             public void run() {
                                 LOGGER.debug("signalProvider.runIfActive() hit. We're going to tear down this connection. We can trust that it wont change during this method.");
+                                String s = connection.getSessionKey();
+                                String c = signalProvider.getClientId();
+                                if (!StringUtil.equals(sessionKey, s)) {
+                                    LOGGER.warn(String.format("The sessionKey changed from underneath us. [%s->%s] Just quitting", sessionKey, s));
+                                    return;
+                                } else if (!StringUtil.equals(clientId, c)) {
+                                    LOGGER.warn(String.format("The clientId changed from underneath us. [%s->%s] Just quitting", clientId, c));
+                                    return;
+                                }
 
-                                // This thread is the connection thread (deadlock if block on connect / disconnect)
-
-                                // we need to synchronize on the CONNECTION in order to guarantee that no one can change
-                                // the sessionKey while we're working on it.
-                                synchronized (connection) {
-                                    String s = connection.getSessionKey();
-                                    String c = signalProvider.getClientId();
-                                    if (!StringUtil.equals(sessionKey, s)) {
-                                        LOGGER.warn(String.format("The sessionKey changed from underneath us. [%s->%s] Just quitting", sessionKey, s));
-                                        return;
-                                    } else if (!StringUtil.equals(clientId, c)) {
-                                        LOGGER.warn(String.format("The clientId changed from underneath us. [%s->%s] Just quitting", clientId, c));
-                                        return;
-                                    }
-
-                                    try {
-                                        LOGGER.debug("We're safely in the same connection as we were before, so we're going to tear down the connection since we missed a SubscriptionCompleteCommand");
-                                        signalProvider.resetAndDisconnect();
-                                    } catch (Exception e) {
-                                        LOGGER.error("");
-                                    }
+                                try {
+                                    LOGGER.debug("We're safely in the same connection as we were before, so we're going to tear down the connection since we missed a SubscriptionCompleteCommand");
+                                    signalProvider.resetAndDisconnect();
+                                } catch (Exception e) {
+                                    LOGGER.error("");
                                 }
                             }
                         });
@@ -683,19 +655,28 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     private static class ResetDisconnectFutureObserver implements Observer<ObservableFuture<Void>> {
 
         final ClientZipwhipNetworkSupport client;
+        final ObservableFuture<?> future;
 
-        private ResetDisconnectFutureObserver(ClientZipwhipNetworkSupport client) {
+        private ResetDisconnectFutureObserver(ClientZipwhipNetworkSupport client, ObservableFuture<?> future) {
             this.client = client;
+            this.future = future;
         }
 
+        /**
+         * We are running in the "this.executor" thread.
+         *
+         * @param sender
+         * @param item
+         */
         @Override
         public void notify(Object sender, ObservableFuture<Void> item) {
-            LOGGER.debug("Our disconnectFuture has finished, so we are going to reset it (only 'if active').");
             // this will only run if the state hasn't changed between enqueue and execute.
             // otherwise it will log/return.
             synchronized (client) {
+                if (this.future == client.disconnectFuture) {
                     LOGGER.debug("Resetting the disconnectFuture so that other people can call disconnect.");
                     client.disconnectFuture = null;
+                }
             }
         }
     }

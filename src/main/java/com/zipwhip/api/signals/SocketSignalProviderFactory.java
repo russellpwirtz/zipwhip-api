@@ -15,6 +15,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy = null;
     private ChannelPipelineFactory channelPipelineFactory = null;
+    private String host;
 
     private SocketSignalProviderFactory() {
 
@@ -27,6 +28,9 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     @Override
     public SignalProvider create() {
         NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
+        if (host != null) {
+            connection.setHost(host);
+        }
         return new SocketSignalProvider(connection);
     }
 
@@ -40,4 +44,8 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         return this;
     }
 
+    public SocketSignalProviderFactory host(String host) {
+        this.host = host;
+        return this;
+    }
 }
