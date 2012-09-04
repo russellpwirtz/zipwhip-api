@@ -7,6 +7,7 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
@@ -190,8 +191,25 @@ public interface SignalConnection extends Destroyable {
      * such things as call disconnect on the current connection ensuring with 100% certainty that
      * you are connecting the right channel instead of a new one.
      *
-     * @param runnable
+     * @param callable
      */
-    public ObservableFuture<Void> runIfActive(Runnable runnable);
+    public <T> ObservableFuture<T> runIfActive(Callable<T> callable);
 
+    /**
+     * Will run on the core Connection executor. This will prevent any changes to the underlying
+     * connection while you are running.
+     *
+     * @param callable
+     * @param <T>
+     * @return
+     */
+    public <T> ObservableFuture<T> runSafely(Callable<T> callable);
+
+    /**
+     * This is how you tell that the underlying connection hasn't changed. If you do a connect/disconnect/reconnect or
+     * lose the channel, this connectionId will increment.
+     *
+     * @return
+     */
+    long getConnectionId();
 }

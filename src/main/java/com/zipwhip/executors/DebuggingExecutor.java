@@ -18,7 +18,7 @@ public class DebuggingExecutor extends DestroyableBase implements Executor {
 
     private final static Logger LOGGER = Logger.getLogger(DebuggingExecutor.class);
 
-    final Executor executor;
+    public final Executor executor;
     protected Runnable currentItem;
     protected final List<Runnable> runnableSet = Collections.synchronizedList(new LinkedList<Runnable>());
 

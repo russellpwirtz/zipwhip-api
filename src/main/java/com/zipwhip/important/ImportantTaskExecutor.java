@@ -65,7 +65,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         final String requestId = UUID.randomUUID().toString();
 
         // we're returning this value.
-        final ObservableFuture<T> parentFuture = createObservableFuture(executor);
+        final ObservableFuture<T> parentFuture = createObservableFuture(executor, request);
 
         /**
          * Schedule a timeout in the future if it has an expirationDate.
@@ -216,8 +216,13 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         return diff > -1000;
     }
 
-    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture(Executor executor) {
-        return new DefaultObservableFuture<TResponse>(this, executor);
+    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture(Executor executor, final Callable request) {
+        return new DefaultObservableFuture<TResponse>(request, executor) {
+            @Override
+            public String toString() {
+                return String.format("[ImportantTaskExecutorFuture: %s]", request);
+            }
+        };
     }
 
     public Scheduler getScheduler() {

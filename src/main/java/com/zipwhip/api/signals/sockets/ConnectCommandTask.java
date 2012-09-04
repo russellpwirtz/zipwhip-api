@@ -36,9 +36,14 @@ public class ConnectCommandTask implements Callable<ObservableFuture<ConnectComm
     public ObservableFuture<ConnectCommand> call() throws Exception {
         final ObservableFuture<Boolean> future;
 
-        final ObservableFuture<ConnectCommand> result = new DefaultObservableFuture<ConnectCommand>(connection);
-        final Observer<Boolean>[] onDisconnectObserver = new Observer[1];
+        final ObservableFuture<ConnectCommand> result = new DefaultObservableFuture<ConnectCommand>(connection) {
+            @Override
+            public String toString() {
+                return "ConnectCommandTaskFuture";
+            }
+        };
 
+        final Observer<Boolean>[] onDisconnectObserver = new Observer[1];
         final Observer<Command> onMessageReceivedObserver = new Observer<Command>() {
             @Override
             public void notify(Object sender, Command item) {

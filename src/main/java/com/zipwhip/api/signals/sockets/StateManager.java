@@ -19,6 +19,7 @@ public class StateManager<T extends Enum> {
 
     private Directory<T, T> states = new SetDirectory<T, T>();
     private T state;
+    private long stateId = 0;
 
     public StateManager(Directory<T, T> directory) {
         this();
@@ -34,6 +35,7 @@ public class StateManager<T extends Enum> {
     }
 
     public synchronized void set(T state) {
+        this.stateId ++;
         this.state = state;
     }
 
@@ -49,7 +51,7 @@ public class StateManager<T extends Enum> {
         boolean allowed = states.contains(state);
 
         if (allowed) {
-            this.state = state;
+            this.set(state);
         }
 
         return allowed;
@@ -93,5 +95,9 @@ public class StateManager<T extends Enum> {
             }
         }
         return false;
+    }
+
+    public long getStateId() {
+        return stateId;
     }
 }

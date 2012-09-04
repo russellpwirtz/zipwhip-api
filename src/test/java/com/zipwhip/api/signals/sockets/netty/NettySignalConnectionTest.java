@@ -135,6 +135,8 @@ public class NettySignalConnectionTest {
 
         connection.connect().get();
 
+        assertNull(((NettySignalConnection)connection).connectFuture);
+
         connection.onConnect(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
@@ -151,7 +153,7 @@ public class NettySignalConnectionTest {
         latch.await(5, TimeUnit.SECONDS);
 
         System.out.println(connection.isConnected());
-        assertTrue(connection.isConnected());
+        assertTrue("IsConnected", connection.isConnected());
     }
 
     @Test

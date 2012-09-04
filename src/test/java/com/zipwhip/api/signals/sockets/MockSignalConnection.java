@@ -94,6 +94,7 @@ public class MockSignalConnection extends SignalConnectionBase implements Signal
             @Override
             public Void call() throws Exception {
 
+                isConnected = false;
                 disconnectEvent.notifyObservers(this, requestReconnect);
 
                 return null;

@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIdleStateHandler;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
 import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -33,7 +34,7 @@ public class RawSocketIoChannelPipelineFactory extends DestroyableBase implement
     private final StringDecoder stringDecoder = new StringDecoder();
     private final StringEncoder stringEncoder = new StringEncoder();
     private final SocketIoCommandDecoder socketIoCommandDecoder = new SocketIoCommandDecoder();
-    private final Timer idleChannelTimer = new HashedWheelTimer();
+    private final Timer idleChannelTimer = new HashedWheelTimer(new NamedThreadFactory("IdleStateHandler-"));
 
     public RawSocketIoChannelPipelineFactory() {
         this(DEFAULT_PING_INTERVAL_SECONDS, DEFAULT_PONG_TIMEOUT_SECONDS);

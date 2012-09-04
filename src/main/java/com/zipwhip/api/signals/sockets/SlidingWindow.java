@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.events.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -39,7 +40,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     private final ObservableHelper<List<P>> packetsReleasedEvent = new ObservableHelper<List<P>>();
 
     // This timer schedules our hole timeout waits
-    private final HashedWheelTimer timer = new HashedWheelTimer();
+    private final HashedWheelTimer timer = new HashedWheelTimer(new NamedThreadFactory("SlidingWindow-"));
 
     // The last known sequence that was released from the window
     private long indexSequence = 0L;

@@ -7,12 +7,15 @@ package com.zipwhip.api.signals.sockets;
  * Time: 3:00 PM
  */
 public enum SignalProviderState {
-
     NONE,
-    CONNECTING,
-    CONNECTED,
-    AUTHENTICATED,
-    DISCONNECTED,
-    DISCONNECTING
 
+    CONNECTING,
+
+    CONNECTED,
+
+    AUTHENTICATED,
+
+    DISCONNECTED,
+
+    DISCONNECTING
 }

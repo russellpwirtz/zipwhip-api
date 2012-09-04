@@ -19,7 +19,7 @@ class CopyFutureStatusToNestedFuture<T> implements Observer<ObservableFuture<T>>
 
     @Override
     public void notify(Object sender, ObservableFuture<T> future) {
-        LOGGER.debug(String.format("Cloning the state from %s to %s", future, nestedFuture));
+        LOGGER.trace(String.format("Cloning the state from %s to %s", future, nestedFuture));
         // notify people that care.
         NestedObservableFuture.syncState(future, nestedFuture);
     }

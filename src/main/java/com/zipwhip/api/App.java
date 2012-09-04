@@ -88,7 +88,7 @@ public class App {
         });
 
         // Observe clientId change events
-        client.getSignalProvider().onNewClientIdReceived(new Observer<String>() {
+        client.getSignalProvider().getNewClientIdReceivedEvent().addObserver(new Observer<String>() {
             @Override
             public void notify(Object sender, String item) {
                 LOGGER.debug("APP::Received a new clientId " + item);
@@ -96,7 +96,7 @@ public class App {
         });
 
         // Observe Signal Verification events
-        client.getSignalProvider().onSignalVerificationReceived(new Observer<Void>() {
+        client.getSignalProvider().getSignalVerificationReceivedEvent().addObserver(new Observer<Void>() {
             @Override
             public void notify(Object sender, Void item) {
                 LOGGER.debug("APP::Received a signal verification");
@@ -104,7 +104,7 @@ public class App {
         });
 
         // Observe connection change events
-        client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
+        client.getSignalProvider().getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 LOGGER.debug("APP::Received a connection change to " + (item ? "CONNECTED" : "DISCONNECTED"));
@@ -112,7 +112,7 @@ public class App {
         });
 
         // Observe the presence of the phone
-        client.getSignalProvider().onPhonePresenceReceived(new Observer<Boolean>() {
+        client.getSignalProvider().getPhonePresenceReceivedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 LOGGER.debug("APP::PHONE Presence reported as " + (item ? "CONNECTED" : "DISCONNECTED"));
@@ -120,7 +120,7 @@ public class App {
         });
 
         // Observe a PING being sent to the SignalServer indicating that the line has been inactive for a period of time
-        client.getSignalProvider().onPingEvent(new Observer<PingEvent>() {
+        client.getSignalProvider().getPingReceivedEvent().addObserver(new Observer<PingEvent>() {
             @Override
             public void notify(Object sender, PingEvent item) {
                 LOGGER.debug("APP::PING_EVENT " + item.toString());

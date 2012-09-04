@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.ApiConnectionConfiguration;
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
@@ -8,7 +9,7 @@ import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.concurrent.DefaultObservableFuture;
-import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
@@ -25,10 +26,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * @author jed
@@ -52,7 +50,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     protected final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
     protected final ObservableHelper<Boolean> disconnectEvent = new ObservableHelper<Boolean>();
 
-    protected ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-"));
+//    protected Executor executor = SimpleExecutor.getInstance();
+    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-"));
 
     protected ReconnectStrategy reconnectStrategy;
 
@@ -61,7 +60,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
     private Future<Void> disconnectFuture;
-    private Future<Boolean> connectFuture;
+    protected Future<Boolean> connectFuture;
 
     /**
      * Protected constructor for subclasses.
@@ -124,8 +123,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             // immediately/synchronously create the wrapper.
             final ChannelWrapper channelWrapper = this.wrapper = channelWrapperFactory.create();
 
-            return connectFuture = FutureUtil.execute(this.executor, new Callable<Boolean>() {
-
+            final Future<Boolean> finalConnectingFuture = new FutureTask<Boolean>(new Callable<Boolean>() {
                 @Override
                 public Boolean call() throws Exception {
                     boolean success;
@@ -170,6 +168,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                             }
                         }
 
+                        connectFuture = null;
+
                         // restore the strategy so it can listen to these events.
                         // we are connected, so bind the reconnect strategy up.
                         bindReconnectStrategy();
@@ -186,12 +186,16 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                         LOGGER.debug(String.format("Returning from connect. %b/%b/%b", isConnected(), channelWrapper.isConnected(), success));
 
-                        return isConnected();
+                        return success;
                     } finally {
                         connectFuture = null;
                     }
                 }
             });
+
+            this.executor.execute((FutureTask) finalConnectingFuture);
+
+            return finalConnectingFuture;
         }
     }
 
@@ -222,8 +226,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
             cancelAndUbindReconnectStrategy();
 
-            LOGGER.debug("Entering the executor for .disconnect()");
-            return disconnectFuture = FutureUtil.execute(executor, new Callable<Void>() {
+            final Future<Void> resultFuture = new FutureTask<Void>(new Callable<Void>() {
 
                 @Override
                 public Void call() throws Exception {
@@ -256,6 +259,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                                 bindReconnectStrategy();
                             }
 
+                            // kill the disconnectFuture
+                            disconnectFuture = null;
+
                             // synchronous event firing
                             disconnectEvent.notifyObservers(this, network);
                         }
@@ -263,11 +269,18 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                         LOGGER.debug("Finished disconnecting the wrapper in SignalConnectionBase");
 
                         return null;
-                    } finally {
+                    } catch (Exception e) {
                         disconnectFuture = null;
+                        throw e;
                     }
                 }
             });
+
+            disconnectFuture = resultFuture;
+
+            executor.execute((FutureTask) resultFuture);
+
+            return resultFuture;
         }
     }
 
@@ -290,10 +303,31 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
+    public <T> ObservableFuture<T> runSafely(final Callable<T> callable) {
+
+        final ObservableFuture<T> future = new DefaultObservableFuture<T>(this);
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (SignalConnectionBase.this) {
+                    try {
+                        T result = callable.call();
+                        future.setSuccess(result);
+                    } catch (Exception e) {
+                        future.setFailure(e);
+                    }
+                }
+            }
+        });
+
+        return future;
+    }
+
     /**
      * @param runnable
      */
-    public synchronized ObservableFuture<Void> runIfActive(final Runnable runnable) {
+    public <T> ObservableFuture<T> runIfActive(final Callable<T> runnable) {
         final ChannelWrapper channelWrapper = this.wrapper;
 
         return runIfActive(channelWrapper, runnable);
@@ -304,70 +338,55 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
      *
      * @param runnable
      */
-    public ObservableFuture<Void> runIfActive(final ChannelWrapper wrapper, final Runnable runnable) {
-        // this test here creates a potential deadlock because it allows
-        // the Delegate to sync before the TOUCH lock. That's the wrong order.
-//        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-//            final ChannelWrapper w = this.wrapper;
-//            if (w != wrapper) {
-//                // they are not the same instance, they are not active. Kick them out.
-//                return false;
-//            } else if (w.isDestroyed()) {
-//                // the wrapper is currently in the state of terminating.
-//                return false;
-//            }
-//        }
-
-        ObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, executor);
-
-        executeRunIfActive(wrapper, runnable, future);
-
-        return future;
+    public <T> ObservableFuture<T> runIfActive(final ChannelWrapper wrapper, final Runnable runnable) {
+        return runIfActive(wrapper, new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                runnable.run();
+                return null;
+            }
+        });
     }
 
-    private void executeRunIfActive(final ChannelWrapper wrapper, final Runnable runnable, final ObservableFuture<Void> future) {
-        try {
-            if (wrapper == null) {
-                throw new IllegalArgumentException("The wrapper cannot be null!");
-            } else if (runnable == null) {
-                throw new IllegalArgumentException("The runnable cannot be null!");
+    public <T> ObservableFuture<T> runIfActive(final ChannelWrapper wrapper, final Callable<T> callable) {
+        if (wrapper == null) {
+            return new FakeFailingObservableFuture<T>(this, new IllegalArgumentException("The wrapper cannot be null!"));
+        } else if (callable == null) {
+            return new FakeFailingObservableFuture<T>(this, new IllegalArgumentException("The runnable cannot be null!"));
+        }
+
+        NestedObservableFuture<T> future = new NestedObservableFuture<T>(this, executor);
+
+        future.setNestedFuture(runSafely(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
+                    final ChannelWrapper w = SignalConnectionBase.this.wrapper;
+                    if (w != wrapper) {
+                        // they are not the same instance, they are not active.
+                        // Kick them out.
+                        throw new IllegalStateException("There is no currently active wrapper");
+                    } else if (w.isDestroyed()) {
+                        // the wrapper is currently in the state of terminating.
+                        throw new IllegalStateException("The currently active wrapper is destroyed");
+                    }
+
+                    // the wrapper is not allowed to SELF-DESTRUCT
+                    // so that means that we're able to safely depend on
+                    // WRAPPER BEING TOUCHED LOCK to prevent destruction between
+                    // the test and the run.
+
+                    return callable.call();
+                }
             }
 
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (SignalConnectionBase.this) {
-                        synchronized (WRAPPER_BEING_TOUCHED_LOCK) {
-                            final ChannelWrapper w = SignalConnectionBase.this.wrapper;
-                            if (w != wrapper) {
-                                // they are not the same instance, they are not active.
-                                // Kick them out.
-                                future.setFailure(new Exception("The underlying wrappers were not equal! Connection changed while waiting!"));
-                                return;
-                            } else if (w.isDestroyed()) {
-                                // the wrapper is currently in the state of terminating.
-                                future.setFailure(new Exception("Already destroyed!"));
-                                return;
-                            }
+            @Override
+            public String toString() {
+                return String.format("[runSafely: %s]", callable);
+            }
+        }));
 
-                            // the wrapper is not allowed to SELF-DESTRUCT
-                            // so that means that we're able to safely depend on
-                            // WRAPPER BEING TOUCHED LOCK to prevent destruction between
-                            // the test and the run.
-
-                            try {
-                                runnable.run();
-                            } finally {
-                                future.setSuccess(null);
-                            }
-                        }
-                    }
-                }
-            });
-        } catch (RuntimeException e){
-            future.setFailure(e);
-            throw e;
-        }
+        return future;
     }
 
     @Override
@@ -548,4 +567,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     public void removeOnMessageReceivedObserver(Observer<Command> observer) {
         receiveEvent.removeObserver(observer);
     }
+
+    public long getConnectionId() {
+        if (wrapper == null) {
+            return -1;
+        }
+
+        return wrapper.id;
+    }
+
 }

@@ -37,10 +37,12 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
         ChannelFuture future;
 
-        synchronized (wrapper) {
+        // this channel.write is NOT async like we thought. It's actually
+        // an OIO non sync.
+//        synchronized (wrapper) {
             // dont let anyone destroy the wrapper (and channel) during access.
             future = wrapper.channel.write(message);
-        }
+//        }
 
         boolean finished = future.await(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 

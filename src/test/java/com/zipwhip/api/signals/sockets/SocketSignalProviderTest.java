@@ -18,8 +18,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
@@ -46,7 +48,7 @@ public class SocketSignalProviderTest {
     }
 
     @Test
-    public void testDisconnectConnectDisconnect() throws Exception{
+    public void testDisconnectConnectDisconnect() throws Exception {
 
         ObservableFuture<Boolean> connectFuture1 = provider.connect();
         connectFuture1.await();
@@ -76,33 +78,50 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testConnect() throws Exception {
-
-        provider.onConnectionChanged(new Observer<Boolean>() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 System.out.println("testConnect - provider.onConnectionChanged " + item);
                 assertTrue(item);
+                latch.countDown();
             }
         });
 
         connect();
+
+        assertTrue(latch.await(50, TimeUnit.SECONDS));
     }
 
     @Test
     public void testDisconnect() throws Exception {
 
+        //synchronously connect
         connect();
 
-        provider.onConnectionChanged(new Observer<Boolean>() {
+        assertTrue("Not connected even though we just connected!", provider.isConnected());
+        assertTrue("Not connected even though we just connected!", provider.isAuthenticated());
+        assertTrue(connection.isConnected());
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        //add our handler
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
-                System.out.println("testDisconnect - provider.onConnectionChanged " + item);
+                LOG.debug("testDisconnect - provider.onConnectionChanged " + item);
                 assertFalse(item);
+                latch.countDown();
             }
         });
 
+        // do a disconnect.
         Future<Void> task = provider.disconnect();
         task.get();
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+        assertFalse(provider.isConnected());
+        assertFalse("Connection should be disconnected too!", connection.isConnected());
     }
 
     private void connect() throws Exception, InterruptedException, ExecutionException {
@@ -119,10 +138,10 @@ public class SocketSignalProviderTest {
         Boolean signalCommandReceived = false;
 
         SignalObserver signalObserver = new SignalObserver();
-        provider.onSignalReceived(signalObserver);
+        provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
-        provider.onSignalCommandReceived(signalCommandObserver);
+        provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
         connection.send(null);
         Signal signal = new Signal();
@@ -143,10 +162,10 @@ public class SocketSignalProviderTest {
     public void testOnSignalReceivedOutOfOrder() throws Exception {
 
         SignalObserver signalObserver = new SignalObserver();
-        provider.onSignalReceived(signalObserver);
+        provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
-        provider.onSignalCommandReceived(signalCommandObserver);
+        provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
         connection.send(null);
         Signal signal = new Signal();
@@ -193,13 +212,13 @@ public class SocketSignalProviderTest {
     public void testOnSignalReceivedHoleTimeout() throws Exception {
 
         SignalObserver signalObserver = new SignalObserver();
-        provider.onSignalReceived(signalObserver);
+        provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
-        provider.onSignalCommandReceived(signalCommandObserver);
+        provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
         VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
-        provider.onVersionChanged(versionChangedObserver);
+        provider.getVersionChangedEvent().addObserver(versionChangedObserver);
 
         connection.send(null);
         Signal signal = new Signal();
@@ -257,13 +276,13 @@ public class SocketSignalProviderTest {
     public void testOnMuchHigherVersionReceived() throws Exception {
 
         SignalObserver signalObserver = new SignalObserver();
-        provider.onSignalReceived(signalObserver);
+        provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
-        provider.onSignalCommandReceived(signalCommandObserver);
+        provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
         VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
-        provider.onVersionChanged(versionChangedObserver);
+        provider.getVersionChangedEvent().addObserver(versionChangedObserver);
 
         connection.send(null);
         Signal signal = new Signal();
@@ -311,13 +330,13 @@ public class SocketSignalProviderTest {
         versions.put("key", 200001l);
         provider.setVersions(versions);
         SignalObserver signalObserver = new SignalObserver();
-        provider.onSignalReceived(signalObserver);
+        provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
-        provider.onSignalCommandReceived(signalCommandObserver);
+        provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
         VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
-        provider.onVersionChanged(versionChangedObserver);
+        provider.getVersionChangedEvent().addObserver(versionChangedObserver);
 
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
@@ -345,7 +364,7 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnConnectionChanged() throws Exception {
 
-        provider.onConnectionChanged(new Observer<Boolean>() {
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 System.out.println("testOnConnectionChanged - provider.onConnectionChanged CONNECT " + item);

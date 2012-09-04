@@ -84,7 +84,7 @@ public class SocketSignalProviderIntegrationTest {
 
         final Signal[] verifySignal = new Signal[1];
 
-        client.getSignalProvider().onSignalReceived(new Observer<List<Signal>>() {
+        client.getSignalProvider().getSignalReceivedEvent().addObserver(new Observer<List<Signal>>() {
             @Override
             public void notify(Object sender, List<Signal> item) {
                 for (Signal signal : item) {

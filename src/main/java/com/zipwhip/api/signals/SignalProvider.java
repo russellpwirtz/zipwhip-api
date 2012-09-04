@@ -3,8 +3,9 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.api.signals.sockets.SignalProviderState;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observer;
+import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 
@@ -18,10 +19,19 @@ public interface SignalProvider extends Destroyable {
 
     /**
      * Determines if the SignalProvider is connected or not.
-     * 
+     *
      * @return true if the SignalProvider is connected else false.
      */
-    boolean isConnected();
+    SignalProviderState getState();
+
+    /**
+     * Every time the state changes, we will change the Version. This will help you keep track of
+     * 'did the state change while i was waiting to execute'
+     *
+     * @return
+     */
+    long getStateVersion();
+
 
     /**
      * The SignalServer uses a separate id to track you, because it's an Id
@@ -70,9 +80,8 @@ public interface SignalProvider extends Destroyable {
 
     /**
      * Tell it to connect.
-     * 
-     * @param clientId
-     *        Pass in null if you don't have one.
+     *
+     * @param clientId Pass in null if you don't have one.
      * @return A future that tells you when the connecting is complete. The
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting
@@ -82,8 +91,7 @@ public interface SignalProvider extends Destroyable {
     /**
      * Tell it to connect.
      *
-     * @param clientId
-     *        Pass in null if you don't have one.
+     * @param clientId Pass in null if you don't have one.
      * @param versions a Map of the current signal version per subscription.
      * @return A future that tells you when the connecting is complete. The
      *         string result is the clientId.
@@ -94,8 +102,7 @@ public interface SignalProvider extends Destroyable {
     /**
      * Tell it to connect. The future will unblock when {action:"CONNECT"} comes back
      *
-     * @param clientId
-     *        Pass in null if you don't have one.
+     * @param clientId Pass in null if you don't have one.
      * @param versions a Map of the current signal version per subscription.
      * @param presence A Presence object to send on connect.
      * @return A future that tells you when the connecting is complete. The
@@ -132,109 +139,87 @@ public interface SignalProvider extends Destroyable {
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions
      * (i.e. Android) when the CPU goes to sleep.
-     *
+     * <p/>
      * Calling {@code nudge} will cancel any pending network keepalives and fire one immediately.
      */
     void nudge();
 
     /**
      * You can Observe this event to capture signals that come in.
-     *
+     * <p/>
      * As signals are always wrapped by SignalCommand this event and {@code onSignalCommandReceived} will fire simultaneously.
-     * 
-     * @param observer an Observer of type List<Signal> to listen for new signal events.
      */
-    void onSignalReceived(Observer<List<Signal>> observer);
+    Observable<List<Signal>> getSignalReceivedEvent();
 
     /**
      * You can Observe this event to capture the higher level object containing the command
      * and the signal object.
-     *
+     * <p/>
      * As signals are always wrapped by SignalCommand this event and {@code onSignalReceived} will fire simultaneously.
-     *
-     * @param observer an Observer of type Map<Long, Signal> to listen for new signal events.
      */
-    void onSignalCommandReceived(Observer<List<SignalCommand>> observer);
+    Observable<List<SignalCommand>> getSignalCommandReceivedEvent();
 
     /**
      * Observe the changes in connection. This is when your clientId is used for
      * the first time. True is connected and False is disconnected.
-     * 
+     * <p/>
      * This is a low level TCP connection observable.
-     * 
-     * @param observer an Observer of type Boolean to listen for connection changes events.
      */
-    void onConnectionChanged(Observer<Boolean> observer);
+    Observable<Boolean> getConnectionChangedEvent();
 
     /**
      * Observe when we authenticate with the SignalServer. This means a new
      * clientId has been given to us for the first time. This should only fire
      * once.
-     *
+     * <p/>
      * The String param is the clientId.
-     * 
-     * @param observer an Observer of type String to listen for the event.
      */
-    void onNewClientIdReceived(Observer<String> observer);
+    Observable<String> getNewClientIdReceivedEvent();
 
     /**
      * Observe when receive the subscription complete event indicating
      * that we are subscribed to the SignalServer and will begin to
      * receive events.
-     *
-     * @param observer an Observer of type SubscriptionCompleteCommand to listen for the event.
      */
-    void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer);
+    Observable<SubscriptionCompleteCommand> getSubscriptionCompleteReceivedEvent();
 
     /**
      * Observe when we receive a presence update and report if the phone is connected.
      * A True result indicates the phone is connected.
-     *
-     * @param observer an Observer of type Boolean to listen for the event.
      */
-    void onPhonePresenceReceived(Observer<Boolean> observer);
+    Observable<Boolean> getPhonePresenceReceivedEvent();
 
     /**
      * Observe a signal verification sent by another connected client.
-     *
-     * @param observer an Observer of type Void to listen for the event.
      */
-    void onSignalVerificationReceived(Observer<Void> observer);
+    Observable<Void> getSignalVerificationReceivedEvent();
 
     /**
      * Observe a new signal version for a given subscription and channel.
-     *
-     * @param observer an Observer of type  to listen for the event.
      */
-    void onVersionChanged(Observer<VersionMapEntry> observer);
+    Observable<VersionMapEntry> getVersionChangedEvent();
 
     /**
      * Observe an inactive ping event.
-     *
-     * @param observer an Observer of type PingEvent indicating the event that happened.
      */
-    void onPingEvent(Observer<PingEvent> observer);
+    Observable<PingEvent> getPingReceivedEvent();
 
     /**
      * Observe any exceptions in the {@code SignalConnection} layer.
-     *
-     * @param observer an Observer of type String indicating the exception that occurred.
      */
-    void onExceptionEvent(Observer<String> observer);
+    Observable<String> getExceptionEvent();
 
     /**
      * Observe any commands sent from the Signal Server
-     *
-     * @param observer an Observer of type Command indicating the command that was sent.
      */
-    void onCommandReceived(Observer<Command> observer);
+    Observable<Command> getCommandReceivedEvent();
 
     /**
      * Run on the connection thread if and only if by the time it actually runs the connection
      * has not changed state (ie: same clientId, etc). It also adds synchronization so that
      * the underlying connection cannot be changed while you are running. So PLEASE run very quickly.
      * No one can send/receive events or disconnect/reconnect while you are running.
-     *
+     * <p/>
      * Be careful not to block within this method on any synchronization keywords. It would cause
      * deadlocks. IE: anything like future.get() on the disconnect/connect methods.
      *
@@ -242,8 +227,20 @@ public interface SignalProvider extends Destroyable {
      */
     ObservableFuture<Void> runIfActive(Runnable runnable);
 
-    void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer);
+    /**
+     * Determines if the state is CONNECTED
+     *
+     * @return
+     */
+    boolean isConnected();
 
-    void removeOnConnectionChangedObserver(Observer<Boolean> observer);
+    /**
+     * Determines if the state is AUTHENTICATED
+     *
+     * (isConnected() && has an active clientId)
+     *
+     * @return
+     */
+    boolean isAuthenticated();
 
 }

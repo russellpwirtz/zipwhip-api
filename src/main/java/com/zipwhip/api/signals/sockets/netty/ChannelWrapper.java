@@ -48,14 +48,16 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     protected final StateManager<ChannelState> stateManager;
     protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
     private SignalConnectionBase connection;
+    public final long id;
 
     /**
      * For keeping absolute care over the thread safe state
      */
-    public ChannelWrapper(Channel channel, SignalConnectionDelegate delegate) {
+    public ChannelWrapper(long id, Channel channel, SignalConnectionDelegate delegate) {
         this.channel = channel;
         this.delegate = delegate;
         this.stateManager = ChannelStateManagerFactory.newStateManager();
+        this.id = id;
     }
 
     /**
@@ -163,7 +165,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
     }
 
-    public synchronized ObservableFuture<Boolean> write(Object message) {
+    public ObservableFuture<Boolean> write(Object message) {
         assertConnected();
 
         return FutureUtil.execute(executor, null,

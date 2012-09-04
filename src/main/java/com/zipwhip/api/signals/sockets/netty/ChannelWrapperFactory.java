@@ -9,6 +9,8 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Created with IntelliJ IDEA.
  * User: Michael
@@ -18,6 +20,8 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * Creates "ChannelWrapper" instances "correctly" (NOTE: you still have to call 'connect' manually).
  */
 public class ChannelWrapperFactory extends DestroyableBase implements Factory<ChannelWrapper> {
+
+    private static AtomicLong id = new AtomicLong(0);
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
 
@@ -48,7 +52,7 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
-        ChannelWrapper channelWrapper = new ChannelWrapper(channel, delegate);
+        ChannelWrapper channelWrapper = new ChannelWrapper(id.incrementAndGet(), channel, delegate);
 
         delegate.setChannelWrapper(channelWrapper);
 

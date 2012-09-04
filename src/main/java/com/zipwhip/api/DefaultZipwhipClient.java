@@ -570,12 +570,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public void addSignalObserver(Observer<List<Signal>> observer) {
-        getSignalProvider().onSignalReceived(observer);
+        getSignalProvider().getSignalReceivedEvent().addObserver(observer);
     }
 
     @Override
     public void addSignalsConnectionObserver(Observer<Boolean> observer) {
-        getSignalProvider().onConnectionChanged(observer);
+        getSignalProvider().getConnectionChangedEvent().addObserver(observer);
     }
 
     @Override

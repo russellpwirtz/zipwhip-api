@@ -13,7 +13,7 @@ import java.util.concurrent.Executor;
  */
 public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
 
-    ObservableFuture<T> nestedFuture;
+    protected ObservableFuture<T> nestedFuture;
     boolean nesting = false;
     boolean alreadySyncedStateWithNestedFuture = false;
 
@@ -38,8 +38,8 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
         this.nestedFuture = nestedFuture;
 
         synchronized (nestedFuture) {
-            this.nestedFuture.addObserver(new CopyFutureStatusToNestedFuture<T>(this));
             this.addObserver(new CopyFutureStatusToNestedFuture<T>(this.nestedFuture));
+            this.nestedFuture.addObserver(new CopyFutureStatusToNestedFuture<T>(this));
 
             // Note: we believe that even if the observableFutures are asynchronous, the above lines
             // are sufficient.
@@ -99,6 +99,15 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
         return wasAChange;
     }
 
+    @Override
+    public String toString() {
+        if (nestedFuture != null) {
+            return "Nested/" + nestedFuture.toString();
+        } else {
+            return "NestedObservableFuture";
+        }
+    }
+
     public static <T> void syncState(ObservableFuture<T> source, ObservableFuture<T> destination) {
         if (source.isDone()) {
             if (source.isCancelled()) {
@@ -117,10 +126,11 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
                 destination.cancel();
             } else if (source.isSuccess()) {
                 destination.setSuccess(Boolean.TRUE);
-            } else {
+            } else if (source.getCause() != null) {
                 destination.setFailure(source.getCause());
+            } else {
+                throw new RuntimeException("How did this get here? What state are we missing? " + source);
             }
         }
     }
-
 }

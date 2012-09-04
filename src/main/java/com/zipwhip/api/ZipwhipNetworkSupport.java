@@ -176,6 +176,10 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         return get(executeAsync(method, params, files, requiresAuthentication, FORWARD_RUNNABLE));
     }
 
+    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params) throws Exception {
+        return executeAsync(method, params, true, null);
+    }
+
     protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
         return executeAsync(method, params, null, requiresAuthentication, businessLogic);
     }
@@ -245,7 +249,11 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                 }
 
                 try {
-                    businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
+                    if (businessLogic != null){
+                        businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
+                    } else {
+                        result.setSuccess(null);
+                    }
                 } catch (Exception e) {
                     LOGGER.fatal("Problem with running the business logic conversion", e);
                     // this will execute in the "callbackExecutor"

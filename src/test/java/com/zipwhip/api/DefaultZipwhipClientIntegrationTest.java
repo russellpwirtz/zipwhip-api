@@ -5,16 +5,13 @@ import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
-
-import static junit.framework.Assert.assertTrue;
 
 /**
  * Created by IntelliJ IDEA.
@@ -42,14 +39,14 @@ public class DefaultZipwhipClientIntegrationTest {
         ZipwhipClient client = factory.create();
 
         ObservableFuture future = client.connect();
+        TestUtil.awaitAndAssertSuccess(future);
 
-        assertTrue(future.await(70, TimeUnit.SECONDS));
-        assertTrue(future.isSuccess());
+        LOGGER.debug("Connect done!");
 
         future = client.disconnect();
+        TestUtil.awaitAndAssertSuccess(future);
 
-        assertTrue(future.await(70, TimeUnit.SECONDS));
-        assertTrue(future.isSuccess());
+        LOGGER.debug("Disconnect done!");
 
     }
 

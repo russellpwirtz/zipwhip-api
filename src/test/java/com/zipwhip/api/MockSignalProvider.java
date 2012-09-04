@@ -7,18 +7,22 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.api.signals.sockets.SignalProviderState;
+import com.zipwhip.api.signals.sockets.SignalProviderStateManagerFactory;
+import com.zipwhip.api.signals.sockets.StateManager;
 import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
-import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeObservableFuture;
-import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.util.Asserts;
 import com.zipwhip.util.StringUtil;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MockSignalProvider implements SignalProvider {
 
@@ -37,12 +41,46 @@ public class MockSignalProvider implements SignalProvider {
     private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
-    private Executor executor = SimpleExecutor.getInstance();
-//    private Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
+    protected StateManager<SignalProviderState> stateManager;
+    protected ObservableFuture<Void> disconnectingFuture = null;
+    protected ObservableFuture<Boolean> connectingFuture;
+
+    public MockSignalProvider() {
+        try {
+            stateManager = SignalProviderStateManagerFactory.getInstance().create();
+        } catch (Exception e) {
+            // bad api :(
+        }
+    }
+
+//    protected Executor executor = SimpleExecutor.getInstance();
+protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
+
+    public boolean isConnected() {
+        if (stateManager.get() == SignalProviderState.AUTHENTICATED) {
+            Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Authenticated !connected)");
+            return true;
+        } else {
+            if (stateManager.get() == SignalProviderState.CONNECTED) {
+                Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Connected !connected)");
+            }
+
+            return false;
+        }
+    }
+
+    public boolean isAuthenticated() {
+        return stateManager.get() == SignalProviderState.AUTHENTICATED;
+    }
 
     @Override
-    public boolean isConnected() {
-        return isConnected;
+    public SignalProviderState getState() {
+        return stateManager.get();
+    }
+
+    @Override
+    public long getStateVersion() {
+        return stateManager.getStateId();
     }
 
     @Override
@@ -74,45 +112,55 @@ public class MockSignalProvider implements SignalProvider {
 
     @Override
     public ObservableFuture<Boolean> connect() throws Exception {
-        this.clientId = "1234567890";
-        isConnected = true;
-        connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, clientId);
-        return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
+        return connect(null);
     }
 
     @Override
     public ObservableFuture<Boolean> connect(String c) throws Exception {
-        this.clientId = "1234567890";
-        isConnected = true;
-        connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, this.clientId);
-        return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
+        return connect(c, null);
     }
 
     @Override
     public ObservableFuture<Boolean> connect(String c, Map<String, Long> versions) throws Exception {
-        this.clientId = "1234567890";
-        isConnected = true;
-        connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, this.clientId);
-        return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
+        return connect(c, versions, null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String c, Map<String, Long> versions, Presence presence) throws Exception {
-        this.clientId = "1234567890";
-        isConnected = true;
-        connectionChangedEvent.notify(this, Boolean.TRUE);
-        newClientIdEvent.notify(this, this.clientId);
-        return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
+    public synchronized ObservableFuture<Boolean> connect(String c, Map<String, Long> versions, Presence presence) throws Exception {
+
+        if (connectingFuture != null) {
+            return connectingFuture;
+        }
+
+        stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
+
+        final ObservableFuture<Boolean> future = new DefaultObservableFuture<Boolean>(this);
+
+        connectingFuture = future;
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (MockSignalProvider.this) {
+                    clientId = "1234567890";
+                    isConnected = true;
+                    stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
+                    stateManager.transitionOrThrow(SignalProviderState.AUTHENTICATED);
+                    connectionChangedEvent.notify(this, Boolean.TRUE);
+                    newClientIdEvent.notify(this, clientId);
+
+                    connectingFuture = null;
+                    future.setSuccess(true);
+                }
+            }
+        });
+
+        return future;
     }
 
     @Override
     public ObservableFuture<Void> disconnect() throws Exception {
-        isConnected = false;
-        connectionChangedEvent.notifyObservers(this, Boolean.FALSE);
-        return new FakeObservableFuture<Void>(this, null);
+        return disconnect(false);
     }
 
     @Override
@@ -121,10 +169,34 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception {
-        isConnected = false;
-        connectionChangedEvent.notify(this, Boolean.FALSE);
-        return new FakeObservableFuture<Void>(this, null);
+    public synchronized ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception {
+        if (disconnectingFuture != null) {
+            return disconnectingFuture;
+        }
+
+        final ObservableFuture<Void> result = new DefaultObservableFuture<Void>(this);
+
+        if (connectingFuture != null){
+            connectingFuture.cancel();
+            connectingFuture = null;
+        }
+
+        disconnectingFuture = result;
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                stateManager.set(SignalProviderState.DISCONNECTING);
+                isConnected = false;
+                stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
+                connectionChangedEvent.notify(this, Boolean.FALSE);
+                disconnectingFuture = null;
+
+                result.setSuccess(null);
+            }
+        });
+
+        return result;
     }
 
     @Override
@@ -132,58 +204,58 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public void onSignalReceived(Observer<List<Signal>> observer) {
-        signalEvent.addObserver(observer);
+    public Observable<List<Signal>> getSignalReceivedEvent() {
+        return signalEvent;
     }
 
     @Override
-    public void onSignalCommandReceived(Observer<List<SignalCommand>> observer) {
-        signalCommandEvent.addObserver(observer);
+    public Observable<List<SignalCommand>> getSignalCommandReceivedEvent() {
+        return signalCommandEvent;
     }
 
     @Override
-    public void onConnectionChanged(Observer<Boolean> observer) {
-        connectionChangedEvent.addObserver(observer);
+    public Observable<Boolean> getConnectionChangedEvent() {
+        return connectionChangedEvent;
     }
 
     @Override
-    public void onNewClientIdReceived(Observer<String> observer) {
-        newClientIdEvent.addObserver(observer);
+    public Observable<String> getNewClientIdReceivedEvent() {
+        return newClientIdEvent;
     }
 
     @Override
-    public void onSubscriptionComplete(Observer<SubscriptionCompleteCommand> observer) {
-        subscriptionCompleteEvent.addObserver(observer);
+    public Observable<SubscriptionCompleteCommand> getSubscriptionCompleteReceivedEvent() {
+        return subscriptionCompleteEvent;
     }
 
     @Override
-    public void onPhonePresenceReceived(Observer<Boolean> observer) {
-        presenceReceivedEvent.addObserver(observer);
+    public Observable<Boolean> getPhonePresenceReceivedEvent() {
+        return presenceReceivedEvent;
     }
 
     @Override
-    public void onSignalVerificationReceived(Observer<Void> observer) {
-        signalVerificationEvent.addObserver(observer);
+    public Observable<Void> getSignalVerificationReceivedEvent() {
+        return signalVerificationEvent;
     }
 
     @Override
-    public void onVersionChanged(Observer<VersionMapEntry> observer) {
-        newVersionEvent.addObserver(observer);
+    public Observable<VersionMapEntry> getVersionChangedEvent() {
+        return newVersionEvent;
     }
 
     @Override
-    public void onPingEvent(Observer<PingEvent> observer) {
-        pingEvent.addObserver(observer);
+    public Observable<PingEvent> getPingReceivedEvent() {
+        return pingEvent;
     }
 
     @Override
-    public void onExceptionEvent(Observer<String> observer) {
-        exceptionEvent.addObserver(observer);
+    public Observable<String> getExceptionEvent() {
+        return exceptionEvent;
     }
 
     @Override
-    public void onCommandReceived(Observer<Command> observer) {
-        commandReceivedEvent.addObserver(observer);
+    public Observable<Command> getCommandReceivedEvent() {
+        return commandReceivedEvent;
     }
 
     @Override
@@ -201,10 +273,10 @@ public class MockSignalProvider implements SignalProvider {
                         boolean c = isConnected();
                         if (connected != c) {
                             future.setFailure(new Exception());
-    //                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
+                            //                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
                             return;
                         } else if (!StringUtil.equals(MockSignalProvider.this.getClientId(), clientId)) {
-    //                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
+                            //                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
                             future.setFailure(new Exception());
                             return;
                         }
@@ -222,16 +294,6 @@ public class MockSignalProvider implements SignalProvider {
         }
 
         return future;
-    }
-
-    @Override
-    public void removeOnSubscriptionCompleteObserver(Observer<SubscriptionCompleteCommand> observer) {
-        subscriptionCompleteEvent.removeObserver(observer);
-    }
-
-    @Override
-    public void removeOnConnectionChangedObserver(Observer<Boolean> observer) {
-        connectionChangedEvent.removeObserver(observer);
     }
 
     @Override
