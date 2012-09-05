@@ -9,7 +9,6 @@ import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.File;
 import java.io.InputStream;
@@ -145,12 +144,12 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
     public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
