@@ -182,10 +182,10 @@ public class NettyChannelHandlerTest {
     public void testExceptionCaught() throws Exception {
 
         ExceptionEvent event = new ExceptionEvent() {
-            public Throwable getCause() {return new Throwable("EXCEPTION");}
+            public Throwable getCause() {return new Throwable("TEST EXCEPTION");}
             public Channel getChannel() {return null;}
             public ChannelFuture getFuture() {return null;}
-            public String toString() {return "EXCEPTION";}
+            public String toString() {return "TEST EXCEPTION";}
         };
 
         Assert.assertTrue(delegate.isConnected);
@@ -194,7 +194,7 @@ public class NettyChannelHandlerTest {
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertNull(delegate.receiveEventCommand);
         Assert.assertEquals(1, delegate.exceptionCount);
-        Assert.assertEquals("EXCEPTION", delegate.exceptionString);
+        Assert.assertEquals("TEST EXCEPTION", delegate.exceptionString);
         Assert.assertFalse(delegate.isConnected);
     }
 

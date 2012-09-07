@@ -1,21 +1,20 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
-import com.zipwhip.util.StateManager;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
+import com.zipwhip.util.StateManager;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
 import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -196,7 +195,8 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
     }
 
-    public ObservableFuture<Boolean> write(Object message) {
+    public synchronized ObservableFuture<Boolean> write(Object message) {
+        // need to ensure that the CONNECTED state doesn't change.
         stateManager.ensure(ConnectionState.CONNECTED);
 
         return FutureUtil.execute(executor, null,
