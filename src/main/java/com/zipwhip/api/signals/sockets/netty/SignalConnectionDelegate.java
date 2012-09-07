@@ -57,13 +57,12 @@ public class SignalConnectionDelegate extends DestroyableBase {
         return signalConnectionBase.getConnectTimeoutSeconds();
     }
 
-    public void sendAsyncIfActive(final SerializingCommand command) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                signalConnectionBase.send(connectionHandle, command);
-            }
-        });
+    public synchronized void sendAsyncIfActive(final SerializingCommand command) {
+        if (isDestroyed() || isPaused()) {
+            return;
+        }
+
+        signalConnectionBase.send(connectionHandle, command);
     }
 
     public void receivePong(final PingPongCommand command) {

@@ -291,12 +291,7 @@ public class NettySignalConnection extends SignalConnectionBase {
         con.destroy();
     }
 
-    @Override
-    public synchronized ObservableFuture<Boolean> send(final SerializingCommand command) {
-        return send(getCurrentConnection(), command);
-    }
-
-    protected ObservableFuture<Boolean> send(ConnectionHandle connectionHandle, final Object command) {
+    protected ObservableFuture<Boolean> executeSend(ConnectionHandle connectionHandle, final Object command) {
         synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
             validateConnected();
 

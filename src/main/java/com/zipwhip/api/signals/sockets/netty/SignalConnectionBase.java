@@ -253,7 +253,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized ObservableFuture<Boolean> send(final SerializingCommand command) {
-        return send(getCurrentConnection(), command);
+        return executeSend(getCurrentConnection(), command);
     }
 
     protected abstract void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork);
@@ -291,9 +291,13 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     // TODO: actually dont crash here. It takes down the phone and isn't necessary.
     protected void runIfActive(final ConnectionHandle connectionHandle, Executor executor, final Runnable runnable) {
         if (connectionHandle == null) {
-            throw new NullPointerException("Connection cannot be null!");
+            LOGGER.error("The connectionHandle was null, so most certainly was not active. Quitting");
+            return;
         } else if (runnable == null) {
-            throw new NullPointerException("Runnable cannot be null!");
+            throw new NullPointerException("The runnable can never be null.");
+        } else if (connectionHandle != this.getCurrentConnection()) {
+            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, getCurrentConnection()));
+            return;
         }
 
         executor.execute(new Runnable() {
@@ -305,13 +309,14 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                         if (w != connectionHandle) {
                             // they are not the same instance, they are not active.
                             // Kick them out.
-                            throw new IllegalStateException("There is no currently active wrapper");
+                            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, getCurrentConnection()));
                         } else if (w.isDestroyed()) {
                             // the wrapper is currently in the state of terminating.
-                            throw new IllegalStateException("The currently active wrapper is destroyed");
+                            LOGGER.error(String.format("The connectionHandle %s was destroyed. Quitting.", w));
+                            return;
                         }
 
-                        // the wrapper is not allowed to SELF-DESTRUCT
+                        // he wrapper is not allowed to SELF-DESTRUCT
                         // so that means that we're able to safely depend on
                         // WRAPPER BEING TOUCHED LOCK to prevent destruction between
                         // the test and the run.
@@ -325,7 +330,17 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     protected abstract Executor getExecutorForConnection(ConnectionHandle connectionHandle);
 
-    protected abstract ObservableFuture<Boolean> send(ConnectionHandle connectionHandle, final Object command);
+    protected void send(final ConnectionHandle connectionHandle, final Object command) {
+        runIfActive(connectionHandle, getExecutorForConnection(connectionHandle), new Runnable(){
+
+            @Override
+            public void run() {
+                executeSend(connectionHandle, command);
+            }
+        });
+    }
+
+    protected abstract ObservableFuture<Boolean> executeSend(ConnectionHandle connectionHandle, final Object command);
 
     protected void receivePong(final ConnectionHandle connectionHandle, final PingPongCommand command) {
 

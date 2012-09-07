@@ -365,12 +365,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             return;
         }
 
-        // Ensure that the latch is in a good state for reconnect
-        if (!stateManager.transition(ConnectionState.DISCONNECTED)) {
-            LOGGER.error(String.format("Was not able to transition from %s in order to execute my disconnections.", stateManager.get()));
-            return;
-        }
-
         ((SignalProviderConnectionHandle) connectionHandle).destroy();
         // TODO: who's job is it to update this value???
         LOGGER.error(String.format("Set currentSignalProviderConnection to null! %s", Thread.currentThread()));

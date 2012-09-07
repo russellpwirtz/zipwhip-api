@@ -82,12 +82,12 @@ public class MockSignalConnection extends SignalConnectionBase {
     }
 
     @Override
-    protected ObservableFuture<Boolean> send(final ConnectionHandle connectionHandle, final Object command) {
+    protected ObservableFuture<Boolean> executeSend(final ConnectionHandle connectionHandle, final Object command) {
         sent.add((Command) command);
 
         if (command instanceof ConnectCommand) {
             // we need to send it back in
-            executor.execute(new Runnable() {
+            getExecutorForConnection(connectionHandle).execute(new Runnable() {
                 @Override
                 public void run() {
                     receiveEvent.notifyObservers(connectionHandle, new ConnectCommand("123-123-123"));

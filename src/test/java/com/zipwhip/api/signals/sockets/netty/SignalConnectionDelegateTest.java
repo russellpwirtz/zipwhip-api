@@ -178,11 +178,10 @@ public class SignalConnectionDelegateTest {
         }
 
         @Override
-        protected ObservableFuture<Boolean> send(ConnectionHandle connectionHandle, Object command) {
+        protected ObservableFuture<Boolean> executeSend(ConnectionHandle connectionHandle, Object command) {
             sent.add((Command) command);
             return new FakeObservableFuture<Boolean>(connectionHandle, Boolean.TRUE);
         }
-
 
         private class MockSignalConnectionConnectionHandle extends SignalConnectionBaseConnectionHandleBase {
 
