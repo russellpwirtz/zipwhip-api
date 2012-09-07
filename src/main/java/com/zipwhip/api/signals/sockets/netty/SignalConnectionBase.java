@@ -59,9 +59,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
      * Protected constructor for subclasses.
      */
     protected SignalConnectionBase(Executor executor) {
-        if (reconnectStrategy == null) {
-            this.setReconnectStrategy(reconnectStrategy);
-        }
 
         if (executor != null) {
             this.executor = executor;
