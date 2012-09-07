@@ -28,4 +28,7 @@ public class FutureDateUtil {
         return new Date(System.currentTimeMillis() + millis);
     }
 
+    public static boolean isExpired(Date expireDate) {
+        return (System.currentTimeMillis() > expireDate.getTime());
+    }
 }

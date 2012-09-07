@@ -393,11 +393,13 @@ public class DefaultZipwhipClientTest {
             }
         });
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
         client.getSignalProvider().getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 if (Boolean.FALSE.equals(item))
+                    latch.countDown();
+                else
                     latch.countDown();
             }
         });
@@ -413,9 +415,10 @@ public class DefaultZipwhipClientTest {
 
         assertTrue("Latch finished?", latch.await(10, TimeUnit.SECONDS));
 
-        assertFalse("SignalProvider connection should be torn down", client.getSignalProvider().isConnected());
-        assertEquals(2, connectionChangedObserver.connectionChangedEvents);
-        assertFalse(connectionChangedObserver.connected);
+        // it reconnected succesfully?
+        assertTrue("SignalProvider connection should be torn down", client.getSignalProvider().isConnected());
+        assertEquals(3, connectionChangedObserver.connectionChangedEvents);
+        assertTrue(connectionChangedObserver.connected);
     }
 
     @Test

@@ -532,17 +532,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             } else {
                 settingsStore.put(SettingsStore.Keys.CLIENT_ID, newClientId);
 
-                // lets do a signals connect!
-                Map<String, Object> params = new HashMap<String, Object>();
-                params.put("clientId", newClientId);
-                params.put("sessions", sessionKey);
-
-                Presence presence = signalProvider.getPresence();
-
-                if (presence != null) {
-                    params.put("category", presence.getCategory());
-                }
-
                 signalsConnectFuture = executeSignalsConnect(connectionHandle, newClientId, sessionKey);
             }
 
@@ -655,6 +644,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
             params.put("sessions", sessionKey);
             params.put("clientId", clientId);
+
+            if (signalProvider.getPresence() != null){
+                params.put("category", signalProvider.getPresence().getCategory());
+            }
 
             // it's important that this future is synchronous (no executor)
             final ObservableFuture<SubscriptionCompleteCommand> resultFuture = new DefaultObservableFuture<SubscriptionCompleteCommand>(this);

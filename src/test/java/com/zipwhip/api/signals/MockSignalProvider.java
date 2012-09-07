@@ -211,7 +211,19 @@ public class MockSignalProvider implements SignalProvider {
 
     @Override
     public ObservableFuture<ConnectionHandle> resetDisconnectAndConnect() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        clientId = null;
+
+        final NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(this);
+
+
+        disconnect().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                future.setNestedFuture(connect());
+            }
+        });
+
+        return future;
     }
 
     @Override

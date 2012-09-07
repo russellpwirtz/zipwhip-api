@@ -61,9 +61,9 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
             return;
         } else if (msg instanceof SignalCommand) {
             if (((SignalCommand) msg).getSignal() != null){
-                LOGGER.error("Command: " + ((SignalCommand) msg).getSignal());
+                LOGGER.debug("Command: " + ((SignalCommand) msg).getSignal());
             } else {
-                LOGGER.error("Command (message): " + ((SignalCommand)msg).toString());
+                LOGGER.debug("Command (message): " + ((SignalCommand)msg).toString());
             }
         }
 

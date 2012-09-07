@@ -70,8 +70,6 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
     @Override
     protected void onDestroy() {
-        if (channelPipelineFactory instanceof Destroyable) {
-            ((Destroyable) channelPipelineFactory).destroy();
-        }
+
     }
 }
