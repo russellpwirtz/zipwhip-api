@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
@@ -60,7 +59,17 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
     public NettySignalConnection(ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
-        super(null);
+        this(null, reconnectStrategy, channelPipelineFactory);
+    }
+
+    /**
+     * Create a new {@code NettySignalConnection}
+     *
+     * @param reconnectStrategy      The reconnect strategy to use in the case of socket disconnects.
+     * @param channelPipelineFactory The Factory to create a Netty pipeline.
+     */
+    public NettySignalConnection(Executor executor, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
+        super(executor);
 
         if (channelPipelineFactory == null) {
             channelPipelineFactory = new RawSocketIoChannelPipelineFactory();
