@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.Timer;

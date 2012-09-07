@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.util.FlexibleTimedEvictionMap;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

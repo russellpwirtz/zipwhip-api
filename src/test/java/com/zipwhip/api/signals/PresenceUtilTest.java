@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.*;
 import junit.framework.Assert;

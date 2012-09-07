@@ -11,8 +11,6 @@ import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.RawSocketChannelHandler;
-
 /**
  * @author jdinsel
  *

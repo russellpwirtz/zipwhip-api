@@ -6,7 +6,6 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -24,6 +23,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.*;
 
@@ -35,13 +35,13 @@ public class SocketSignalProviderTest {
     private static final Logger LOG = Logger.getLogger(SocketSignalProviderTest.class);
 
     private SignalProvider provider;
-    private MockSignalConnection connection;
+    private MockSignalConnection signalConnection;
     private Presence presence;
 
     @Before
     public void setUp() throws Exception {
-        connection = new MockSignalConnection();
-        provider = new SocketSignalProvider(connection, SimpleExecutor.getInstance(), null, null);
+        signalConnection = new MockSignalConnection();
+        provider = new SocketSignalProvider(signalConnection, null, null);
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
@@ -50,22 +50,22 @@ public class SocketSignalProviderTest {
     @Test
     public void testDisconnectConnectDisconnect() throws Exception {
 
-        ObservableFuture<Boolean> connectFuture1 = provider.connect();
+        ObservableFuture<ConnectionHandle> connectFuture1 = provider.connect();
         connectFuture1.await();
-        assertTrue(connectFuture1.get());
+        assertNotNull(connectFuture1.get());
         assertTrue(connectFuture1.isSuccess());
 
-        ObservableFuture<Void> disconnectFuture1 = provider.disconnect();
+        ObservableFuture<ConnectionHandle> disconnectFuture1 = provider.disconnect();
         disconnectFuture1.await();
         assertTrue(disconnectFuture1.isSuccess());
 
-        ObservableFuture<Boolean> connectFuture2 = provider.connect();
+        ObservableFuture<ConnectionHandle> connectFuture2 = provider.connect();
         assertFalse(connectFuture1 == connectFuture2);
         connectFuture2.await();
-        assertTrue(connectFuture2.get());
+        assertNotNull(connectFuture2.get());
         assertTrue(connectFuture2.isSuccess());
 
-        ObservableFuture<Void> disconnectFuture2 = provider.disconnect();
+        ObservableFuture<ConnectionHandle> disconnectFuture2 = provider.disconnect();
         assertFalse(disconnectFuture1 == disconnectFuture2);
         disconnectFuture2.await();
         assertTrue(disconnectFuture2.isSuccess());
@@ -101,7 +101,7 @@ public class SocketSignalProviderTest {
 
         assertTrue("Not connected even though we just connected!", provider.isConnected());
         assertTrue("Not connected even though we just connected!", provider.isAuthenticated());
-        assertTrue(connection.isConnected());
+        assertTrue(signalConnection.isConnected());
 
         final CountDownLatch latch = new CountDownLatch(1);
         //add our handler
@@ -115,27 +115,26 @@ public class SocketSignalProviderTest {
         });
 
         // do a disconnect.
-        Future<Void> task = provider.disconnect();
+        Future<ConnectionHandle> task = provider.disconnect();
         task.get();
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
 
         assertFalse(provider.isConnected());
-        assertFalse("Connection should be disconnected too!", connection.isConnected());
+        assertFalse("Connection should be disconnected too!", signalConnection.isConnected());
     }
 
     private void connect() throws Exception, InterruptedException, ExecutionException {
-        Future<Boolean> future = provider.connect(null, null, presence);
+        Future<ConnectionHandle> future = provider.connect(null, null, presence);
 
         assertNotNull(future);
-        assertTrue(future.get());
+        assertNotNull(future.get());
     }
 
     @Test
     public void testOnSignalReceived() throws Exception {
 
-        Boolean signalReceived = false;
-        Boolean signalCommandReceived = false;
+        provider.connect().await();
 
         SignalObserver signalObserver = new SignalObserver();
         provider.getSignalReceivedEvent().addObserver(signalObserver);
@@ -143,7 +142,7 @@ public class SocketSignalProviderTest {
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
         provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
-        connection.send(null);
+        signalConnection.send(null);
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
         VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
@@ -152,7 +151,7 @@ public class SocketSignalProviderTest {
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
 
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
 
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
@@ -161,13 +160,15 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnSignalReceivedOutOfOrder() throws Exception {
 
+        provider.connect().await();
+
         SignalObserver signalObserver = new SignalObserver();
         provider.getSignalReceivedEvent().addObserver(signalObserver);
 
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
         provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
-        connection.send(null);
+        signalConnection.send(null);
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
         VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
@@ -176,7 +177,7 @@ public class SocketSignalProviderTest {
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
 
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
 
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
@@ -189,7 +190,7 @@ public class SocketSignalProviderTest {
         signalCommand.setVersion(versionMapEntry);
         signalObserver.signalReceived = false;
         signalCommandObserver.signalCommandReceived = false;
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
         assertEquals(1, signalObserver.signalReceivedCount);
@@ -201,7 +202,7 @@ public class SocketSignalProviderTest {
         signalCommand.setVersion(versionMapEntry);
         signalObserver.signalReceived = false;
         signalCommandObserver.signalCommandReceived = false;
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
         assertEquals(3, signalObserver.signalReceivedCount);
@@ -210,6 +211,8 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnSignalReceivedHoleTimeout() throws Exception {
+
+        provider.connect().await();
 
         SignalObserver signalObserver = new SignalObserver();
         provider.getSignalReceivedEvent().addObserver(signalObserver);
@@ -220,7 +223,7 @@ public class SocketSignalProviderTest {
         VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
         provider.getVersionChangedEvent().addObserver(versionChangedObserver);
 
-        connection.send(null);
+        signalConnection.send(null);
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
         VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
@@ -229,7 +232,7 @@ public class SocketSignalProviderTest {
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
 
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
 
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
@@ -242,7 +245,7 @@ public class SocketSignalProviderTest {
         signalCommand.setVersion(versionMapEntry);
         signalObserver.signalReceived = false;
         signalCommandObserver.signalCommandReceived = false;
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
         assertEquals(1, signalObserver.signalReceivedCount);
@@ -254,7 +257,7 @@ public class SocketSignalProviderTest {
         signalCommand.setVersion(versionMapEntry);
         signalObserver.signalReceived = false;
         signalCommandObserver.signalCommandReceived = false;
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
         assertEquals(1, signalObserver.signalReceivedCount);
@@ -275,6 +278,8 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnMuchHigherVersionReceived() throws Exception {
 
+        provider.connect().await();
+
         SignalObserver signalObserver = new SignalObserver();
         provider.getSignalReceivedEvent().addObserver(signalObserver);
 
@@ -284,7 +289,7 @@ public class SocketSignalProviderTest {
         VersionChangedObserver versionChangedObserver = new VersionChangedObserver();
         provider.getVersionChangedEvent().addObserver(versionChangedObserver);
 
-        connection.send(null);
+        signalConnection.send(null);
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
         VersionMapEntry versionMapEntry = new VersionMapEntry("key", 200001l);
@@ -293,7 +298,7 @@ public class SocketSignalProviderTest {
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
 
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
 
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
@@ -306,7 +311,7 @@ public class SocketSignalProviderTest {
         signalCommand.setVersion(versionMapEntry);
         signalObserver.signalReceived = false;
         signalCommandObserver.signalCommandReceived = false;
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
         assertEquals(1, signalObserver.signalReceivedCount);
@@ -325,6 +330,8 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnMuchHigherVersionReceivedAfterInit() throws Exception {
+
+        provider.connect().await();
 
         Map<String, Long> versions = new HashMap<String, Long>();
         versions.put("key", 200001l);
@@ -346,7 +353,7 @@ public class SocketSignalProviderTest {
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
 
-        connection.mockReceive(signalCommand);
+        signalConnection.mockReceive(signalCommand);
 
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
@@ -373,7 +380,7 @@ public class SocketSignalProviderTest {
 
         connect();
 
-        Future<Void> task = provider.disconnect();
+        Future<ConnectionHandle> task = provider.disconnect();
         task.get();
     }
 
@@ -392,7 +399,7 @@ public class SocketSignalProviderTest {
         // Simulate a reconnect so that we can witness the change
         {
             String newClientId = "4321-8765-4321-8765";
-            connection.mockReceive(new ConnectCommand(newClientId, null));
+            signalConnection.mockReceive(new ConnectCommand(newClientId, null));
 
             assertNotSame(originalClientId, provider.getClientId());
             assertEquals(newClientId, provider.getClientId());
@@ -408,14 +415,14 @@ public class SocketSignalProviderTest {
 
         LOG.debug("Sending a SubscriptionCompleteCommand from the server to our client");
 
-        connection.getSent().clear();
-        assertTrue(connection.getSent().isEmpty());
+        signalConnection.getSent().clear();
+        assertTrue(signalConnection.getSent().isEmpty());
 
         List<Object> channels = new ArrayList<Object>();
         SubscriptionCompleteCommand subscriptionCompleteCommand = new SubscriptionCompleteCommand(null, channels);
-        connection.mockReceive(subscriptionCompleteCommand);
+        signalConnection.mockReceive(subscriptionCompleteCommand);
 
-        List<Command> sentCommand = connection.getSent();
+        List<Command> sentCommand = signalConnection.getSent();
         assertEquals(Integer.valueOf(1), Integer.valueOf(sentCommand.size()));
         PresenceCommand presenceCommand = (PresenceCommand) sentCommand.get(0);
         assertNotNull(presenceCommand);
@@ -434,13 +441,13 @@ public class SocketSignalProviderTest {
         {
             LOG.debug("Sending a null presence command from the server to our client");
 
-            connection.getSent().clear();
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            assertTrue(signalConnection.getSent().isEmpty());
 
             PresenceCommand presenceCommand = new PresenceCommand(null);
-            connection.mockReceive(presenceCommand);
+            signalConnection.mockReceive(presenceCommand);
 
-            List<Command> sentCommand = connection.getSent();
+            List<Command> sentCommand = signalConnection.getSent();
             assertEquals(Integer.valueOf(1), Integer.valueOf(sentCommand.size()));
             presenceCommand = (PresenceCommand) sentCommand.get(0);
             assertNotNull(presenceCommand);
@@ -454,14 +461,14 @@ public class SocketSignalProviderTest {
         {
             LOG.debug("Sending an empty presence command from the server to our client");
 
-            connection.getSent().clear();
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            assertTrue(signalConnection.getSent().isEmpty());
 
             List<Presence> presenceList = new ArrayList<Presence>();
             PresenceCommand presenceCommand = new PresenceCommand(presenceList);
-            connection.mockReceive(presenceCommand);
+            signalConnection.mockReceive(presenceCommand);
 
-            List<Command> sentCommand = connection.getSent();
+            List<Command> sentCommand = signalConnection.getSent();
             assertEquals(Integer.valueOf(1), Integer.valueOf(sentCommand.size()));
             presenceCommand = (PresenceCommand) sentCommand.get(0);
             assertNotNull(presenceCommand);
@@ -476,17 +483,17 @@ public class SocketSignalProviderTest {
         {
             LOG.debug("Sending a presence command with other client's presence from the server to our client");
 
-            connection.getSent().clear();
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            assertTrue(signalConnection.getSent().isEmpty());
 
             List<Presence> presenceList = new ArrayList<Presence>();
             Presence peerPresence = new Presence();
             peerPresence.setAddress(new ClientAddress("peerClientId"));
             presenceList.add(peerPresence);
             PresenceCommand presenceCommand = new PresenceCommand(presenceList);
-            connection.mockReceive(presenceCommand);
+            signalConnection.mockReceive(presenceCommand);
 
-            List<Command> sentCommand = connection.getSent();
+            List<Command> sentCommand = signalConnection.getSent();
             assertEquals(Integer.valueOf(1), Integer.valueOf(sentCommand.size()));
             presenceCommand = (PresenceCommand) sentCommand.get(0);
             assertNotNull(presenceCommand);
@@ -500,17 +507,17 @@ public class SocketSignalProviderTest {
         {
             LOG.debug("Sending a presence command with other client's presence from the server to our client");
 
-            connection.getSent().clear();
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            assertTrue(signalConnection.getSent().isEmpty());
 
             List<Presence> presenceList = new ArrayList<Presence>();
             Presence peerPresence = new Presence();
             peerPresence.setAddress(new ClientAddress(provider.getClientId()));
             presenceList.add(peerPresence);
             PresenceCommand presenceCommand = new PresenceCommand(presenceList);
-            connection.mockReceive(presenceCommand);
+            signalConnection.mockReceive(presenceCommand);
 
-            List<Command> sentCommand = connection.getSent();
+            List<Command> sentCommand = signalConnection.getSent();
             assertEquals(Integer.valueOf(0), Integer.valueOf(sentCommand.size()));
         }
     }
@@ -521,13 +528,13 @@ public class SocketSignalProviderTest {
 
         LOG.debug("Sending a SignalVerificationCommand from the server to our client");
 
-        connection.getSent().clear();
-        assertTrue(connection.getSent().isEmpty());
+        signalConnection.getSent().clear();
+        assertTrue(signalConnection.getSent().isEmpty());
 
         SignalVerificationCommand signalVerificationCommand = new SignalVerificationCommand();
-        connection.mockReceive(signalVerificationCommand);
+        signalConnection.mockReceive(signalVerificationCommand);
 
-        List<Command> sentCommand = connection.getSent();
+        List<Command> sentCommand = signalConnection.getSent();
         assertEquals(Integer.valueOf(0), Integer.valueOf(sentCommand.size()));
     }
 
@@ -547,10 +554,10 @@ public class SocketSignalProviderTest {
             VersionMapEntry versionMapEntry = null;
             signalCommand.setVersion(versionMapEntry);
 
-            connection.getSent().clear();
-            connection.mockReceive(signalCommand);
+            signalConnection.getSent().clear();
+            signalConnection.mockReceive(signalCommand);
             assertTrue(versions.isEmpty());
-            assertTrue(connection.getSent().isEmpty());
+            assertTrue(signalConnection.getSent().isEmpty());
         }
 
         // Test key is < 0
@@ -559,10 +566,10 @@ public class SocketSignalProviderTest {
             VersionMapEntry versionMapEntry = new VersionMapEntry("key1", Long.valueOf(-1));
             signalCommand.setVersion(versionMapEntry);
 
-            connection.getSent().clear();
-            connection.mockReceive(signalCommand);
+            signalConnection.getSent().clear();
+            signalConnection.mockReceive(signalCommand);
             assertTrue(versions.isEmpty());
-            assertTrue(connection.getSent().isEmpty());
+            assertTrue(signalConnection.getSent().isEmpty());
         }
         // Test key is = 0
         {
@@ -570,9 +577,9 @@ public class SocketSignalProviderTest {
             VersionMapEntry versionMapEntry = new VersionMapEntry("key1", Long.valueOf(0));
             signalCommand.setVersion(versionMapEntry);
 
-            connection.getSent().clear();
-            connection.mockReceive(signalCommand);
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            signalConnection.mockReceive(signalCommand);
+            assertTrue(signalConnection.getSent().isEmpty());
             assertEquals(Integer.valueOf(0), versions.size());
             assertNull(versions.get("key1"));
         }
@@ -582,9 +589,9 @@ public class SocketSignalProviderTest {
             VersionMapEntry versionMapEntry = new VersionMapEntry("key1", Long.valueOf(1));
             signalCommand.setVersion(versionMapEntry);
 
-            connection.getSent().clear();
-            connection.mockReceive(signalCommand);
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            signalConnection.mockReceive(signalCommand);
+            assertTrue(signalConnection.getSent().isEmpty());
             assertEquals(Integer.valueOf(1), versions.size());
             assertEquals(Long.valueOf(1), versions.get("key1"));
         }
@@ -595,9 +602,9 @@ public class SocketSignalProviderTest {
             VersionMapEntry versionMapEntry = new VersionMapEntry("key2", Long.valueOf(11));
             signalCommand.setVersion(versionMapEntry);
 
-            connection.getSent().clear();
-            connection.mockReceive(signalCommand);
-            assertTrue(connection.getSent().isEmpty());
+            signalConnection.getSent().clear();
+            signalConnection.mockReceive(signalCommand);
+            assertTrue(signalConnection.getSent().isEmpty());
             assertEquals(Integer.valueOf(2), versions.size());
             assertEquals(Long.valueOf(1), versions.get("key1"));
             assertEquals(Long.valueOf(11), versions.get("key2"));

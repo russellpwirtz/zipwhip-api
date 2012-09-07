@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.signals.presence.Presence;
 

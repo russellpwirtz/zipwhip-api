@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.signals.sockets.netty.ChannelState;
+import com.zipwhip.util.StateManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -14,61 +14,61 @@ import static junit.framework.Assert.*;
  */
 public class StateManagerTest {
 
-    StateManager<ChannelState> manager;
+    StateManager<ConnectionState> manager;
 
     @Before
     public void setUp() throws Exception {
-        manager = new StateManager<ChannelState>();
+        manager = new StateManager<ConnectionState>();
     }
 
     @Test
     public void testAdd() throws Exception {
         assertNull(manager.get());
-        manager.add(ChannelState.NONE, ChannelState.CONNECTED);
+        manager.add(ConnectionState.NONE, ConnectionState.CONNECTED);
         assertNull(manager.get());
-        manager.set(ChannelState.NONE);
+        manager.set(ConnectionState.NONE);
 
-        assertFalse(manager.transition(ChannelState.DISCONNECTING));
-        assertTrue(manager.transition(ChannelState.CONNECTED));
+        assertFalse(manager.transition(ConnectionState.DISCONNECTING));
+        assertTrue(manager.transition(ConnectionState.CONNECTED));
     }
 
     @Test
     public void testSet() throws Exception {
-        manager.set(ChannelState.NONE);
-        assertEquals(ChannelState.NONE, manager.get());
+        manager.set(ConnectionState.NONE);
+        assertEquals(ConnectionState.NONE, manager.get());
     }
 
     @Test
     public void testTransition() throws Exception {
-        manager.add(ChannelState.NONE, ChannelState.CONNECTED);
-        manager.add(ChannelState.CONNECTED, ChannelState.DISCONNECTED);
-        manager.set(ChannelState.NONE);
-        assertEquals(ChannelState.NONE, manager.get());
+        manager.add(ConnectionState.NONE, ConnectionState.CONNECTED);
+        manager.add(ConnectionState.CONNECTED, ConnectionState.DISCONNECTED);
+        manager.set(ConnectionState.NONE);
+        assertEquals(ConnectionState.NONE, manager.get());
 
-        assertFalse(manager.transition(ChannelState.CONNECTING));
-        assertEquals(ChannelState.NONE, manager.get());
+        assertFalse(manager.transition(ConnectionState.CONNECTING));
+        assertEquals(ConnectionState.NONE, manager.get());
 
-        assertTrue(manager.transition(ChannelState.CONNECTED));
-        assertEquals(ChannelState.CONNECTED, manager.get());
+        assertTrue(manager.transition(ConnectionState.CONNECTED));
+        assertEquals(ConnectionState.CONNECTED, manager.get());
     }
 
     @Test
     public void testTransitionOrThrow() throws Exception {
-        manager.add(ChannelState.NONE, ChannelState.CONNECTED);
-        manager.add(ChannelState.CONNECTED, ChannelState.DISCONNECTED);
-        manager.set(ChannelState.NONE);
-        assertEquals(ChannelState.NONE, manager.get());
+        manager.add(ConnectionState.NONE, ConnectionState.CONNECTED);
+        manager.add(ConnectionState.CONNECTED, ConnectionState.DISCONNECTED);
+        manager.set(ConnectionState.NONE);
+        assertEquals(ConnectionState.NONE, manager.get());
 
-        manager.transitionOrThrow(ChannelState.CONNECTED);
-        assertEquals(ChannelState.CONNECTED, manager.get());
+        manager.transitionOrThrow(ConnectionState.CONNECTED);
+        assertEquals(ConnectionState.CONNECTED, manager.get());
 
         boolean threw = false;
 
         try {
-            manager.transitionOrThrow(ChannelState.CONNECTING);
+            manager.transitionOrThrow(ConnectionState.CONNECTING);
         } catch (Exception e) {
             threw = true;
-            assertEquals(ChannelState.CONNECTED, manager.get());
+            assertEquals(ConnectionState.CONNECTED, manager.get());
         }
 
         assertTrue(threw);
@@ -77,16 +77,16 @@ public class StateManagerTest {
     @Test
     public void testEnsure() throws Exception {
 
-        manager.set(ChannelState.DISCONNECTED);
-        assertEquals(ChannelState.DISCONNECTED, manager.get());
+        manager.set(ConnectionState.DISCONNECTED);
+        assertEquals(ConnectionState.DISCONNECTED, manager.get());
 
         boolean threw = false;
 
         try {
-            manager.ensure(ChannelState.NONE);
+            manager.ensure(ConnectionState.NONE);
         } catch (Exception e) {
             threw = true;
-            assertEquals(ChannelState.DISCONNECTED, manager.get());
+            assertEquals(ConnectionState.DISCONNECTED, manager.get());
         }
 
         assertTrue(threw);

@@ -4,32 +4,28 @@ import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
-import com.zipwhip.concurrent.FutureUtil;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.DebuggingExecutor;
-import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
 import com.zipwhip.important.schedulers.HashedWheelScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.util.Asserts;
-import com.zipwhip.util.CollectionUtil;
-import com.zipwhip.util.FutureDateUtil;
-import com.zipwhip.util.StringUtil;
+import com.zipwhip.util.*;
 import org.apache.log4j.Logger;
 
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/1/11 Time: 4:30 PM
@@ -42,25 +38,27 @@ import java.util.concurrent.*;
 public class SocketSignalProvider extends CascadingDestroyableBase implements SignalProvider {
 
     private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
+    private static AtomicLong ID = new AtomicLong();
 
-    private final ObservableHelper<PingEvent> pingReceivedEvent;
-    private final ObservableHelper<List<Signal>> signalReceivedEvent;
-    private final ObservableHelper<List<SignalCommand>> signalCommandReceivedEvent;
-    private final ObservableHelper<Void> signalVerificationReceivedEvent;
-    private final ObservableHelper<Command> commandReceivedEvent;
-    private final ObservableHelper<Boolean> presenceReceivedEvent;
-    private final ObservableHelper<String> newClientIdReceivedEvent;
+    private final ObservableHelper<PingEvent> pingReceivedEvent = new ObservableHelper<PingEvent>("pingReceivedEvent");
+    private final ObservableHelper<List<Signal>> signalReceivedEvent = new ObservableHelper<List<Signal>>("signalReceivedEvent");
+    private final ObservableHelper<List<SignalCommand>> signalCommandReceivedEvent = new ObservableHelper<List<SignalCommand>>("signalCommandReceivedEvent");
+    private final ObservableHelper<Void> signalVerificationReceivedEvent = new ObservableHelper<Void>("signalVerificationReceivedEvent");
+    private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>("commandReceivedEvent");
+    private final ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>("presenceReceivedEvent");
+    private final ObservableHelper<String> newClientIdReceivedEvent = new ObservableHelper<String>("newClientIdReceivedEvent");
 
-    private final ObservableHelper<Boolean> connectionChangedEvent;
-    private final ObservableHelper<String> exceptionEvent;
-    private final ObservableHelper<VersionMapEntry> newVersionEvent;
-    private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteReceivedEvent;
+    private final ObservableHelper<Boolean> connectionChangedEvent = new ObservableHelper<Boolean>("connectionChangedEvent");
+    private final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>("exceptionEvent");
+    private final ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>("newVersionEvent");
+    private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteReceivedEvent = new ObservableHelper<SubscriptionCompleteCommand>("subscriptionCompleteReceivedEvent");
 
-    protected final SignalConnection connection;
+    // this is how we interact with the underlying signal server.
+    protected final SignalConnection signalConnection;
+
     protected final Scheduler scheduler;
-    protected final Executor executor;
 
-    private final StateManager<SignalProviderState> stateManager;
+    private final StateManager<ConnectionState> stateManager;
 
     private ImportantTaskExecutor importantTaskExecutor;
 
@@ -70,115 +68,25 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     private Presence presence;
     private Map<String, Long> versions = new HashMap<String, Long>();
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
-    private ObservableFuture<Boolean> connectingFuture;
+
+    private ObservableFuture<ConnectionHandle> connectingFuture;
+    private ObservableFuture<ConnectionHandle> disconnectFuture;
+    private SignalProviderConnectionHandle currentSignalProviderConnection;
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
     }
 
     public SocketSignalProvider(SignalConnection conn) {
-        this(conn, null, null, null);
+        this(conn, null, null);
     }
 
-    public SocketSignalProvider(SignalConnection conn, Executor executor, ImportantTaskExecutor importantTaskExecutor, Scheduler scheduler) {
+    public SocketSignalProvider(SignalConnection conn, ImportantTaskExecutor importantTaskExecutor, Scheduler scheduler) {
         if (conn == null) {
-            this.connection = new NettySignalConnection();
+            this.signalConnection = new NettySignalConnection();
         } else {
-            this.connection = conn;
+            this.signalConnection = conn;
         }
-
-        if (executor == null) {
-//            this.executor = SimpleExecutor.getInstance();
-            this.executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("SocketSignalProvider-"))) {
-                @Override
-                public synchronized void execute(Runnable command) {
-                    super.execute(command);    //To change body of overridden methods use File | Settings | File Templates.
-                }
-
-                @Override
-                public String toString() {
-                    return "[executor:SocketSignalProvider running:" + currentItem + " queue:" + runnableSet + "]";
-                }
-            };
-
-            // we created it, so we destroy it.
-            this.link(new DestroyableBase() {
-                @Override
-                public void onDestroy() {
-                    ((ExecutorService)((DebuggingExecutor) SocketSignalProvider.this.executor).executor).shutdownNow();
-                }
-            });
-        } else {
-            this.executor = executor;
-        }
-
-
-        connectionChangedEvent = new ObservableHelper<Boolean>(executor) {
-            @Override
-            public String toString() {
-                return "connectionChangedEvent/" + super.toString();
-            }
-        };
-        pingReceivedEvent = new ObservableHelper<PingEvent>(executor) {
-            @Override
-            public String toString() {
-                return "pingReceivedEvent/" + super.toString();
-            }
-        };
-        newClientIdReceivedEvent = new ObservableHelper<String>(executor) {
-            @Override
-            public String toString() {
-                return "newClientIdReceivedEvent/" + super.toString();
-            }
-        };
-        signalReceivedEvent = new ObservableHelper<List<Signal>>(executor) {
-            @Override
-            public String toString() {
-                return "signalReceivedEvent/" + super.toString();
-            }
-        };
-        signalCommandReceivedEvent = new ObservableHelper<List<SignalCommand>>(executor) {
-            @Override
-            public String toString() {
-                return "signalCommandReceivedEvent/" + super.toString();
-            }
-        };
-        exceptionEvent = new ObservableHelper<String>(executor) {
-            @Override
-            public String toString() {
-                return "exceptionEvent/" + super.toString();
-            }
-        };
-        signalVerificationReceivedEvent = new ObservableHelper<Void>(executor) {
-            @Override
-            public String toString() {
-                return "signalVerificationReceivedEvent/" + super.toString();
-            }
-        };
-        newVersionEvent = new ObservableHelper<VersionMapEntry>(executor) {
-            @Override
-            public String toString() {
-                return "newVersionEvent/" + super.toString();
-            }
-        };
-        presenceReceivedEvent = new ObservableHelper<Boolean>(executor) {
-            @Override
-            public String toString() {
-                return "presenceReceivedEvent/" + super.toString();
-            }
-        };
-        subscriptionCompleteReceivedEvent = new ObservableHelper<SubscriptionCompleteCommand>(executor) {
-            @Override
-            public String toString() {
-                return "subscriptionCompleteReceivedEvent/" + super.toString();
-            }
-        };
-        commandReceivedEvent = new ObservableHelper<Command>(executor) {
-            @Override
-            public String toString() {
-                return "commandReceivedEvent/" + super.toString();
-            }
-        };
 
         if (importantTaskExecutor == null) {
             importantTaskExecutor = new ImportantTaskExecutor();
@@ -191,14 +99,16 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         this.scheduler = scheduler;
-        scheduler.onScheduleComplete(new TransitionThreadObserver<String>(executor, this.onScheduleComplete));
+
+        // TODO: we need to double check that the connection state hasn't changed while waiting.
+        scheduler.onScheduleComplete(this.onScheduleComplete);
 
         this.setImportantTaskExecutor(importantTaskExecutor);
-        this.link(connection);
+        this.link(signalConnection);
 
-        StateManager<SignalProviderState> m;
+        StateManager<ConnectionState> m;
         try {
-            m = SignalProviderStateManagerFactory.getInstance().create();
+            m = ConnectionStateManagerFactory.getInstance().create();
         } catch (Exception e) {
             m = null;
         }
@@ -223,21 +133,59 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         this.link(signalCommandReceivedEvent);
         this.link(commandReceivedEvent);
 
-        this.connection.onMessageReceived(new TransitionThreadObserver<Command>(null, onMessageReceived));
-        this.connection.onConnect(new TransitionThreadObserver<Boolean>(executor, sendConnectCommandIfConnected));
+        // TODO: do we really have to do this? Isn't the "importantTaskExecutor" responsible for this?
+        this.signalConnection.getConnectEvent().addObserver(sendConnectCommandIfConnectedObserver);
 
         /**
          * Forward disconnect events up to clients
          */
-        this.connection.onDisconnect(new TransitionThreadObserver<Boolean>(executor, notifyObserversIfConnectionChangedOnDisconnectObserver));
-        this.connection.onPingEvent(pingReceivedEvent);
-        this.connection.onExceptionCaught(exceptionEvent);
+        this.signalConnection.getDisconnectEvent().addObserver(notifyObserversIfConnectionChangedOnDisconnectObserver);
+        // this event will only fire if the current connection 'isActive'
+        this.signalConnection.getCommandReceivedEvent().addObserver(new ActiveConnectionObserverAdapter<Command>(this, onMessageReceived));
+        // the ActiveConnectionObserverAdapter will filter out old noise and adapt over the "sender" to the currentConnection if/only if they are active.
+        this.signalConnection.getExceptionEvent().addObserver(new ActiveConnectionObserverAdapter<String>(this, exceptionEvent));
 
         /**
          * Observe our own version changed events so we can stay in sync internally
          */
         newVersionEvent.addObserver(updateVersionsOnVersionChanged);
         newClientIdReceivedEvent.addObserver(updateStateOnNewClientIdReceived);
+    }
+
+    private static class ActiveConnectionObserverAdapter<T> implements Observer<T> {
+
+        private final Observer<T> observer;
+        private final SocketSignalProvider signalProvider;
+
+        private ActiveConnectionObserverAdapter(SocketSignalProvider signalProvider, Observer<T> observer) {
+            this.observer = observer;
+            this.signalProvider = signalProvider;
+        }
+
+        @Override
+        public void notify(Object sender, T data) {
+            ConnectionHandle connectionHandle = (ConnectionHandle) sender;
+
+            synchronized (signalProvider) {
+                SignalProviderConnectionHandle signalProviderConnection = (SignalProviderConnectionHandle) signalProvider.getCurrentConnection();
+                if (signalProviderConnection == null) {
+                    LOGGER.error("The signalProviderConnection is null, so it must be inactive. Quitting.");
+                    return;
+                }
+
+                synchronized (signalProviderConnection) {
+                    if (signalProviderConnection.isDestroyed()) {
+                        LOGGER.error("The signalProviderConnection is not active. Quitting.");
+                        return;
+                    } else if (!signalProviderConnection.isFor(connectionHandle)) {
+                        LOGGER.error("The signalProviderConnection is not for the current connection. Quitting.");
+                        return;
+                    }
+
+                    observer.notify(signalProviderConnection, data);
+                }
+            }
+        }
     }
 
     private final Observer<Command> onMessageReceived = new Observer<Command>() {
@@ -251,8 +199,9 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
          */
         @Override
         public void notify(Object sender, Command command) {
+            SignalProviderConnectionHandle connection = (SignalProviderConnectionHandle) sender;
 
-//            LOGGER.debug("on message received: /signals/command/received/SIGNAL" + command);
+            Asserts.assertTrue(!connection.isDestroyed(), "The connection wasn't active?!?");
 
             // Check if this command has a valid version number associated with it...
             if (command.getVersion() != null && command.getVersion().getValue() > 0) {
@@ -287,11 +236,11 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 switch (result) {
                     case EXPECTED_SEQUENCE:
                         LOGGER.debug("EXPECTED_SEQUENCE");
-                        handleCommands(commandResults);
+                        handleCommands(connection, commandResults);
                         break;
                     case HOLE_FILLED:
                         LOGGER.debug("HOLE_FILLED");
-                        handleCommands(commandResults);
+                        handleCommands(connection, commandResults);
                         break;
                     case DUPLICATE_SEQUENCE:
                         LOGGER.warn("DUPLICATE_SEQUENCE");
@@ -301,14 +250,14 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                         break;
                     case NEGATIVE_HOLE:
                         LOGGER.debug("NEGATIVE_HOLE");
-                        handleCommands(commandResults);
+                        handleCommands(connection, commandResults);
                         break;
                     default:
                         LOGGER.warn("UNKNOWN_RESULT");
                 }
             } else {
                 // Non versioned command, not windowed
-                handleCommand(command);
+                handleCommand(connection, command);
             }
         }
 
@@ -318,49 +267,61 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private final Observer<Boolean> sendConnectCommandIfConnected = new Observer<Boolean>() {
-        /*
-        * The NettySignalConnection will call this method when a TCP socket connection is attempted.
-        */
+    private final Observer<ConnectionHandle> sendConnectCommandIfConnectedObserver = new Observer<ConnectionHandle>() {
+
+        /**
+         * The NettySignalConnection will call this method when a TCP socket connection is attempted.
+         */
         @Override
-        public void notify(Object sender, Boolean connected) {
+        public void notify(Object sender, final ConnectionHandle socketConnectionHandle) {
             synchronized (SocketSignalProvider.this) {
-                synchronized (connection) {
-                    /*
-                    * If we have a successful TCP connection then
-                    * check if we need to send the connect command.
-                    */
-                    if (connected) {
-                        if (isConnecting()) {
-                            return;
-                        }
+                if (isConnecting()) {
+                    return;
+                }
 
-                        final long connectionId = connection.getConnectionId();
+                // sync so the .isActive() state can't change.
+                synchronized (SocketSignalProvider.this.signalConnection) {
+                    synchronized (socketConnectionHandle) {
+                        boolean connected = !socketConnectionHandle.isDestroyed();
 
-                        stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
+                        /**
+                         * If we have a successful TCP connection then check if we need to send the connect command.
+                         */
+                        if (connected) {
+                            stateManager.transitionOrThrow(ConnectionState.CONNECTED);
 
-                        ObservableFuture<ConnectCommand> future = writeConnectCommand();
+                            final SignalProviderConnectionHandle wrappedConnection = (SignalProviderConnectionHandle) getCurrentConnection();
 
-                        future.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
-                            @Override
-                            public void notify(Object sender, final ObservableFuture<ConnectCommand> item) {
-                                // do a runIfActive because we are in a different thread.
-                                runIfActive(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        if (connectionId != connection.getConnectionId()) {
-                                            LOGGER.warn("The connectionId's changed! Not going to change state.");
-                                        } else if (item.isSuccess()) {
-                                            stateManager.transitionOrThrow(SignalProviderState.AUTHENTICATED);
-                                            // success!
-                                            notifyConnected(true);
+                            Asserts.assertTrue(wrappedConnection.isFor(socketConnectionHandle), "The connections must agree!");
+
+                            ObservableFuture<ConnectCommand> connectCommandFuture = writeConnectCommandAsyncWithTimeoutBakedIn(socketConnectionHandle);
+
+                            connectCommandFuture.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
+                                @Override
+                                public void notify(Object sender, final ObservableFuture<ConnectCommand> future) {
+
+                                    if (future.isSuccess()) {
+                                        if (!socketConnectionHandle.isDestroyed()) {
+                                            // great, we're still active and we got a success from the future
+                                            // transition our state.
+                                            stateManager.transitionOrThrow(ConnectionState.AUTHENTICATED);
+                                            notifyConnected(wrappedConnection, true);
+                                        } else {
+                                            // the socketConnection isn't active. Someone else torn it down or we're late to the game.
+                                            // just quit.
                                         }
+                                    } else {
+                                        // we might be in a timeout scenario?
+                                        // who's job is it to kill the connection?
+                                        // we'll kill it. This shoud cause a reconnect because we passed in true
+                                        // the reconnect strategy should kick in?
+                                        socketConnectionHandle.disconnect(true);
                                     }
-                                });
-                            }
-                        });
-                    } else {
-                        // not connected. That's already handled via a different observer.
+                                }
+                            });
+                        } else {
+                            // not connected. That's already handled via a different observer. TODO: which one?
+                        }
                     }
                 }
             }
@@ -368,22 +329,26 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         @Override
         public String toString() {
-            return "sendConnectCommandIfConnected";
+            return "sendConnectCommandIfConnectedObserver";
         }
     };
 
-    private final Observer<Boolean> notifyObserversIfConnectionChangedOnDisconnectObserver = new Observer<Boolean>() {
+    private final Observer<ConnectionHandle> notifyObserversIfConnectionChangedOnDisconnectObserver = new Observer<ConnectionHandle>() {
         @Override
-        public void notify(Object sender, Boolean causedByNetwork) {
-            if (stateManager.get() == SignalProviderState.DISCONNECTED) {
-                // already disconnected, just quit
-                return;
-            }
+        public void notify(Object sender, ConnectionHandle connectionHandle) {
             synchronized (SocketSignalProvider.this) {
-                // Ensure that the latch is in a good state for reconnect
-                stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
+                final SignalProviderConnectionHandle signalProviderConnection = currentSignalProviderConnection;
+                if (connectionHandle != null && signalProviderConnection != null && !signalProviderConnection.isFor(connectionHandle)) {
+                    // they aren't the same.
+                    return;
+                } else if (stateManager.get() == ConnectionState.DISCONNECTED) {
+                    // already disconnected, just quit
+                    return;
+                }
 
-                connectionChangedEvent.notifyObservers(sender, Boolean.FALSE);
+                // within this method we are guaranteed to have a non-changing state.
+
+                executeDisconnect(signalProviderConnection);
             }
         }
 
@@ -393,14 +358,39 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
+    private synchronized void executeDisconnect(ConnectionHandle connectionHandle) {
+        if (currentSignalProviderConnection != connectionHandle) {
+            LOGGER.error("The connectionHandles didnt agree, so not executing the disconnect events");
+            return;
+        }
+
+        // Ensure that the latch is in a good state for reconnect
+        stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
+
+        currentSignalProviderConnection.destroy();
+        currentSignalProviderConnection.getDisconnectFuture().setSuccess(currentSignalProviderConnection);
+
+        // TODO: is this the right connection we should use?
+        connectionChangedEvent.notifyObservers(connectionHandle, Boolean.FALSE);
+
+        // TODO: who's job is it to update this value???
+        currentSignalProviderConnection = null;
+    }
+
     private final Observer<String> updateStateOnNewClientIdReceived = new Observer<String>() {
+
         @Override
         public void notify(Object sender, String newClientId) {
+            SignalProviderConnectionHandle connection = (SignalProviderConnectionHandle)sender;
+
+            Asserts.assertTrue(!connection.isDestroyed(), "bad state?");
+
             clientId = newClientId;
             originalClientId = newClientId;
 
-            if (presence != null)
+            if (presence != null) {
                 presence.setAddress(new ClientAddress(newClientId));
+            }
         }
 
         @Override
@@ -409,15 +399,19 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private void handleCommands(List<Command> commands) {
+    private void handleCommands(SignalProviderConnectionHandle connection, List<Command> commands) {
         for (Command command : commands) {
-            handleCommand(command);
+            handleCommand(connection, command);
         }
     }
 
     private final Observer<VersionMapEntry> updateVersionsOnVersionChanged = new Observer<VersionMapEntry>() {
         @Override
         public void notify(Object sender, VersionMapEntry version) {
+            SignalProviderConnectionHandle connection = (SignalProviderConnectionHandle) sender;
+
+            Asserts.assertTrue(!connection.isDestroyed(), "The connection is not active?!?");
+
             versions.put(version.getKey(), version.getValue());
         }
 
@@ -427,37 +421,37 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private void handleCommand(Command command) {
+    private void handleCommand(SignalProviderConnectionHandle connection, Command command) {
 
-        commandReceivedEvent.notifyObservers(this, command);
+        commandReceivedEvent.notifyObservers(connection, command);
 
         if (command.getVersion() != null && command.getVersion().getValue() > 0) {
-            newVersionEvent.notifyObservers(this, command.getVersion());
+            newVersionEvent.notifyObservers(connection, command.getVersion());
         }
 
         if (command instanceof ConnectCommand) {
 
-            handleConnectCommand((ConnectCommand) command);
+            handleConnectCommand(connection, (ConnectCommand) command);
 
         } else if (command instanceof DisconnectCommand) {
 
-            handleDisconnectCommand((DisconnectCommand) command);
+            handleDisconnectCommand(connection, (DisconnectCommand) command);
 
         } else if (command instanceof SubscriptionCompleteCommand) {
 
-            handleSubscriptionCompleteCommand((SubscriptionCompleteCommand) command);
+            handleSubscriptionCompleteCommand(connection, (SubscriptionCompleteCommand) command);
 
         } else if (command instanceof SignalCommand) {
 
-            handleSignalCommand((SignalCommand) command);
+            handleSignalCommand(connection, (SignalCommand) command);
 
         } else if (command instanceof PresenceCommand) {
 
-            handlePresenceCommand((PresenceCommand) command);
+            handlePresenceCommand(connection, (PresenceCommand) command);
 
         } else if (command instanceof SignalVerificationCommand) {
 
-            handleSignalVerificationCommand((SignalVerificationCommand) command);
+            handleSignalVerificationCommand(connection, (SignalVerificationCommand) command);
 
         } else if (command instanceof NoopCommand) {
 
@@ -473,26 +467,29 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 	 * This method allows us to decouple connection.connect() from provider.connect() for
 	 * cases when we have been notified by the connection that it has a successful connection.
 	 */
-    private ObservableFuture<ConnectCommand> writeConnectCommand() {
-        return writeConnectCommandAsyncWithTimeoutBakedIn(clientId, versions);
+    private ObservableFuture<ConnectCommand> writeConnectCommandAsyncWithTimeoutBakedIn(ConnectionHandle connectionHandle) {
+        return writeConnectCommandAsyncWithTimeoutBakedIn(connectionHandle, clientId, versions);
     }
 
     /**
      * This future will self cancel if the timeout elapses.
      */
-    private ObservableFuture<ConnectCommand> writeConnectCommandAsyncWithTimeoutBakedIn(String clientId, Map<String, Long> versions) {
+    private ObservableFuture<ConnectCommand> writeConnectCommandAsyncWithTimeoutBakedIn(ConnectionHandle connectionHandle, String clientId, Map<String, Long> versions) {
         return importantTaskExecutor.enqueue(null,
-                new ConnectCommandTask(connection, clientId, versions, presence),
-                FutureDateUtil.inFuture(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS));
+                new ConnectCommandTask(SocketSignalProvider.this.signalConnection, connectionHandle, clientId, versions, presence),
+                FutureDateUtil.inFuture(SocketSignalProvider.this.signalConnection.getConnectTimeoutSeconds(), TimeUnit.SECONDS));
     }
 
-    private void notifyConnected(boolean connected) {
+    private void notifyConnected(ConnectionHandle connectionHandle, boolean connected) {
+        Asserts.assertTrue(connectionHandle == currentSignalProviderConnection, "Connections not matched up?");
+//        currentSignalProviderConnection = new SignalProviderConnection(0, this, connection);
+
         // If the state has changed then notify
-        connectionChangedEvent.notifyObservers(this, connected);
+        connectionChangedEvent.notifyObservers(connectionHandle, connected);
     }
 
     public boolean isAuthenticated() {
-        if (stateManager.get() == SignalProviderState.AUTHENTICATED) {
+        if (stateManager.get() == ConnectionState.AUTHENTICATED) {
 //            Asserts.assertTrue(connection.isConnected(), "The connection and stateManager disagreed! (AUTHENTICATED !connected)");
 
             return true;
@@ -502,27 +499,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     public boolean isConnected() {
-        if (stateManager.get() == SignalProviderState.CONNECTED) {
+        if (stateManager.get() == ConnectionState.CONNECTED) {
 //            Asserts.assertTrue(connection.isConnected(), "The connection and stateManager disagreed! (CONNECTED !connected)");
 
             return true;
-        } else if (stateManager.get() == SignalProviderState.AUTHENTICATED) {
+        } else if (stateManager.get() == ConnectionState.AUTHENTICATED) {
 //            Asserts.assertTrue(connection.isConnected(), "The connection and stateManager disagreed! (AUTHENTICATED !connected)");
 
             return true;
         }
 
         return false;
-    }
-
-    @Override
-    public SignalProviderState getState() {
-        return stateManager.get();
-    }
-
-    @Override
-    public long getStateVersion() {
-        return stateManager.getStateId();
     }
 
     @Override
@@ -551,33 +538,32 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     @Override
-    public ObservableFuture<Boolean> connect() throws Exception {
+    public ObservableFuture<ConnectionHandle> connect() throws Exception {
         return connect(originalClientId, null, null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String clientId) throws Exception {
+    public ObservableFuture<ConnectionHandle> connect(String clientId) throws Exception {
         return connect(clientId, null, null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception {
+    public ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions) throws Exception {
         return connect(clientId, versions, presence);
     }
 
     @Override
-    public synchronized ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception {
 
         // if already connected, return a nonfailing future.
         if (isConnected()) {
-            return new FakeObservableFuture<Boolean>(this, Boolean.TRUE);
-        }
-
-        if (connectingFuture != null) {
+            return new FakeFailingObservableFuture<ConnectionHandle>(this, new IllegalStateException("Already connected"));
+        } else if (connectingFuture != null) {
             return connectingFuture;
         }
 
         // keep track of the original one, so we can detect change
+        final String finalClientId = clientId;
         if (StringUtil.exists(clientId)) {
             originalClientId = clientId;
         }
@@ -591,110 +577,86 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             this.versions = versions;
         }
 
-        // Connect our TCP socket
-        final Future<Boolean> socketConnectFuture;
+        Asserts.assertTrue(this.currentSignalProviderConnection == null, "Should be no other connection");
+        stateManager.transitionOrThrow(ConnectionState.CONNECTING);
 
-        // If the connection (connection.connect()) happens too fast, then we get a race condition where we
-        // try to send in a ConnectCommand twice. We need to set this.connectingFuture to non-null (but really a real future)
-        // first, and THEN attach the execute() future to it.
-        final NestedObservableFuture<Boolean> finalConnectingFuture = createSelfHealingConnectingFuture();
-
+        final SignalProviderConnectionHandle wrappedConnection = createAndSetActiveSelfHealingSignalProviderConnection();
+        final NestedObservableFuture<ConnectionHandle> finalConnectingFuture = createSelfHealingConnectingFuture(wrappedConnection);
         this.connectingFuture = finalConnectingFuture;
 
-        try {
-            stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
-            socketConnectFuture = connection.connect();
-        } catch (Exception e) {
-            this.connectingFuture = null;
-            // oh shit, we crashed!
-            LOGGER.warn("Fixed the connectLatch deadlock bug. Killed the latch because got exception connecting.");
-            throw e;
-        }
+        // This future already has an underlying timeout.
+        ObservableFuture<ConnectionHandle> requestFuture = signalConnection.connect();
 
-        executor.execute(new Runnable() {
-
+        requestFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
             @Override
-            public String toString() {
-                return "SignalProvider.connect()";
-            }
-
-            @Override
-            public void run() {
-                Asserts.assertTrue(connectingFuture == finalConnectingFuture, "Someone changed the connectionFuture underneath us.");
-
-                boolean connected;
-
-                try {
-                    // Block until the TCP connection connects or times out
-                    connected = socketConnectFuture.get(connection.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
-                } catch (Exception ex) {
-                    socketConnectFuture.cancel(true);
-
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                if (item.isSuccess()) {
                     synchronized (SocketSignalProvider.this) {
-                        stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
+                        synchronized (signalConnection) {
+                            synchronized (wrappedConnection) {
+                                stateManager.transitionOrThrow(ConnectionState.CONNECTED);
+                                final ConnectionHandle connectionHandle = item.getResult();
 
-                        finalConnectingFuture.setFailure(ex);
+                                // set the currently active connection's internal connection.
+                                wrappedConnection.setConnectionHandle(connectionHandle);
 
-                        return;
-                    }
-                }
+                                // send in the connect command (will queue up and execute in our signalProvider.executor
+                                // so we must be sure not to block (it's the current thread we're on right now!)).
+                                ObservableFuture<ConnectCommand> sendConnectCommandFuture
+                                        = writeConnectCommandAsyncWithTimeoutBakedIn(wrappedConnection, finalClientId, SocketSignalProvider.this.versions);
 
-                if (connected) {
-                    synchronized (SocketSignalProvider.this) {
-                        stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
 
-                        final long connectionId = connection.getConnectionId();
+                                /**
+                                 * Because the sendConnectCommandFuture will self-timeout, we don't have to do a block/timeout
+                                 * of our own.
+                                 *
+                                 * Regardless of success/failure we will be in the "signalProvider" thread.
+                                 */
+                                sendConnectCommandFuture.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
 
-                        // send in the connect command (will queue up and execute in our signalProvider.executor
-                        // so we must be sure not to block (it's the current thread we're on right now!)).
-                        ObservableFuture<ConnectCommand> sendConnectCommandFuture = writeConnectCommandAsyncWithTimeoutBakedIn(originalClientId, SocketSignalProvider.this.versions);
+                                    // WE ARE IN THE "SignalProvider.executor" THREAD if that executor is "simple" then
+                                    // we're in the connection thread or the scheduler thread.
+                                    @Override
+                                    public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
 
-                        /**
-                         * Because the sendConnectCommandFuture will self-timeout, we don't have to do a block/timeout
-                         * of our own.
-                         *
-                         * Regardless of success/failure we will be in the "signalProvider" thread.
-                         */
-                        sendConnectCommandFuture.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
+                                        // the "sender" is the "task"
+                                        // we are in the "signalProvider.executor" thread.
+                                        synchronized (SocketSignalProvider.this) {
+                                            if (future.isSuccess()) {
+                                                final ConnectCommand connectCommand = future.getResult();
 
-                            // WE ARE IN THE "SignalProvider.executor" THREAD
-                            // If that executor is "simple" then we're in the connection thread or the scheduler thread.
-                            @Override
-                            public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
-                                // the "sender" is the "task"
-                                // we are in the "signalProvider.executor" thread.
-                                synchronized (SocketSignalProvider.this) {
-                                    if (future.isSuccess()) {
-                                        // NOTE: what thread are we in? is this a deadlock?
-                                        stateManager.transitionOrThrow(SignalProviderState.AUTHENTICATED);
+                                                // NOTE: what thread are we in? is this a deadlock?
+                                                stateManager.transitionOrThrow(ConnectionState.AUTHENTICATED);
 
-                                        // THE handleConnectCommand METHOD WILL THROW THE APPROPRIATE EVENTS.
-                                        handleConnectCommand(future.getResult());
+                                                // THE handleConnectCommand METHOD WILL THROW THE APPROPRIATE EVENTS.
+                                                handleConnectCommand(wrappedConnection, connectCommand);
 
-                                        LOGGER.debug("Success finalConnectingFuture!");
-                                        finalConnectingFuture.setSuccess(true);
-                                    } else {
+                                                LOGGER.debug("Success finalConnectingFuture!");
+                                                finalConnectingFuture.setSuccess(wrappedConnection);
+                                            } else {
+                                                // TODO: what happens if the ConnectCommand times out? Who's job is it to tear down?
 
-                                        // TODO: what happens if the ConnectCommand times out? Who's job is it to tear down?
-
-                                        // NOTE: what thread are we in? is this a deadlock?
-                                        // who's job is it to tear down the connection?
-                                        NestedObservableFuture.syncStateBoolean(future, finalConnectingFuture);
+                                                // NOTE: what thread are we in? is this a deadlock?
+                                                // who's job is it to tear down the connection?
+                                                NestedObservableFuture.syncState(future, finalConnectingFuture, wrappedConnection);
+                                            }
+                                        }
                                     }
 
-//                                    notifyConnected(future.isSuccess());
-                                }
+                                    @Override
+                                    public String toString() {
+                                        return "sendConnectCommandFuture";
+                                    }
+                                });
                             }
-
-                            @Override
-                            public String toString() {
-                                return "sendConnectCommandFuture";
-                            }
-                        });
+                        }
                     }
                 } else {
                     synchronized (SocketSignalProvider.this) {
-                        stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
+                        stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
+
+                        wrappedConnection.destroy();
+
 
                         finalConnectingFuture.setFailure(new Exception("Couldn't connect!"));
                     }
@@ -703,44 +665,72 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             }
         });
 
-//        Asserts.assertTrue(finalConnectingFuture == this.connectingFuture, "Make sure no one changed the code later");
-
         return finalConnectingFuture;
     }
 
-    private NestedObservableFuture<Boolean> createSelfHealingConnectingFuture() {
-        NestedObservableFuture<Boolean> future = new NestedObservableFuture<Boolean>(this, executor);
+    private SignalProviderConnectionHandle createAndSetActiveSelfHealingSignalProviderConnection() {
+        SignalProviderConnectionHandle connection = new SignalProviderConnectionHandle(ID.incrementAndGet(), this);
+        this.currentSignalProviderConnection = connection;
 
-        future.addObserver(new Observer<ObservableFuture<Boolean>>() {
+        connection.getDisconnectFuture().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
             @Override
-            public void notify(Object sender, ObservableFuture<Boolean> item) {
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                ConnectionHandle connectionHandle = (ConnectionHandle)sender;
+
                 synchronized (SocketSignalProvider.this) {
-                    connectingFuture = null;
+                    if (SocketSignalProvider.this.currentSignalProviderConnection == connectionHandle) {
+                        SocketSignalProvider.this.currentSignalProviderConnection = null;
+                    }
                 }
             }
         });
 
-        future.addObserver(new Observer<ObservableFuture<Boolean>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<Boolean> item) {
-                if (item.isSuccess()) {
-                    notifyConnected(item.getResult());
-                } else {
-                    notifyConnected(false);
-                }
-            }
-        });
+        return connection;
+    }
+
+    private NestedObservableFuture<ConnectionHandle> createSelfHealingConnectingFuture(ConnectionHandle connectionHandle) {
+        NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(connectionHandle);
+
+        future.addObserver(resetConnectingFutureIfMatchingObserver);
+        future.addObserver(notifyConnectedOnFinishObserver);
 
         return future;
     }
 
+    private final Observer<ObservableFuture<ConnectionHandle>> resetConnectingFutureIfMatchingObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
+            synchronized (SocketSignalProvider.this) {
+                if (future == connectingFuture) {
+                    connectingFuture = null;
+                }
+            }
+        }
+    };
+
+    private final Observer<ObservableFuture<ConnectionHandle>> notifyConnectedOnFinishObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
+            ConnectionHandle connectionHandle = (SignalProviderConnectionHandle)sender;
+
+            if (future.isSuccess()) {
+                Asserts.assertTrue(sender == future.getResult(), "The connections should agree.");
+                boolean connected = !connectionHandle.isDestroyed();
+
+                notifyConnected(connectionHandle, connected);
+            } else {
+                notifyConnected(connectionHandle, false);
+            }
+        }
+    };
+
     @Override
-    public synchronized ObservableFuture<Void> disconnect() throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> disconnect() {
         return disconnect(false);
     }
 
     @Override
-    public ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) {
         if (isConnecting()) {
             // this is an unsafe operation, we're already trying to connect!
             // TODO: probably the best action is to tear everything down
@@ -752,93 +742,30 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             throw new IllegalStateException("We are not connected and you tried to call disconnect..");
         }
 
-        return FutureUtil.execute(executor, this, connection.disconnect(causedByNetwork));
-    }
+        stateManager.transitionOrThrow(ConnectionState.DISCONNECTING);
 
-    public ObservableFuture<Void> runIfActive(final Runnable runnable) {
-        final String clientId = this.clientId;
-        final boolean wasConnected = isConnected();
-        final NestedObservableFuture<Void> resultFuture = new NestedObservableFuture<Void>(this, executor) {
+        final ConnectionHandle finalConnectionHandle = currentSignalProviderConnection;
+
+        final ObservableFuture<ConnectionHandle> resultFuture = finalConnectionHandle.getDisconnectFuture();
+
+//        currentSignalProviderConnection.getConnectionHandle().disconnect(causedByNetwork);
+
+        final ObservableFuture<ConnectionHandle> requestFuture = signalConnection.disconnect(causedByNetwork);
+
+        requestFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
             @Override
-            public String toString() {
-                return "SignalProvider/runIfActive";
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                executeDisconnect(finalConnectionHandle);
             }
-        };
-
-        final long connectionId = connection.getConnectionId();
-
-        try {
-            ObservableFuture<Void> future = connection.runIfActive(new Callable<Void>() {
-
-                @Override
-                public Void call() {
-                    // TODO: check if active.
-                    // dont let the clientId be changed while we compare.
-
-                    synchronized (SocketSignalProvider.this) {
-                        boolean connected = isConnected();
-                        long cId = connection.getConnectionId();
-                        if (connectionId != cId) {
-                            resultFuture.setFailure(new Exception(String.format("the connectedId changed while waiting, (%b/%b)", connectionId, cId)));
-                            LOGGER.warn(String.format(String.format("the connectedId changed while waiting, (%b/%b)", connectionId, cId)));
-                            return null;
-                        } else if (wasConnected != connected) {
-                            resultFuture.setFailure(new Exception(String.format("the connected state changed while waiting, (%b/%b)", wasConnected, connected)));
-                            LOGGER.warn(String.format("The two connected states disagree (%b/%b), so not going to execute this runnable %s", wasConnected, connected, runnable));
-                            return null;
-                        } else if (!StringUtil.equals(SocketSignalProvider.this.getClientId(), clientId)) {
-                            LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
-                            resultFuture.setFailure(new Exception("the ClientId changed while waiting"));
-                            return null;
-                        }
-
-                        try {
-                            runnable.run();
-                        } catch (RuntimeException e) {
-                            resultFuture.setFailure(e);
-                            throw e;
-                        }
-                    }
-
-                    resultFuture.setSuccess(null);
-
-                    return null;
-                }
-
-                @Override
-                public String toString() {
-                    return "signalProvider/runIfActive/" + runnable;
-                }
-            });
-
-            // in case the inner one isn't run
-            resultFuture.setNestedFuture(future);
-
-        } catch (RuntimeException e) {
-            resultFuture.setFailure(e);
-            throw e;
-        }
+        });
 
         return resultFuture;
     }
 
-    private static class CopyStateObserver<T> implements Observer<T> {
-
-        final Observer<T> observer;
-
-        private CopyStateObserver(Observer<T> observer) {
-            this.observer = observer;
-        }
-
-        @Override
-        public void notify(Object sender, T item) {
-            observer.notify(sender, item);
-        }
-    }
-
     // TODO: who calls this because it could be a deadlock
-    public synchronized void resetAndDisconnect() throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> resetDisconnectAndConnect() {
         final String c = clientId = originalClientId = StringUtil.EMPTY_STRING;
+        // TODO: I think this is a bug. The local hashmap being cleared doesnt really do anything on disk.
         versions.clear();
 
         synchronized (slidingWindows) {
@@ -847,14 +774,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             }
         }
 
+        // todo: is this the right event?
         newClientIdReceivedEvent.notifyObservers(this, c);
 
-        disconnect(true);
+        return signalConnection.reconnect();
     }
 
     @Override
-    public void nudge() {
-        connection.keepalive();
+    public void ping() {
+        signalConnection.ping();
     }
 
     @Override
@@ -912,23 +840,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         return commandReceivedEvent;
     }
 
-    @Override
-    protected void onDestroy() {
-//        eventExecutor.shutdownNow();
-        if (executor instanceof ExecutorService) {
-            ((ExecutorService) executor).shutdownNow();
-        }
-    }
-
-//    private void succeedTheConnectingFuture() {
-//        if (this.connectingFuture != null) {
-//            ObservableFuture<Boolean> c = connectingFuture;
-//            this.connectingFuture = null;
-//            c.setSuccess(true);
-//        }
-//    }
-
-    private void handleConnectCommand(ConnectCommand command) {
+    private void handleConnectCommand(SignalProviderConnectionHandle connection, ConnectCommand command) {
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
 
@@ -951,27 +863,17 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             if (newClientId) {
                 // not the same, lets announce
                 // announce on a separate thread
-                newClientIdReceivedEvent.notifyObservers(this, clientId);
+                newClientIdReceivedEvent.notifyObservers(connection, clientId);
             }
 
             // we are on the SignalProvider thread, since the events all bootstrap the notify
             // our "executor." We can't trust that the connection is still connected.
             if (versions != null) {
-                ObservableFuture<Void> future = runIfActive(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Send a BackfillCommand for each version key - in practice
-                        // this is a single key/version
-                        for (String key : versions.keySet()) {
-                            // TODO: This could fail! Need to enqueue these.
-                            connection.send(new BackfillCommand(Collections.singletonList(versions.get(key)), key))
-                                    .addObserver((Observer) logIfWriteFailedObserver);
-                        }
-                    }
-                });
-
-                // log if this fails.
-                future.addObserver((Observer) logIfWriteFailedObserver);
+                // kind of cheating i guess.
+                for (String key : versions.keySet()) {
+                    connection.write(new BackfillCommand(Collections.singletonList(versions.get(key)), key))
+                            .addObserver((Observer) logIfWriteFailedObserver);
+                }
             }
         }
     }
@@ -980,7 +882,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         return connectingFuture != null && !connectingFuture.isDone();
     }
 
-    private void handleDisconnectCommand(DisconnectCommand command) {
+    private void handleDisconnectCommand(SignalProviderConnectionHandle connection, DisconnectCommand command) {
 
         LOGGER.debug("Handling DisconnectCommand");
 
@@ -997,14 +899,19 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         // If the command has not said 'ban' or 'stop'
         if (!command.isStop() || !command.isBan()) {
+            // TODO: what are the initial values?
+            String host = null;
+            int port = 0;
 
             if (!StringUtil.EMPTY_STRING.equals(command.getHost())) {
-                connection.setHost(command.getHost());
+                host = command.getHost();
             }
 
             if (command.getPort() > 0) {
-                connection.setPort(command.getPort());
+                port = command.getPort();
             }
+
+            this.signalConnection.setAddress(new InetSocketAddress(host, port));
 
             LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
 
@@ -1033,7 +940,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private void handlePresenceCommand(PresenceCommand command) {
+    private void handlePresenceCommand(SignalProviderConnectionHandle connection, PresenceCommand command) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Handling PresenceCommand " + command.getPresence());
         }
@@ -1068,7 +975,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                     LOGGER.debug("Reidentifying our presence object");
                 }
 
-                connection.send(new PresenceCommand(Collections.singletonList(presence)));
+                this.signalConnection.send(new PresenceCommand(Collections.singletonList(presence)));
 
             } else {
                 LOGGER.debug("Our presence object was empty, so we didn't share it");
@@ -1076,7 +983,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     }
 
-    private void handleSignalCommand(SignalCommand command) {
+    private void handleSignalCommand(SignalProviderConnectionHandle connection, SignalCommand command) {
         LOGGER.debug("Handling SignalCommand");
 
         // Distribute the command and the raw signal to give client's flexibility regarding what data they need
@@ -1084,7 +991,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         signalReceivedEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
     }
 
-    private void handleSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
+    private void handleSubscriptionCompleteCommand(SignalProviderConnectionHandle connection, SubscriptionCompleteCommand command) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Handling SubscriptionCompleteCommand " + command.toString());
         }
@@ -1106,7 +1013,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             presence.setAddress(new ClientAddress(clientId));
 
             // TODO handle send future
-            connection.send(new PresenceCommand(Collections.singletonList(presence)));
+            signalConnection.send(new PresenceCommand(Collections.singletonList(presence)));
             return true;
 
         } else {
@@ -1114,7 +1021,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     }
 
-    private void handleSignalVerificationCommand(SignalVerificationCommand command) {
+    private void handleSignalVerificationCommand(SignalProviderConnectionHandle connection, SignalVerificationCommand command) {
         LOGGER.debug("Processing SignalVerificationCommand " + command.toString());
         signalVerificationReceivedEvent.notifyObservers(this, null);
     }
@@ -1123,7 +1030,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         @Override
         public void notify(Object sender, SlidingWindow.HoleRange hole) {
             LOGGER.debug("Signal hole detected, requesting backfill for  " + hole.toString());
-            connection.send(new BackfillCommand(hole.getRange(), hole.key));
+            signalConnection.send(new BackfillCommand(hole.getRange(), hole.key));
         }
     };
 
@@ -1131,7 +1038,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         @Override
         public void notify(Object sender, List<Command> commands) {
             LOGGER.warn(commands.size() + " packets released due to timeout, leaving a hole.");
-            handleCommands(commands);
+            // TODO: how do we know this is the right connection???
+            handleCommands(currentSignalProviderConnection, commands);
         }
     };
 
@@ -1184,4 +1092,28 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             return observer.toString();
         }
     }
+
+    private static class CopyStateObserver<T> implements Observer<T> {
+
+        final Observer<T> observer;
+
+        private CopyStateObserver(Observer<T> observer) {
+            this.observer = observer;
+        }
+
+        @Override
+        public void notify(Object sender, T item) {
+            observer.notify(sender, item);
+        }
+    }
+
+    public ConnectionHandle getCurrentConnection() {
+        return currentSignalProviderConnection;
+    }
+
+    @Override
+    protected void onDestroy() {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
 }
+

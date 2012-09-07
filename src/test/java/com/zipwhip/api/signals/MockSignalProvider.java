@@ -1,23 +1,21 @@
-package com.zipwhip.api;
+package com.zipwhip.api.signals;
 
-import com.zipwhip.api.signals.PingEvent;
-import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.api.signals.sockets.SignalProviderState;
-import com.zipwhip.api.signals.sockets.SignalProviderStateManagerFactory;
-import com.zipwhip.api.signals.sockets.StateManager;
+import com.zipwhip.api.signals.sockets.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
+import com.zipwhip.events.Observer;
+import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Asserts;
-import com.zipwhip.util.StringUtil;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.util.StateManager;
 
 import java.util.List;
 import java.util.Map;
@@ -41,27 +39,27 @@ public class MockSignalProvider implements SignalProvider {
     private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
-    protected StateManager<SignalProviderState> stateManager;
-    protected ObservableFuture<Void> disconnectingFuture = null;
-    protected ObservableFuture<Boolean> connectingFuture;
+    protected StateManager<ConnectionState> stateManager;
+    protected ObservableFuture<ConnectionHandle> disconnectingFuture = null;
+    protected ObservableFuture<ConnectionHandle> connectingFuture;
+
+    //    protected Executor executor = SimpleExecutor.getInstance();
+    public Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
 
     public MockSignalProvider() {
         try {
-            stateManager = SignalProviderStateManagerFactory.getInstance().create();
+            stateManager = ConnectionStateManagerFactory.getInstance().create();
         } catch (Exception e) {
             // bad api :(
         }
     }
 
-//    protected Executor executor = SimpleExecutor.getInstance();
-protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
-
     public boolean isConnected() {
-        if (stateManager.get() == SignalProviderState.AUTHENTICATED) {
+        if (stateManager.get() == ConnectionState.AUTHENTICATED) {
             Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Authenticated !connected)");
             return true;
         } else {
-            if (stateManager.get() == SignalProviderState.CONNECTED) {
+            if (stateManager.get() == ConnectionState.CONNECTED) {
                 Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Connected !connected)");
             }
 
@@ -70,17 +68,7 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
     }
 
     public boolean isAuthenticated() {
-        return stateManager.get() == SignalProviderState.AUTHENTICATED;
-    }
-
-    @Override
-    public SignalProviderState getState() {
-        return stateManager.get();
-    }
-
-    @Override
-    public long getStateVersion() {
-        return stateManager.getStateId();
+        return stateManager.get() == ConnectionState.AUTHENTICATED;
     }
 
     @Override
@@ -111,46 +99,61 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
     }
 
     @Override
-    public ObservableFuture<Boolean> connect() throws Exception {
+    public ObservableFuture<ConnectionHandle> connect() {
         return connect(null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String c) throws Exception {
+    public ObservableFuture<ConnectionHandle> connect(String c)  {
         return connect(c, null);
     }
 
     @Override
-    public ObservableFuture<Boolean> connect(String c, Map<String, Long> versions) throws Exception {
+    public ObservableFuture<ConnectionHandle> connect(String c, Map<String, Long> versions) {
         return connect(c, versions, null);
     }
 
     @Override
-    public synchronized ObservableFuture<Boolean> connect(String c, Map<String, Long> versions, Presence presence) throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> connect(String c, Map<String, Long> versions, Presence presence) {
 
         if (connectingFuture != null) {
             return connectingFuture;
+        } else if (disconnectingFuture != null){
+            disconnectingFuture.cancel();
         }
 
-        stateManager.transitionOrThrow(SignalProviderState.CONNECTING);
+        if (stateManager.get() == ConnectionState.CONNECTED) {
+            return new FakeObservableFuture<ConnectionHandle>(null, null);
+        }
 
-        final ObservableFuture<Boolean> future = new DefaultObservableFuture<Boolean>(this);
+        stateManager.transitionOrThrow(ConnectionState.CONNECTING);
+
+        final ObservableFuture<ConnectionHandle> future = new DefaultObservableFuture<ConnectionHandle>(this);
 
         connectingFuture = future;
 
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                ConnectionHandle connectionHandle = new MockSignalProviderConnectionHandle();
                 synchronized (MockSignalProvider.this) {
+                    if (connectingFuture.isCancelled()) {
+                        return;
+                    }
+
+                    stateManager.ensure(ConnectionState.CONNECTING);
+
                     clientId = "1234567890";
                     isConnected = true;
-                    stateManager.transitionOrThrow(SignalProviderState.CONNECTED);
-                    stateManager.transitionOrThrow(SignalProviderState.AUTHENTICATED);
-                    connectionChangedEvent.notify(this, Boolean.TRUE);
-                    newClientIdEvent.notify(this, clientId);
+                    stateManager.transitionOrThrow(ConnectionState.CONNECTED);
+                    stateManager.transitionOrThrow(ConnectionState.AUTHENTICATED);
 
                     connectingFuture = null;
-                    future.setSuccess(true);
+
+                    connectionChangedEvent.notify(connectionHandle, Boolean.TRUE);
+                    newClientIdEvent.notify(connectionHandle, clientId);
+
+                    future.setSuccess(connectionHandle);
                 }
             }
         });
@@ -159,40 +162,47 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
     }
 
     @Override
-    public ObservableFuture<Void> disconnect() throws Exception {
+    public ObservableFuture<ConnectionHandle> disconnect() {
         return disconnect(false);
     }
 
     @Override
-    public void resetAndDisconnect() throws Exception {
-        disconnect();
-    }
+    public synchronized ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) {
 
-    @Override
-    public synchronized ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception {
         if (disconnectingFuture != null) {
             return disconnectingFuture;
-        }
-
-        final ObservableFuture<Void> result = new DefaultObservableFuture<Void>(this);
-
-        if (connectingFuture != null){
+        } else if (connectingFuture != null){
             connectingFuture.cancel();
-            connectingFuture = null;
         }
+
+        if (stateManager.get() == ConnectionState.DISCONNECTED) {
+            return new FakeObservableFuture<ConnectionHandle>(this, null);
+        }
+
+        final ObservableFuture<ConnectionHandle> result = new DefaultObservableFuture<ConnectionHandle>(this);
 
         disconnectingFuture = result;
+        stateManager.transitionOrThrow(ConnectionState.DISCONNECTING);
 
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                stateManager.set(SignalProviderState.DISCONNECTING);
-                isConnected = false;
-                stateManager.transitionOrThrow(SignalProviderState.DISCONNECTED);
-                connectionChangedEvent.notify(this, Boolean.FALSE);
-                disconnectingFuture = null;
+                synchronized (MockSignalProvider.this) {
+                    if (disconnectingFuture.isCancelled()) {
+                        return;
+                    }
 
-                result.setSuccess(null);
+                    stateManager.ensure(ConnectionState.DISCONNECTING);
+
+                    isConnected = false;
+                    stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
+
+                    disconnectingFuture = null;
+
+                    connectionChangedEvent.notify(this, Boolean.FALSE);
+
+                    result.setSuccess(null);
+                }
             }
         });
 
@@ -200,7 +210,13 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
     }
 
     @Override
-    public void nudge() {
+    public ObservableFuture<ConnectionHandle> resetDisconnectAndConnect() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void ping() {
+        //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
@@ -259,44 +275,6 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
     }
 
     @Override
-    public ObservableFuture<Void> runIfActive(final Runnable runnable) {
-        final String clientId = this.clientId;
-        final boolean connected = isConnected();
-        final ObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, executor);
-
-        try {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // dont let the clientId be changed while we compare.
-                    synchronized (MockSignalProvider.this) {
-                        boolean c = isConnected();
-                        if (connected != c) {
-                            future.setFailure(new Exception());
-                            //                                LOGGER.warn("Not currently connected, so not going to execute this runnable " + runnable);
-                            return;
-                        } else if (!StringUtil.equals(MockSignalProvider.this.getClientId(), clientId)) {
-                            //                                LOGGER.warn("We avoided a race condition by detecting the clientId changed. Not going to run this runnable " + runnable);
-                            future.setFailure(new Exception());
-                            return;
-                        }
-
-                        try {
-                            runnable.run();
-                        } finally {
-                            future.setSuccess(null);
-                        }
-                    }
-                }
-            });
-        } catch (RuntimeException e) {
-            future.setFailure(e);
-        }
-
-        return future;
-    }
-
-    @Override
     public void destroy() {
     }
 
@@ -305,4 +283,34 @@ protected Executor executor = Executors.newSingleThreadExecutor(new NamedThreadF
         return false;
     }
 
+    static long id;
+
+    private class MockSignalProviderConnectionHandle extends ConnectionHandleBase {
+
+        protected MockSignalProviderConnectionHandle() {
+            super(id++);
+        }
+
+        @Override
+        protected void proxyDisconnectFromRequestorToParent(ObservableFuture<ConnectionHandle> disconnectFuture, boolean causedByNetwork) {
+            MockSignalProvider.this.disconnect(causedByNetwork);
+        }
+
+        @Override
+        public ObservableFuture<ConnectionHandle> reconnect() {
+            final NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(this);
+            disconnect().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                    future.setNestedFuture(connect());
+                }
+            });
+            return future;
+        }
+
+        @Override
+        protected void onDestroy() {
+            //To change body of implemented methods use File | Settings | File Templates.
+        }
+    }
 }

@@ -12,9 +12,13 @@ import static junit.framework.Assert.*;
  */
 public class TestUtil {
 
-    public static <T> T awaitAndAssertSuccess(ObservableFuture<T> future) throws InterruptedException {
+    public static <T> T awaitAndAssertSuccess(ObservableFuture<T> future) {
         assertNotNull("future was null!!", future);
-        assertTrue("future didn't finish!", future.await(90, TimeUnit.SECONDS));
+        try {
+            assertTrue("future didn't finish!", future.await(90, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         assertTrue("future wasn't done!", future.isDone());
         assertNull(String.format("Future failure was %s", future.getCause()), future.getCause());
         assertFalse("future was cancelled!", future.isCancelled());

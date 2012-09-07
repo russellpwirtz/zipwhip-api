@@ -1,5 +1,6 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.util;
 
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.Directory;
 import com.zipwhip.util.SetDirectory;
@@ -15,7 +16,7 @@ import java.util.Collection;
  *
  * For trusted state transitioning. Thread safe.
  */
-public class StateManager<T extends Enum> {
+public class StateManager<T extends Enum> extends DestroyableBase {
 
     private Directory<T, T> states = new SetDirectory<T, T>();
     private T state;
@@ -80,10 +81,10 @@ public class StateManager<T extends Enum> {
             }
         }
     }
+
     public synchronized void ensureNot(T... states) {
         ensureNot(Arrays.asList(states));
     }
-
     public T get() {
         return this.state;
     }
@@ -99,5 +100,12 @@ public class StateManager<T extends Enum> {
 
     public long getStateId() {
         return stateId;
+    }
+
+    @Override
+    protected void onDestroy() {
+        // dont clear the states array because it might be shared.
+        this.states = null;
+        this.state = null;
     }
 }

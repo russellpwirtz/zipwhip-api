@@ -3,7 +3,10 @@
  */
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
+import com.zipwhip.concurrent.FakeFailingObservableFuture;
+import com.zipwhip.concurrent.ObservableFuture;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -47,26 +50,10 @@ public class ExponentialBackoffReconnectStrategyTest {
 	}
 
 	private class CannotConnectSignalConnection extends MockSignalConnection {
-		@Override
-		public synchronized Future<Boolean> connect() throws Exception {
 
-			FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
-
-				@Override
-				public Boolean call() throws Exception {
-					isConnected = false;
-
-					System.out.println("Forcing a failed connect");
-					return Boolean.valueOf(isConnected);
-				}
-			});
-
-			if (executor == null) {
-				executor = Executors.newSingleThreadExecutor();
-			}
-			executor.execute(task);
-
-			return task;
+			@Override
+		public synchronized ObservableFuture<ConnectionHandle> connect() {
+            return new FakeFailingObservableFuture<ConnectionHandle>(this, new Exception());
 		}
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import java.util.HashMap;
 import java.util.Map;

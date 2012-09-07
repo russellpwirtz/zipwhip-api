@@ -1,9 +1,10 @@
-package com.zipwhip.api.signals.sockets.netty;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
+import com.zipwhip.api.signals.sockets.netty.SignalConnectionDelegate;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.timeout.IdleState;
@@ -31,7 +32,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         Object object = e.getMessage();
 
         if (object instanceof PingPongCommand) {
-            delegate.notifyPingEvent(this, PingEvent.PING_SENT);
+            delegate.notifyPingEvent(PingEvent.PING_SENT);
         }
 
         if (ctx == null) {
@@ -67,7 +68,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
         }
 
         LOGGER.debug("We got an event. Going to notify the listeners: " + msg);
-        delegate.notifyReceiveEvent(this, (Command) msg);
+        delegate.notifyReceiveEvent((Command) msg);
     }
 
     @Override
@@ -99,7 +100,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
                 LOGGER.debug("Channel ALL_IDLE, sending PING");
 
                 try {
-                    delegate.send(PingPongCommand.getShortformInstance());
+                    delegate.sendAsyncIfActive(PingPongCommand.getShortformInstance());
                 } catch (IllegalStateException e) {
                     LOGGER.warn("IllegalStateException on send" , e);
                     // We were probably disconnected
@@ -143,7 +144,7 @@ public class NettyChannelHandler extends IdleStateAwareChannelHandler {
             return;
         }
 
-        delegate.notifyExceptionAndDisconnect(this, event.toString());
+        delegate.notifyExceptionAndDisconnect(event.toString());
     }
 
     @Override

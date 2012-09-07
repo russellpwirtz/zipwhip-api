@@ -3,7 +3,7 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.api.signals.sockets.SignalProviderState;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
@@ -18,20 +18,20 @@ import java.util.Map;
 public interface SignalProvider extends Destroyable {
 
     /**
-     * Determines if the SignalProvider is connected or not.
-     *
-     * @return true if the SignalProvider is connected else false.
-     */
-    SignalProviderState getState();
-
-    /**
-     * Every time the state changes, we will change the Version. This will help you keep track of
-     * 'did the state change while i was waiting to execute'
+     * Determines if the state is CONNECTED
      *
      * @return
      */
-    long getStateVersion();
+    boolean isConnected();
 
+    /**
+     * Determines if the state is AUTHENTICATED
+     *
+     * (isConnected() && has an active clientId)
+     *
+     * @return
+     */
+    boolean isAuthenticated();
 
     /**
      * The SignalServer uses a separate id to track you, because it's an Id
@@ -42,41 +42,13 @@ public interface SignalProvider extends Destroyable {
     String getClientId();
 
     /**
-     * Get the current Presence object or null
-     *
-     * @return The current Presence object or null
-     */
-    Presence getPresence();
-
-    /**
-     * Set the Presence to use on the next connection.
-     *
-     * @param presence The Presence to use on the next connection.
-     */
-    void setPresence(Presence presence);
-
-    /**
-     * Get the current versions or null
-     *
-     * @return The current versions or null
-     */
-    Map<String, Long> getVersions();
-
-    /**
-     * Set the signal versions to use on the next connection.
-     *
-     * @param versions The signal versions to use on the next connection.
-     */
-    void setVersions(Map<String, Long> versions);
-
-    /**
      * Tell it to connect. This call is idempotent, so if multiple calls to
      * a connection provider will have no effect.
      *
      * @return a ObservableFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
-    ObservableFuture<Boolean> connect() throws Exception;
+    ObservableFuture<ConnectionHandle> connect() throws Exception;
 
     /**
      * Tell it to connect.
@@ -86,7 +58,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting
      */
-    ObservableFuture<Boolean> connect(String clientId) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId) throws Exception;
 
     /**
      * Tell it to connect.
@@ -97,7 +69,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions) throws Exception;
 
     /**
      * Tell it to connect. The future will unblock when {action:"CONNECT"} comes back
@@ -109,7 +81,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    ObservableFuture<Boolean> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
 
     /**
      * Tell it to disconnect.
@@ -117,7 +89,7 @@ public interface SignalProvider extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<Void> disconnect() throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect();
 
     /**
      * Tell it to disconnect. Call this with false is equivalent to calling {@code disconnect()}.
@@ -127,22 +99,22 @@ public interface SignalProvider extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork);
 
     /**
      * Will reset the state, followed by a disconnect, followed by an immediate reconnect.
      *
      * @throws Exception
      */
-    void resetAndDisconnect() throws Exception;
+    ObservableFuture<ConnectionHandle> resetDisconnectAndConnect();
 
     /**
      * This little function is a BIG deal when you are running on a platform that freezes your executions
      * (i.e. Android) when the CPU goes to sleep.
      * <p/>
-     * Calling {@code nudge} will cancel any pending network keepalives and fire one immediately.
+     * Calling {@code ping} will cancel any pending network keepalives and fire one immediately.
      */
-    void nudge();
+    void ping();
 
     /**
      * You can Observe this event to capture signals that come in.
@@ -215,32 +187,32 @@ public interface SignalProvider extends Destroyable {
     Observable<Command> getCommandReceivedEvent();
 
     /**
-     * Run on the connection thread if and only if by the time it actually runs the connection
-     * has not changed state (ie: same clientId, etc). It also adds synchronization so that
-     * the underlying connection cannot be changed while you are running. So PLEASE run very quickly.
-     * No one can send/receive events or disconnect/reconnect while you are running.
-     * <p/>
-     * Be careful not to block within this method on any synchronization keywords. It would cause
-     * deadlocks. IE: anything like future.get() on the disconnect/connect methods.
+     * Get the current Presence object or null
      *
-     * @param runnable
+     * @return The current Presence object or null
      */
-    ObservableFuture<Void> runIfActive(Runnable runnable);
+    Presence getPresence();
 
     /**
-     * Determines if the state is CONNECTED
+     * Set the Presence to use on the next connection.
      *
-     * @return
+     * @param presence The Presence to use on the next connection.
      */
-    boolean isConnected();
+    void setPresence(Presence presence);
 
     /**
-     * Determines if the state is AUTHENTICATED
+     * Get the current versions or null
      *
-     * (isConnected() && has an active clientId)
-     *
-     * @return
+     * @return The current versions or null
      */
-    boolean isAuthenticated();
+    Map<String, Long> getVersions();
+
+    /**
+     * Set the signal versions to use on the next connection.
+     *
+     * @param versions The signal versions to use on the next connection.
+     */
+    void setVersions(Map<String, Long> versions);
+
 
 }

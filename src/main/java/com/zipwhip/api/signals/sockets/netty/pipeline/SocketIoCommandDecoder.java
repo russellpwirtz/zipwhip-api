@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import com.zipwhip.api.signals.JsonSignalParser;
 import com.zipwhip.api.signals.commands.Command;

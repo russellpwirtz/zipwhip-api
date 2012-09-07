@@ -1,6 +1,8 @@
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.concurrent.ObservableFuture;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.*;
@@ -19,7 +21,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
 
     private static final long RECONNECT_DELAY = 5000;
 
-    private Future<Boolean> reconnectTask;
+    private ObservableFuture<ConnectionHandle> reconnectTask;
     private ScheduledExecutorService scheduler;
 
     @Override

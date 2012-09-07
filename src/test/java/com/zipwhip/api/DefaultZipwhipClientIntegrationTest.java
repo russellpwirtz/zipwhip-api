@@ -13,6 +13,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
+
 /**
  * Created by IntelliJ IDEA.
  * User: Russ
@@ -47,8 +49,9 @@ public class DefaultZipwhipClientIntegrationTest {
         TestUtil.awaitAndAssertSuccess(future);
 
         LOGGER.debug("Disconnect done!");
-
     }
+
+
 
     private static class AndroidZipwhipClientFactory extends DestroyableBase implements Factory<ZipwhipClient> {
 
@@ -67,7 +70,7 @@ public class DefaultZipwhipClientIntegrationTest {
                         .sessionKey(sessionKey);
                 SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                         .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
-                        .host(ApiConnection.STAGING_SIGNALS_HOST)
+                        .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))
                         .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
                 ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

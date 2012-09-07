@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,7 +68,7 @@ public class FlexibleTimedEvictionMap<K, V> extends TreeMap<K, V> {
                 K key = firstKey();
 
                 if (currentTime - evictionTimeMap.get(key) > minimumEvictionAgeMillis) {
-                    pollFirstEntry();
+                    remove(key);
                     evictionTimeMap.remove(key);
                 }
             } else {

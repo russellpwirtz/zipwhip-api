@@ -6,6 +6,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
+import com.zipwhip.api.signals.sockets.netty.pipeline.NettyChannelHandler;
 import junit.framework.Assert;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.ChannelState;
@@ -219,7 +220,7 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public synchronized void send(SerializingCommand command) {
+        public synchronized void sendAsyncIfActive(SerializingCommand command) {
             sentCommand = command;
             try {
                 nettyChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
@@ -236,19 +237,19 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public synchronized void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
+        public synchronized void notifyReceiveEvent(Command command) {
             receiveEventCommand = command;
         }
 
         @Override
-        public synchronized void notifyExceptionAndDisconnect(Object sender, String result) {
+        public synchronized void notifyExceptionAndDisconnect(String result) {
             exceptionCount++;
             exceptionString = result;
             disconnectAsyncIfActive(true);
         }
 
         @Override
-        public synchronized void notifyPingEvent(Object sender, PingEvent event) {
+        public synchronized void notifyPingEvent(PingEvent event) {
             pingEventCount++;
         }
     }

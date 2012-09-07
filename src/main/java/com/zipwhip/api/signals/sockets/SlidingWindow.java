@@ -4,6 +4,7 @@ import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.events.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.FlexibleTimedEvictionMap;
 import org.jboss.netty.util.*;
 import org.jboss.netty.util.TimerTask;
 

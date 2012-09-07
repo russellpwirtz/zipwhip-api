@@ -1,11 +1,14 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.ChannelStateManagerFactory;
-import com.zipwhip.api.signals.sockets.StateManager;
+import com.zipwhip.api.signals.sockets.ConnectionState;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
+import com.zipwhip.util.StateManager;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -25,12 +28,18 @@ import java.util.concurrent.TimeUnit;
  * This wrapper controls the access to a channel. The concept is that 1 wrapper controls all access to 1 channel.
  * Since all requests to a channel must go through this wrapper, we can safely control the threading behavior.
  *
- * THIS WRAPPER IS NEVER ALLOWED TO SELF DESTRUCT.
- *
+ * THIS WRAPPER IS NEVER ALLOWED TO SELF DESTRUCT!
  */
 public class ChannelWrapper extends CascadingDestroyableBase {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapper.class);
+
+    /**
+     * This delegate represents the channel's access to our SignalConnectionBase class. The ChannelHandlers
+     * need to be able to talk into the SignalProvider 'safely'. If their connection gets torn down we need to
+     * terminate their access to the provider.
+     */
+    private SignalConnectionDelegate delegate;
 
     /**
      * This is the channel that we're trying to protect.
@@ -38,26 +47,39 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     protected Channel channel;
 
     /**
-     * This delegate represents the channel's access to our SignalConnectionBase class.
+     * This connection is our external representation of the connection. External entities can interact with it
+     * through this 'connection' object. It's very similar to the "delegate" though I was concerned about combining
+     * them since they have different purposes and access.
      */
-    private final SignalConnectionDelegate delegate;
+    protected final ChannelWrapperConnectionHandle connection;
 
     /**
      * Independently keep track of the state of the connection.
      */
-    protected final StateManager<ChannelState> stateManager;
-    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
-    private SignalConnectionBase connection;
-    public final long id;
+    protected final StateManager<ConnectionState> stateManager;
+    protected final ExecutorService executor;
 
     /**
      * For keeping absolute care over the thread safe state
      */
-    public ChannelWrapper(long id, Channel channel, SignalConnectionDelegate delegate) {
+    public ChannelWrapper(long id, Channel channel, SignalConnectionDelegate delegate, ExecutorService executor) {
         this.channel = channel;
         this.delegate = delegate;
-        this.stateManager = ChannelStateManagerFactory.newStateManager();
-        this.id = id;
+        this.stateManager = ConnectionStateManagerFactory.newStateManager();
+        this.link(stateManager);
+        this.connection = new ChannelWrapperConnectionHandle(id, delegate.signalConnectionBase, this);
+        this.link(connection);
+        if (executor == null){
+            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ChannelWrapper.this.executor.shutdownNow();
+                }
+            });
+        } else {
+            this.executor = executor;
+        }
     }
 
     /**
@@ -66,10 +88,12 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * @param remoteAddress The address to connect to.
      * @throws InterruptedException if interrupted while connecting.
      */
-    public synchronized boolean connect(final SocketAddress remoteAddress) throws InterruptedException {
+    public synchronized void connect(final SocketAddress remoteAddress) throws Throwable {
 
-        stateManager.transitionOrThrow(ChannelState.CONNECTING);
-        Asserts.assertTrue(!isConnected(), "Channel is not connecting");
+        Asserts.assertTrue(!isDestroyed(), "I was destroyed?");
+        Asserts.assertTrue(channel != null, "Channel was destroyed?");
+
+        stateManager.transitionOrThrow(ConnectionState.CONNECTING);
 
         delegate.pause();
         // do the connect async.
@@ -88,7 +112,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
                 future.getChannel().close();
             }
 
-            stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+            stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
 
             throw e;
         }
@@ -102,12 +126,14 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
 
         if (future.isSuccess()) {
-            stateManager.transitionOrThrow(ChannelState.CONNECTED);
+            stateManager.transitionOrThrow(ConnectionState.CONNECTED);
         } else {
-            stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+            stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
         }
 
-        return future.isSuccess();
+        if (!future.isSuccess()) {
+            throw future.getCause();
+        }
     }
 
     /**
@@ -120,7 +146,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     public synchronized void disconnect() {
 
         // make sure our state is correct
-        stateManager.transitionOrThrow(ChannelState.DISCONNECTING);
+        stateManager.transitionOrThrow(ConnectionState.DISCONNECTING);
 
         // because we intend to delete this.channel during the 'ondestroy' method, we need to capture the
         // reference so we don't NPE.
@@ -146,11 +172,11 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
                     // TODO: should we just say it's closed anyway??
 
-                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                    stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
                 } else {
                     LOGGER.debug(String.format("The channel %s closed cleanly", channel));
 
-                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                    stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
 
                     // for debugging (do after all the destroys took place so we aren't left in a bad state after the exception)
                     assertClosed(channel);
@@ -158,7 +184,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             } catch (Exception e) {
                 LOGGER.error("Got exception trying to close", e);
                 // it was interrupted, do we call this disconnected??
-                stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
             }
         } catch (Exception e){
             LOGGER.error("Crazy, we got an error the catch block of an error! ", e);
@@ -166,7 +192,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     }
 
     public ObservableFuture<Boolean> write(Object message) {
-        assertConnected();
+        stateManager.ensure(ConnectionState.CONNECTED);
 
         return FutureUtil.execute(executor, null,
                 new WriteOnChannelSafelyCallable(this, message));
@@ -174,36 +200,8 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
     public boolean shouldBeConnected() {
         synchronized (stateManager) {
-            return stateManager.get() == ChannelState.CONNECTED;
+            return stateManager.get() == ConnectionState.CONNECTED;
         }
-    }
-
-    private void assertConnected() {
-        if (!isConnected()) {
-            throw new IllegalStateException("Not currently connected");
-        }
-
-        stateManager.ensure(ChannelState.CONNECTED);
-    }
-
-    /**
-     * Safely check if the underlying channel is connecting meaning that it is open or bound but not connected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is disconnected.
-     */
-    protected boolean isConnecting() {
-        return (channel != null) && channel.isOpen() && !channel.isConnected();
-    }
-
-    /**
-     * Safely check if the underlying channel is disconnected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is disconnected.
-     */
-    protected synchronized boolean isDisconnected() {
-        return (channel != null) && !channel.isConnected();
     }
 
     /**
@@ -212,17 +210,19 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      *
      * @return True if the underlying channel is connected.
      */
-    protected boolean isConnected() {
-        Channel c = channel;
-
-        return (c != null) && c.isConnected();
+    protected ConnectionState getState() {
+        return stateManager.get();
     }
 
     private void assertClosed(Channel channel) {
         // double check that it worked?
-        if (isConnected()) {
+        if (channel.isConnected()) {
             throw new IllegalStateException(String.format("We assumed that Netty made isOpen, isConnected, isBound false! %b, %b, %b", channel.isOpen(), channel.isConnected(), channel.isBound()));
         }
+    }
+
+    public ConnectionHandle getConnection() {
+        return connection;
     }
 
     @Override
@@ -238,5 +238,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
 
         executor.shutdownNow();
+
+        // dont null out the "connection" object because it would cause null pointers. It's linked so it will auto destroy.
     }
 }

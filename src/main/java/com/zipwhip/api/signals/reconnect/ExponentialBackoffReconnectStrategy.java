@@ -1,12 +1,13 @@
 package com.zipwhip.api.signals.reconnect;
 
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import org.apache.log4j.Logger;
 
 import java.util.Date;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +42,7 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
     private long consecutiveReconnectAttempts = INITIAL_ATTEMPTS;
 
     private ScheduledExecutorService scheduler;
-    private Future<Boolean> reconnectTask;
+    private ObservableFuture<ConnectionHandle> reconnectTask;
     private Runnable reconnectRunnable;
 
     public ExponentialBackoffReconnectStrategy() {
@@ -86,12 +87,14 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
         // Start listening for connect events to reset our counter
         if (!connectObserverSet) {
 
-            signalConnection.onConnect(new Observer<Boolean>() {
+            signalConnection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
+
                 @Override
-                public void notify(Object sender, Boolean connected) {
+                public void notify(Object sender, ConnectionHandle connectionHandle) {
+                    // todo: is isActive the same as isConnected?
+                    boolean connected = !connectionHandle.isDestroyed();
 
                     if (connected) {
-
                         if (LOGGER.isDebugEnabled()) {
                             LOGGER.debug("We reconnected, cleaning up and resetting count.");
                         }
@@ -125,10 +128,6 @@ public class ExponentialBackoffReconnectStrategy extends ReconnectStrategy {
 
                         consecutiveReconnectAttempts++;
                         reconnectTask = signalConnection.connect();
-
-                    } catch (InterruptedException e) {
-
-                        LOGGER.warn("Execution interrupted, we probably already reconnected");
 
                     } catch (Exception e) {
 

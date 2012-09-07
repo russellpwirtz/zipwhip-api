@@ -29,10 +29,11 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
     @Override
     public Boolean call() throws Exception {
-
-        if (!wrapper.isConnected() || wrapper.isDestroyed()) {
-            // it seems that we aren't connected?
-            return Boolean.FALSE;
+        synchronized (wrapper) {
+            if (wrapper.isDestroyed()) {
+                // it seems that we aren't connected?
+                return Boolean.FALSE;
+            }
         }
 
         ChannelFuture future;

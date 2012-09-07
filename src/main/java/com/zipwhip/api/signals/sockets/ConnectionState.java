@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets.netty;
+package com.zipwhip.api.signals.sockets;
 
 /**
  * Created with IntelliJ IDEA.
@@ -8,12 +8,13 @@ package com.zipwhip.api.signals.sockets.netty;
  *
  * Represents the states of the Channel
  */
-public enum ChannelState {
+public enum ConnectionState {
 
-    DESTROYED,
     NONE,
+    DESTROYED,
     CONNECTING,
     CONNECTED,
+    AUTHENTICATED,
     DISCONNECTING,
     DISCONNECTED
 

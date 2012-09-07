@@ -109,11 +109,15 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
     }
 
     public static <T> void syncState(ObservableFuture<T> source, ObservableFuture<T> destination) {
+        syncState(source, destination, source.getResult());
+    }
+
+    public static <T> void syncState(ObservableFuture<?> source, ObservableFuture<T> destination, T result) {
         if (source.isDone()) {
             if (source.isCancelled()) {
                 destination.cancel();
             } else if (source.isSuccess()) {
-                destination.setSuccess(source.getResult());
+                destination.setSuccess(result);
             } else {
                 destination.setFailure(source.getCause());
             }
@@ -133,4 +137,28 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
             }
         }
     }
+
+    /**
+     * Will sync only the failure
+     *
+     * @param source
+     * @param destination
+     */
+    public static void syncFailure(ObservableFuture<?> source, NestedObservableFuture<?> destination) {
+        if (!source.isDone()) {
+            throw new IllegalStateException("The sourceFuture isn't done yet!");
+        } else if (source.isSuccess()) {
+            throw new IllegalStateException("The sourceFuture is successful!");
+        }
+
+        if (source.isCancelled()) {
+            destination.cancel();
+        } else if (source.isFailed()) {
+            destination.setFailure(source.getCause());
+        } else {
+            // not sure what to do?
+        }
+    }
+
+
 }

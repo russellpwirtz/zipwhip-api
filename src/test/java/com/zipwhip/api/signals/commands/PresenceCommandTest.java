@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals.commands;
 
-import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.signals.presence.*;

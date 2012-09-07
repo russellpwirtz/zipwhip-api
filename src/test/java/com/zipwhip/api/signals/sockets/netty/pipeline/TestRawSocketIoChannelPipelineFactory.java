@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.api.signals.sockets.netty.pipeline;
 
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;

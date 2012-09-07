@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.signals;
 
 import java.util.ArrayList;
 import java.util.HashMap;

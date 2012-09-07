@@ -1,6 +1,12 @@
 package com.zipwhip.api;
 
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.SignTool;
+
+import java.io.File;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A {@code Connection} encapsulates the way to communicate to Zipwhip API on behalf of user.
@@ -109,5 +115,42 @@ public interface ApiConnection extends Connection {
      * @return The Zipwhip API version to be used in web calls.
      */
     String getApiVersion();
+
+    /**
+     * Set the sessionKey for this connection
+     *
+     * @param sessionKey the client's Zipwhip sessionKey
+     */
+    void setSessionKey(String sessionKey);
+
+    /**
+     * Get this connection's sessionKey
+     *
+     * @return sessionKey
+     */
+    String getSessionKey();
+
+
+    /**
+     * Execute a call to the Zipwhip API ASYNCHRONOUSLY.
+     *
+     * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
+     * @param params Map of query params to append to the method
+     * @param files  A list of files to be uploaded.
+     * @return A ObservableFuture task which will return the response body as a String on completion.
+     * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
+     */
+    ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception;
+
+    /**
+     * Execute a call to the Zipwhip API ASYNCHRONOUSLY.
+     *
+     * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
+     * @param params Map of query params to append to the method
+     * @return A ObservableFuture task which will return the response body as a String on completion.
+     * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
+     */
+    ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception;
+
 
 }

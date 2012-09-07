@@ -1,8 +1,8 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIdleStateHandler;
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIdleStateHandler;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandEncoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandDecoder;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.jboss.netty.channel.ChannelPipeline;

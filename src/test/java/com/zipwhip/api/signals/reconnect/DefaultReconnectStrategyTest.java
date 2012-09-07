@@ -1,15 +1,15 @@
 package com.zipwhip.api.signals.reconnect;
 
 import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.MockReconnectStrategy;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
+import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.concurrent.Future;
 
 /**
  * Created by IntelliJ IDEA.
@@ -47,14 +47,14 @@ public class DefaultReconnectStrategyTest {
         strategy.start();
         Assert.assertTrue(strategy.isStarted());
 
-        Future<Boolean> task = connection.connect();
-        Assert.assertTrue(task.get());
+        ObservableFuture<ConnectionHandle> task = connection.connect();
+        Assert.assertTrue(task.get() != null);
 
-        connection.onConnect(new Observer<Boolean>() {
+        connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
-            public void notify(Object sender, Boolean item) {
+            public void notify(Object sender, ConnectionHandle item) {
                 System.out.println("Reconnect fired");
-                Assert.assertTrue(item);
+                Assert.assertTrue(!item.isDestroyed());
             }
         });
 
@@ -70,14 +70,14 @@ public class DefaultReconnectStrategyTest {
         strategy.start();
         Assert.assertTrue(strategy.isStarted());
 
-        Future<Boolean> task = connection.connect();
-        Assert.assertTrue(task.get());
+        ObservableFuture<ConnectionHandle> task = connection.connect();
+        Assert.assertTrue(!task.get().isDestroyed());
 
-        connection.onConnect(new Observer<Boolean>() {
+        connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
-            public void notify(Object sender, Boolean item) {
+            public void notify(Object sender, ConnectionHandle item) {
                 System.out.println("Reconnect fired");
-                Assert.assertTrue(item);
+                Assert.assertTrue(!item.isDestroyed());
             }
         });
 
@@ -97,13 +97,13 @@ public class DefaultReconnectStrategyTest {
         Assert.assertFalse(strategy.isStarted());
 
         task = connection.connect();
-        Assert.assertTrue(task.get());
+        Assert.assertTrue(!task.get().isDestroyed());
 
-        connection.onConnect(new Observer<Boolean>() {
+        connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
-            public void notify(Object sender, Boolean item) {
+            public void notify(Object sender, ConnectionHandle item) {
                 System.out.println("Should never fire");
-                Assert.assertTrue(item);
+                Assert.assertTrue(!item.isDestroyed());
             }
         });
 

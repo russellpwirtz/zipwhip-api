@@ -3,10 +3,15 @@ package com.zipwhip.api.signals.sockets;
 import com.zipwhip.api.*;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.SignalProviderTests;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
+import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.DownloadURL;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -19,7 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static junit.framework.Assert.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -36,6 +41,7 @@ public class SocketSignalProviderIntegrationTest {
 //    private String host = "http://network.zipwhip.com";
 
     ZipwhipClient client;
+    SocketSignalProvider signalProvider;
 
     @Before
     public void setUp() throws Exception {
@@ -63,17 +69,15 @@ public class SocketSignalProviderIntegrationTest {
         zipwhipClient.setSettingsStore(new MemorySettingStore());
 
         client = zipwhipClient;
+        signalProvider = (SocketSignalProvider)client.getSignalProvider();
     }
 
     @Test
     public void testConnectAndVerify() throws Exception {
-        Boolean success =  client.connect().get(100, TimeUnit.SECONDS);
-        assertNotNull("connecting returned null?", success);
-
-//        ((DefaultZipwhipClient)client).setSignalsConnectTimeoutInSeconds(1);
+        ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(client.connect());
+        assertFalse("connecting returned null?", connectionHandle.isDestroyed());
 
         String sessionKey = client.getConnection().getSessionKey();
-//        assertEquals(client.getConnection().getSessionKey(), sessionKey);
         assertTrue(client.getSignalProvider().getClientId() != null);
         assertTrue(client.getSignalProvider().isConnected());
 
@@ -105,6 +109,115 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue("Latch didn't finish?", latch.await(50, TimeUnit.SECONDS));
 
         assertNotNull(verifySignal[0]);
+    }
+
+
+    @Test
+    public void testBasicConnect() throws Exception {
+        final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
+
+        final CountDownLatch latch = new CountDownLatch(3);
+
+        connectionHandle.link(new DestroyableBase() {
+            @Override
+            protected void onDestroy() {
+                latch.countDown();
+            }
+        });
+
+        connectionHandle.getDisconnectFuture().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                TestUtil.awaitAndAssertSuccess(item);
+                assertNotNull(item.getResult());
+                assertFalse(signalProvider.isConnected());
+                assertFalse(signalProvider.isAuthenticated());
+                assertTrue(connectionHandle.isDestroyed());
+                latch.countDown();
+            }
+        });
+
+        signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean connected) {
+                assertFalse(connected);
+                assertFalse(signalProvider.isConnected());
+                assertFalse(signalProvider.isAuthenticated());
+                assertTrue(connectionHandle.isDestroyed());
+                latch.countDown();
+            }
+        });
+
+        assertTrue(signalProvider.isConnected());
+
+        TestUtil.awaitAndAssertSuccess(connectionHandle.disconnect());
+        assertTrue(connectionHandle.isDestroyed());
+        assertFalse(signalProvider.isConnected());
+
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
+    }
+
+
+
+    @Test
+    public void testBasicConnect2() throws Exception {
+        ObservableFuture<ConnectionHandle> future = signalProvider.connect();
+
+        TestUtil.awaitAndAssertSuccess(future);
+
+        final ConnectionHandle connectionHandle = future.getResult();
+        final CountDownLatch latch = new CountDownLatch(3);
+
+        connectionHandle.link(new DestroyableBase() {
+            @Override
+            protected void onDestroy() {
+                latch.countDown();
+            }
+        });
+
+        connectionHandle.getDisconnectFuture().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                TestUtil.awaitAndAssertSuccess(item);
+                assertNotNull(item.getResult());
+                assertFalse(signalProvider.isConnected());
+                assertFalse(signalProvider.isAuthenticated());
+                assertTrue(connectionHandle.isDestroyed());
+                latch.countDown();
+            }
+        });
+
+        signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean connected) {
+                assertFalse(connected);
+                assertFalse(signalProvider.isConnected());
+                assertFalse(signalProvider.isAuthenticated());
+                assertTrue(connectionHandle.isDestroyed());
+                latch.countDown();
+            }
+        });
+
+        assertTrue(signalProvider.isConnected());
+
+        TestUtil.awaitAndAssertSuccess(signalProvider.disconnect());
+        assertTrue(connectionHandle.isDestroyed());
+        assertFalse(signalProvider.isConnected());
+
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void testConnectDisconnect() throws Exception {
+        ObservableFuture<ConnectionHandle> future = signalProvider.connect();
+
+        future.addObserver(new SignalProviderTests.AssertConnectedStateObserver(signalProvider));
+
+        TestUtil.awaitAndAssertSuccess(future);
+        assertNotNull((signalProvider).getCurrentConnection());
+
+        TestUtil.awaitAndAssertSuccess(signalProvider.disconnect());
+        assertNull((signalProvider).getCurrentConnection());
     }
 
     @After

@@ -6,6 +6,8 @@ import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.util.Factory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
+import java.net.SocketAddress;
+
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/12/11 Time: 6:54 PM
  * <p/>
@@ -15,9 +17,9 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy = null;
     private ChannelPipelineFactory channelPipelineFactory = null;
-    private String host;
+    private SocketAddress address;
 
-    private SocketSignalProviderFactory() {
+    public SocketSignalProviderFactory() {
 
     }
 
@@ -28,9 +30,10 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     @Override
     public SignalProvider create() {
         NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
-        if (host != null) {
-            connection.setHost(host);
+        if (address != null) {
+            connection.setAddress(address);
         }
+
         return new SocketSignalProvider(connection);
     }
 
@@ -44,8 +47,8 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         return this;
     }
 
-    public SocketSignalProviderFactory host(String host) {
-        this.host = host;
+    public SocketSignalProviderFactory address(SocketAddress address) {
+        this.address = address;
         return this;
     }
 }

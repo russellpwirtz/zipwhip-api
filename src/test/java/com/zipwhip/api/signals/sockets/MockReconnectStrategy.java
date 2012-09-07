@@ -1,8 +1,7 @@
 package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-
-import java.util.concurrent.Future;
+import com.zipwhip.concurrent.ObservableFuture;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,10 +16,10 @@ public class MockReconnectStrategy extends ReconnectStrategy {
 
         try {
             System.out.println("Strategy firing...");
-            Future<Boolean> reconnectTask = signalConnection.connect();
-            Boolean success = reconnectTask.get();
+            ObservableFuture<ConnectionHandle> reconnectTask = signalConnection.connect();
+            ConnectionHandle connectionHandle = reconnectTask.get();
 
-            if (!success) {
+            if (connectionHandle == null || (connectionHandle.isDestroyed() && connectionHandle.disconnectedViaNetwork())) {
                 signalConnection.disconnect(true);
             }
         } catch (Exception e) {

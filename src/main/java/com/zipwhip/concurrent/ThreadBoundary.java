@@ -1,6 +1,6 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.api.signals.sockets.StateManager;
+import com.zipwhip.util.StateManager;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import org.apache.log4j.Logger;
