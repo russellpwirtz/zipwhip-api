@@ -10,6 +10,7 @@ import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -79,9 +80,19 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
      * @return
      */
     public boolean isConnected() {
-        if (signalProvider.isConnected() && signalProvider.isAuthenticated()) {
-            // if the connectingFuture is null, we are authenticated.
-            return connectingFuture == null;
+        ConnectionState connectionState = signalProvider.getConnectionState();
+
+        switch (connectionState) {
+            case CONNECTING:
+                return false;
+            case CONNECTED:
+                return false;
+            case DISCONNECTING:
+                return false;
+            case DISCONNECTED:
+                return false;
+            case AUTHENTICATED:
+                return connectingFuture == null || connectingFuture.isDone();
         }
 
         return false;
@@ -116,7 +127,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         connectingFuture = future;
 
 //        synchronized (signalProvider) {
-//            Asserts.assertTrue(!signalProvider.isConnected(), "How can we connect if we are already connected!");
+//            Asserts.assertTrue(!signalProvider.getConnectionState() == ConnectionState.CONNECTED, "How can we connect if we are already connected!");
 //        }
 
         ObservableFuture<ConnectionHandle> requestFuture = importantTaskExecutor.enqueue(
@@ -601,8 +612,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             synchronized (ClientZipwhipNetworkSupport.this) {
                 // this is the proper order of sync [client->provider]
                 synchronized (signalProvider) {
-                    Asserts.assertTrue(!signalProvider.isConnected(), "Order of operations failure! Already connected!");
-                    Asserts.assertTrue(!signalProvider.isAuthenticated(), "Order of operations failure! Already authenticated!");
+                    Asserts.assertTrue(signalProvider.getConnectionState() != ConnectionState.CONNECTED, "Order of operations failure! Already connected!");
+                    Asserts.assertTrue(signalProvider.getConnectionState() != ConnectionState.AUTHENTICATED, "Order of operations failure! Already authenticated!");
                 }
             }
         }

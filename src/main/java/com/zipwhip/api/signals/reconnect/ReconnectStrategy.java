@@ -71,11 +71,11 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      */
     public synchronized final void start() {
 
-        LOGGER.debug("Start reconnect strategy requested...");
+        LOGGER.debug("Bind reconnect strategy requested...");
 
         if (!isStarted && signalConnection != null) {
 
-            LOGGER.debug("Starting reconnect strategy...");
+            LOGGER.debug("Binding reconnect strategy to events...");
 
             disconnectObserver = new Observer<ConnectionHandle>() {
 

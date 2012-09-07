@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
@@ -48,11 +49,11 @@ public class SignalConnectionDelegateTest {
         assertTrue(delegate.isDestroyed());
 
         signalConnection.connect().get();
-        assertTrue(signalConnection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         // Disconnect fails because we are destroyed
         delegate.disconnectAsyncIfActive(true);
-        assertTrue(signalConnection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -61,7 +62,7 @@ public class SignalConnectionDelegateTest {
         assertFalse(delegate.isDestroyed());
 
         ConnectionHandle connectionHandle = signalConnection.connect().get();
-        assertTrue(signalConnection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         delegate.setConnectionHandle(connectionHandle);
 
@@ -69,7 +70,7 @@ public class SignalConnectionDelegateTest {
         delegate.disconnectAsyncIfActive(true);
         disconnectLatch.await();
 
-        assertFalse(signalConnection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -78,13 +79,13 @@ public class SignalConnectionDelegateTest {
         assertFalse(delegate.isDestroyed());
 
         delegate.setConnectionHandle(signalConnection.connect().get());
-        assertTrue(signalConnection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         // Non-network
         delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
-        assertFalse(signalConnection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -92,13 +93,13 @@ public class SignalConnectionDelegateTest {
 
         delegate.setConnectionHandle(signalConnection.connect().get());
 
-        assertTrue(signalConnection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
         assertFalse(delegate.isDestroyed());
 
         delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
-        assertFalse(signalConnection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test

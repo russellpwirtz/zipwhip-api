@@ -283,12 +283,17 @@ public class NettySignalConnection extends SignalConnectionBase {
 
     protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {
         ChannelWrapperConnectionHandle con = (ChannelWrapperConnectionHandle) connectionHandle;
+        ChannelWrapper w = con.channelWrapper;
 
         con.causedByNetwork = causedByNetwork;
         con.channelWrapper.disconnect();
         // dont manually trigger the disconnectFuture. The caller will do that later.
 
+
         con.destroy();
+
+        Asserts.assertTrue(con.isDestroyed(), "Connection must be destroyed");
+        Asserts.assertTrue(w.isDestroyed(), "ChannelWrapper must be destroyed");
     }
 
     protected ObservableFuture<Boolean> executeSend(ConnectionHandle connectionHandle, final Object command) {

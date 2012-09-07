@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -55,8 +56,8 @@ public class SignalProviderTests {
             public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
                 assertSuccess(item);
                 assertNotNull(item.getResult());
-                assertFalse(signalProvider.isConnected());
-                assertFalse(signalProvider.isAuthenticated());
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
                 assertTrue(connectionHandle.isDestroyed());
                 latch.countDown();
             }
@@ -66,18 +67,18 @@ public class SignalProviderTests {
             @Override
             public void notify(Object sender, Boolean connected) {
                 assertFalse(connected);
-                assertFalse(signalProvider.isConnected());
-                assertFalse(signalProvider.isAuthenticated());
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
                 assertTrue(connectionHandle.isDestroyed());
                 latch.countDown();
             }
         });
 
-        assertTrue(signalProvider.isConnected());
+        assertTrue(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
 
         TestUtil.awaitAndAssertSuccess(connectionHandle.disconnect());
         assertTrue(connectionHandle.isDestroyed());
-        assertFalse(signalProvider.isConnected());
+        assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
@@ -107,8 +108,8 @@ public class SignalProviderTests {
             public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
                 assertSuccess(item);
                 assertNotNull(item.getResult());
-                assertFalse(signalProvider.isConnected());
-                assertFalse(signalProvider.isAuthenticated());
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
                 assertTrue(connectionHandle.isDestroyed());
                 latch.countDown();
             }
@@ -118,18 +119,18 @@ public class SignalProviderTests {
             @Override
             public void notify(Object sender, Boolean connected) {
                 assertFalse(connected);
-                assertFalse(signalProvider.isConnected());
-                assertFalse(signalProvider.isAuthenticated());
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
                 assertTrue(connectionHandle.isDestroyed());
                 latch.countDown();
             }
         });
 
-        assertTrue(signalProvider.isConnected());
+        assertTrue(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
 
         TestUtil.awaitAndAssertSuccess(signalProvider.disconnect());
         assertTrue(connectionHandle.isDestroyed());
-        assertFalse(signalProvider.isConnected());
+        assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }

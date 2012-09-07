@@ -662,7 +662,7 @@ public interface ZipwhipClient extends Destroyable {
 
     /**
      * If connecting, returns false.
-     * If signalProvider.isConnected(), returns authenticated;
+     * If signalProvider.getConnectionState() == ConnectionState.CONNECTED, returns authenticated;
      * If authenticated, returns true;
      * <p/>
      * Authenticated means that we have a SubscriptionCompleteCommand to leverage.
