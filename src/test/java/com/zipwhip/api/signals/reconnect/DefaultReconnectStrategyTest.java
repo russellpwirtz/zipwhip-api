@@ -24,6 +24,7 @@ public class DefaultReconnectStrategyTest {
 
     @Before
     public void setUp() throws Exception {
+
         connection = new MockSignalConnection();
         strategy = new MockReconnectStrategy();
         strategy.setSignalConnection(connection);

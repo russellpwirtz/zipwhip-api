@@ -7,6 +7,7 @@ import com.zipwhip.util.Factory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
 import java.net.SocketAddress;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/12/11 Time: 6:54 PM
@@ -17,6 +18,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy = null;
     private ChannelPipelineFactory channelPipelineFactory = null;
+    private Factory<ExecutorService> executorFactory = null;
     private SocketAddress address;
 
     public SocketSignalProviderFactory() {
@@ -29,7 +31,8 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     @Override
     public SignalProvider create() {
-        NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
+//        NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
+        NettySignalConnection connection = new NettySignalConnection(executorFactory, reconnectStrategy, channelPipelineFactory);
         if (address != null) {
             connection.setAddress(address);
         }
@@ -44,6 +47,11 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     public SocketSignalProviderFactory channelPipelineFactory(ChannelPipelineFactory channelPipelineFactory) {
         this.channelPipelineFactory = channelPipelineFactory;
+        return this;
+    }
+
+    public SocketSignalProviderFactory executorFactory(Factory<ExecutorService> executorFactory) {
+        this.executorFactory = executorFactory;
         return this;
     }
 

@@ -42,6 +42,10 @@ public class MockSignalConnection extends SignalConnectionBase {
         super(SimpleExecutor.getInstance());
     }
 
+    public MockSignalConnection(Executor executor) {
+        super(executor);
+    }
+
     /**
      * Provide a means to simulate traffic coming in from the signal server
      *

@@ -8,9 +8,11 @@ import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,10 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -42,6 +41,7 @@ public class SocketSignalProviderTest {
 
     @Before
     public void setUp() throws Exception {
+
         signalConnection = new MockSignalConnection();
         provider = new SocketSignalProvider(signalConnection, null, null);
 

@@ -7,10 +7,13 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.MockObserver;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.util.Factory;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 import static junit.framework.Assert.*;
 import static junit.framework.Assert.assertFalse;
@@ -29,7 +32,6 @@ public class MockConnectionTests {
     @Before
     public void setUp() throws Exception {
         this.signalConnection = new MockSignalConnection();
-
     }
 
     @Test

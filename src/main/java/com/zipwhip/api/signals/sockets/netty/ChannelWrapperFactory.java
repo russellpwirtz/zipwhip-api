@@ -1,7 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.sockets.netty.pipeline.NettyChannelHandler;
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
@@ -33,16 +32,26 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
     private Factory<ExecutorService> executorFactory;
 
     public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection) {
+        this(channelPipelineFactory, channelFactory, signalConnection, null);
+    }
+
+    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, Factory<ExecutorService> executorFactory) {
         this.channelPipelineFactory = channelPipelineFactory;
         this.channelFactory = channelFactory;
         this.signalConnection = signalConnection;
+        this.executorFactory = executorFactory;
     }
 
     @Override
-    public ChannelWrapper create() throws Exception {
+    public ChannelWrapper create() {
 
         // the pipeline is for the protocol (such as Websocket and/or regular sockets)
-        ChannelPipeline pipeline = channelPipelineFactory.getPipeline();
+        ChannelPipeline pipeline;
+        try {
+            pipeline = channelPipelineFactory.getPipeline();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // the delegate lets the ChannelHandlers talk to the connection (such as pong-received)
         SignalConnectionDelegate delegate = new SignalConnectionDelegate(signalConnection);

@@ -14,7 +14,8 @@ import org.junit.Test;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 
 import static junit.framework.Assert.*;
 
@@ -28,13 +29,20 @@ public class SignalConnectionDelegateTest {
 
     SignalConnectionDelegate delegate;
     SignalConnectionBase signalConnection;
+//    Factory<ExecutorService> executorFactory;
 
     // The delegate does disconnect async so we need this to control timing
     CountDownLatch disconnectLatch;
 
     @Before
     public void setUp() throws Exception {
-        signalConnection = new MockSignalConnection();
+//        executorFactory = new Factory<ExecutorService>() {
+//            @Override
+//            public ExecutorService create() {
+//                return SimpleExecutor.getInstance();
+//            }
+//        };
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
         delegate = new SignalConnectionDelegate(signalConnection);
         disconnectLatch = new CountDownLatch(1);
     }
@@ -141,6 +149,10 @@ public class SignalConnectionDelegateTest {
         protected final List<PingPongCommand> pongs = new ArrayList<PingPongCommand>();
 
         protected boolean isConnected = false;
+
+        public MockSignalConnection(Executor executor) {
+            super(executor);
+        }
 
         public MockSignalConnection() {
             super(SimpleExecutor.getInstance());

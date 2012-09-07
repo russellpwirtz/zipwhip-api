@@ -7,6 +7,8 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.util.Factory;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -24,7 +26,7 @@ public class ExponentialBackoffReconnectStrategyTest {
 
 	private ExponentialBackoffReconnectStrategy strategy;
 
-	/**
+    /**
 	 * @throws java.lang.Exception
 	 */
 	@Before
@@ -51,7 +53,15 @@ public class ExponentialBackoffReconnectStrategyTest {
 
 	private class CannotConnectSignalConnection extends MockSignalConnection {
 
-			@Override
+        public CannotConnectSignalConnection(Factory<ExecutorService> executorFactory) {
+            super(executorFactory.create());
+        }
+
+        public CannotConnectSignalConnection() {
+            super(SimpleExecutor.getInstance());
+        }
+
+        @Override
 		public synchronized ObservableFuture<ConnectionHandle> connect() {
             return new FakeFailingObservableFuture<ConnectionHandle>(this, new Exception());
 		}

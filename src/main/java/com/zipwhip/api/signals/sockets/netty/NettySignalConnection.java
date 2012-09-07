@@ -7,7 +7,9 @@ import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
+import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -15,6 +17,7 @@ import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -25,7 +28,7 @@ public class NettySignalConnection extends SignalConnectionBase {
     private static final Logger LOGGER = Logger.getLogger(NettySignalConnection.class);
 
     private final ChannelWrapperFactory channelWrapperFactory;
-    private final ChannelFactory channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-io-")));
+    private final ChannelFactory channelFactory;
 
     /**
      * Create a new {@code NettySignalConnection} with a default {@code ReconnectStrategy} and {@code ChannelPipelineFactory}.
@@ -68,8 +71,20 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param reconnectStrategy      The reconnect strategy to use in the case of socket disconnects.
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
-    public NettySignalConnection(Executor executor, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
-        super(executor);
+    public NettySignalConnection(Factory<ExecutorService> executorFactory, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
+        super(executorFactory != null ? executorFactory.create() : null);
+
+        if (executorFactory != null){
+            // We created the executor that our parent is using. We need to destroy it.
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    if (executor instanceof ExecutorService) {
+                        ((ExecutorService) executor).shutdownNow();
+                    }
+                }
+            });
+        }
 
         if (channelPipelineFactory == null) {
             channelPipelineFactory = new RawSocketIoChannelPipelineFactory();
@@ -83,7 +98,25 @@ public class NettySignalConnection extends SignalConnectionBase {
             setReconnectStrategy(reconnectStrategy);
         }
 
-        this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this);
+        Executor ex = null;
+        if (executorFactory != null){
+                ex = executorFactory.create();
+        }
+
+        if (ex == null) {
+            ex = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-io-"));
+            final Executor finalEx = ex;
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ((ExecutorService) finalEx).shutdownNow();
+                }
+            });
+        }
+
+        channelFactory = new OioClientSocketChannelFactory(ex);
+
+        this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this, executorFactory);
         this.link(channelWrapperFactory);
     }
 
