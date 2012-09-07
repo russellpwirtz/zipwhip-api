@@ -162,7 +162,7 @@ public class SignalConnectionDelegateTest {
         protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {
             isConnected = false;
             ((MockSignalConnectionConnectionHandle) connectionHandle).causedByNetwork = causedByNetwork;
-            ((MockSignalConnectionConnectionHandle)connectionHandle).destroy();
+            ((MockSignalConnectionConnectionHandle) connectionHandle).destroy();
             disconnectLatch.countDown();
         }
 
@@ -170,6 +170,11 @@ public class SignalConnectionDelegateTest {
         protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
             isConnected = true;
             return new MockSignalConnectionConnectionHandle();
+        }
+
+        @Override
+        protected Executor getExecutorForConnection(ConnectionHandle connectionHandle) {
+            return executor;
         }
 
         @Override

@@ -30,7 +30,8 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
 
     @Override
     protected void proxyDisconnectFromRequestorToParent(ObservableFuture<ConnectionHandle> disconnectFuture, boolean causedByNetwork) {
-        Asserts.assertTrue(getDisconnectFuture() == disconnectFuture && disconnectFuture == signalProvider.disconnect(causedByNetwork), "Bad futures?");
+        Asserts.assertTrue(getDisconnectFuture() == disconnectFuture, "Bad futures 1");
+        Asserts.assertTrue(disconnectFuture == signalProvider.disconnect(causedByNetwork), "Bad futures 2");
     }
 
     @Override

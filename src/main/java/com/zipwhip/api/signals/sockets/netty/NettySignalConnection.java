@@ -6,6 +6,7 @@ import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
@@ -14,6 +15,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
@@ -303,11 +305,32 @@ public class NettySignalConnection extends SignalConnectionBase {
     }
 
     @Override
+    protected Executor getExecutorForConnection(ConnectionHandle connectionHandle) {
+        return ((ChannelWrapperConnectionHandle)connectionHandle).channelWrapper.executor;
+    }
+
+    @Override
     protected void onDestroy() {
         if (channelFactory instanceof Destroyable) {
             ((Destroyable) channelFactory).destroy();
         } else {
             channelFactory.releaseExternalResources();
         }
+    }
+
+    @Override
+    protected <T> void notifyEvent(final ConnectionHandle connectionHandle, final ObservableHelper<T> event, final T data) {
+        ((ChannelWrapperConnectionHandle) connectionHandle).channelWrapper.executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (NettySignalConnection.this) {
+                    synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+                        synchronized (connectionHandle) {
+                            event.notifyObservers(connectionHandle, data);
+                        }
+                    }
+                }
+            }
+        });
     }
 }

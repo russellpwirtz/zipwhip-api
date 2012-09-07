@@ -41,12 +41,17 @@ public abstract class ConnectionHandleBase extends CascadingDestroyableBase impl
     @Override
     public synchronized ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) {
         final ObservableFuture<ConnectionHandle> disconnectFuture = getDisconnectFuture();
+        if (isDestroyed() || disconnectFuture.isDone()) {
+            return disconnectFuture;
+        }
 
         if (this.disconnectRequested) {
             return disconnectFuture;
         }
         this.disconnectRequested = true;
         this.causedByNetwork = causedByNetwork;
+
+
 
         proxyDisconnectFromRequestorToParent(disconnectFuture, causedByNetwork);
 

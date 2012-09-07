@@ -1,10 +1,12 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
@@ -609,6 +611,26 @@ public class SocketSignalProviderTest {
             assertEquals(Long.valueOf(1), versions.get("key1"));
             assertEquals(Long.valueOf(11), versions.get("key2"));
         }
+
+    }
+
+    @Test
+    public void testPingEvent() throws InterruptedException {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        provider.getPingReceivedEvent().addObserver(new Observer<PingEvent>() {
+            @Override
+            public void notify(Object sender, PingEvent item) {
+                latch.countDown();
+            }
+        });
+
+        TestUtil.awaitAndAssertSuccess(provider.connect());
+
+        signalConnection.mockPingPongCommand(PingPongCommand.getShortformInstance());
+
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
 
     }
 

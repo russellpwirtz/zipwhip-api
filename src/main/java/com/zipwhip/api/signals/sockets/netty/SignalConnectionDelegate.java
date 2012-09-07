@@ -5,6 +5,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.apache.log4j.Logger;
 
@@ -66,22 +67,17 @@ public class SignalConnectionDelegate extends DestroyableBase {
     }
 
     public void receivePong(final PingPongCommand command) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                signalConnectionBase.receivePong(connectionHandle, command);
+        synchronized (this) {
+            if (isDestroyed() || isPaused()) {
+                return;
             }
-        });
+
+            signalConnectionBase.receivePong(connectionHandle, command);
+        }
     }
 
     public void notifyReceiveEvent(final Command command) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                // this is already in the "executor" of the signalConnection.
-                signalConnectionBase.notifyEvent(connectionHandle, signalConnectionBase.receiveEvent, command);
-            }
-        });
+        notifyIfActive(signalConnectionBase.receiveEvent, command);
     }
 
     public void notifyExceptionAndDisconnect(final String result) {
@@ -95,12 +91,7 @@ public class SignalConnectionDelegate extends DestroyableBase {
     }
 
     public synchronized void notifyPingEvent(final PingEvent event) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                signalConnectionBase.notifyEvent(connectionHandle, signalConnectionBase.pingEvent, event);
-            }
-        });
+        notifyIfActive(signalConnectionBase.pingEvent, event);
     }
 
     private void runIfActive(Runnable runnable) {
@@ -119,6 +110,25 @@ public class SignalConnectionDelegate extends DestroyableBase {
             }
 
             signalConnectionBase.runIfActive(connectionHandle, runnable);
+        }
+    }
+
+    private <T> void notifyIfActive(ObservableHelper<T> observableHelper, T data) {
+        if (isPaused()) {
+            LOGGER.debug("Paused so quitting.");
+            return;
+        } else if (isDestroyed()) {
+            LOGGER.debug(toString() + ": Returning silently for runIfActive. We were destroyed.");
+            return;
+        }
+
+        synchronized (this) {
+            if (isDestroyed() || isPaused()) {
+                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed or paused!");
+                return;
+            }
+
+            signalConnectionBase.runIfActive(connectionHandle, observableHelper, data);
         }
     }
 

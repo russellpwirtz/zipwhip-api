@@ -9,6 +9,7 @@ import com.zipwhip.api.settings.VersionStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -24,8 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
-
-import com.zipwhip.api.signals.sockets.ConnectionHandle;
 
 /**
  * A base class for future implementation to extend.
@@ -407,12 +406,15 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             requestFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
                 @Override
                 public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                    LOGGER.debug("finishingEvent:requestFuture:done!");
+
                     if (item.isSuccess()) {
                         final ConnectionHandle connectionHandle = ConnectViaSignalProviderTask.this.signalsConnectionHandle = item.getResult();
 
                         if (newClientIdReceivedWhileWaitingToConnect) {
                             Asserts.assertTrue(signalsConnectionHandleFromNewClientId == connectionHandle, "The connectionHandles didnt match up!!!!");
 
+                            LOGGER.debug("finishingEvent:requestFuture:done! processing the newClientId that we postponed");
                             // we received it already
                             processNewClientId(connectionHandle, newClientIdWhileWaitingToConnect);
                         }
@@ -778,7 +780,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             if (!item.isSuccess()) {
                 observer.notify(sender, item);
             } else {
-                LOGGER.debug("Did not notify inner observer because not successful. " + item);
+                LOGGER.debug("Did not notify inner observer because successful. " + item);
             }
         }
 

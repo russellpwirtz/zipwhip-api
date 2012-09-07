@@ -17,15 +17,15 @@ import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author jed
@@ -145,7 +145,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     public synchronized ObservableFuture<ConnectionHandle> disconnect(ConnectionHandle connectionHandle, boolean causedByNetwork) {
-        if (connectionHandle == null){
+        if (connectionHandle == null) {
             throw new NullPointerException("Connection cannot be null");
         }
 
@@ -263,11 +263,33 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
 
     /**
+     * For throwing events
+     *
+     * @param connectionHandle
+     * @param observableHelper
+     * @param data
+     * @param <T>
+     */
+    protected <T> void runIfActive(final ConnectionHandle connectionHandle, final ObservableHelper<T> observableHelper, final T data) {
+        runIfActive(connectionHandle, getExecutorForConnection(connectionHandle), new Runnable() {
+            @Override
+            public void run() {
+                observableHelper.notifyObservers(connectionHandle, data);
+            }
+        });
+    }
+
+    /**
      * This function allows you to run tasks on the channel thread
      *
      * @param runnable
      */
     protected void runIfActive(final ConnectionHandle connectionHandle, final Runnable runnable) {
+        runIfActive(connectionHandle, executor, runnable);
+    }
+
+    // TODO: actually dont crash here. It takes down the phone and isn't necessary.
+    protected void runIfActive(final ConnectionHandle connectionHandle, Executor executor, final Runnable runnable) {
         if (connectionHandle == null) {
             throw new NullPointerException("Connection cannot be null!");
         } else if (runnable == null) {
@@ -300,25 +322,37 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         });
     }
 
+
+    protected abstract Executor getExecutorForConnection(ConnectionHandle connectionHandle);
+
     protected abstract ObservableFuture<Boolean> send(ConnectionHandle connectionHandle, final Object command);
 
     protected void receivePong(final ConnectionHandle connectionHandle, final PingPongCommand command) {
-        executor.execute(new Runnable() {
+
+        getExecutorForConnection(connectionHandle).execute(new Runnable() {
             @Override
             public void run() {
-                if (command.isRequest()) {
-                    LOGGER.debug("Received a REVERSE PING");
+                synchronized (connectionHandle) {
+                    if (connectionHandle.isDestroyed()) {
+                        return;
+                    }
 
-                    PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
-                    reversePong.setTimestamp(command.getTimestamp());
-                    reversePong.setToken(command.getToken());
+                    Asserts.assertTrue(connectionHandle == getCurrentConnection(), "Current connection not matching?!?");
 
-                    LOGGER.debug("Sending a REVERSE PONG");
-                    send(connectionHandle, reversePong);
-                } else {
-                    LOGGER.debug("Received a PONG");
+                    if (command.isRequest()) {
+                        LOGGER.debug("Received a REVERSE PING");
 
-                    pingEvent.notifyObservers(connectionHandle, PingEvent.PONG_RECEIVED);
+                        PingPongCommand reversePong = PingPongCommand.getNewLongformInstance();
+                        reversePong.setTimestamp(command.getTimestamp());
+                        reversePong.setToken(command.getToken());
+
+                        LOGGER.debug("Sending a REVERSE PONG");
+                        send(connectionHandle, reversePong);
+                    } else {
+                        LOGGER.debug("Received a PONG");
+
+                        pingEvent.notifyObservers(connectionHandle, PingEvent.PONG_RECEIVED);
+                    }
                 }
             }
         });

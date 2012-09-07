@@ -48,7 +48,7 @@ public interface SignalProvider extends Destroyable {
      * @return a ObservableFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
-    ObservableFuture<ConnectionHandle> connect() throws Exception;
+    ObservableFuture<ConnectionHandle> connect();
 
     /**
      * Tell it to connect.
@@ -58,7 +58,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting
      */
-    ObservableFuture<ConnectionHandle> connect(String clientId) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId);
 
     /**
      * Tell it to connect.
@@ -69,7 +69,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions);
 
     /**
      * Tell it to connect. The future will unblock when {action:"CONNECT"} comes back
@@ -81,7 +81,7 @@ public interface SignalProvider extends Destroyable {
      *         string result is the clientId.
      * @throws Exception if an I/O happens while connecting.
      */
-    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions, Presence presence) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions, Presence presence);
 
     /**
      * Tell it to disconnect.

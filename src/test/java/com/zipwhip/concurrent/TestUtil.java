@@ -15,7 +15,7 @@ public class TestUtil {
     public static <T> T awaitAndAssertSuccess(ObservableFuture<T> future) {
         assertNotNull("future was null!!", future);
         try {
-            assertTrue("future didn't finish!", future.await(90, TimeUnit.SECONDS));
+            assertTrue("future didn't finish!", future.await(9, TimeUnit.SECONDS));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

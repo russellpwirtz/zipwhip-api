@@ -3,7 +3,6 @@ package com.zipwhip.api.signals.sockets;
 import com.zipwhip.api.*;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.SignalProviderTests;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
@@ -217,7 +216,7 @@ public class SocketSignalProviderIntegrationTest {
         assertNotNull((signalProvider).getCurrentConnection());
 
         TestUtil.awaitAndAssertSuccess(signalProvider.disconnect());
-        assertNull((signalProvider).getCurrentConnection());
+        assertNull("Current connection must be null after a synchronous disconnect", (signalProvider).getCurrentConnection());
     }
 
     @After

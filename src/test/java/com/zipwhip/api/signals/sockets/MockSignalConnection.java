@@ -2,6 +2,7 @@ package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.ConnectCommand;
+import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBaseConnectionHandleBase;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -52,6 +53,10 @@ public class MockSignalConnection extends SignalConnectionBase {
         receiveEvent.notifyObservers(getCurrentConnection(), command);
     }
 
+    public void mockPingPongCommand(PingPongCommand command) {
+        receivePong(getCurrentConnection(), command);
+    }
+
     /**
      * @return the sent
      */
@@ -69,6 +74,11 @@ public class MockSignalConnection extends SignalConnectionBase {
     @Override
     protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
         return new MockConnectionHandle();
+    }
+
+    @Override
+    protected Executor getExecutorForConnection(ConnectionHandle connectionHandle) {
+        return executor;
     }
 
     @Override
