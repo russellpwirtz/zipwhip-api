@@ -71,6 +71,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
         if (channelPipelineFactory == null) {
             channelPipelineFactory = new RawSocketIoChannelPipelineFactory();
+            this.link((Destroyable)channelPipelineFactory);
         }
 
         if (reconnectStrategy == null) {

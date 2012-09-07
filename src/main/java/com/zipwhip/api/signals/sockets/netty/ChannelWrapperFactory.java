@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
@@ -61,8 +60,6 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
     @Override
     protected void onDestroy() {
-        if (channelPipelineFactory instanceof Destroyable) {
-            ((Destroyable) channelPipelineFactory).destroy();
-        }
+
     }
 }
