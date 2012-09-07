@@ -100,7 +100,7 @@ public class NettyConnectionTests extends MockConnectionTests {
         latch2.await();
 
         assertTrue("DisconnectedViaNetwork is wrong", connectionHandle.disconnectedViaNetwork());
-        assertNull(signalConnection.getCurrentConnection());
+        assertNull(signalConnection.getConnectionHandle());
     }
 
 }

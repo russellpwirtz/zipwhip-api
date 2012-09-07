@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
@@ -19,14 +20,9 @@ import java.net.SocketAddress;
  */
 public interface SignalConnection extends Destroyable {
 
-    /**
-     * Determines if the socket is currently connected
-     *
-     * @return returns true if connected, false if not connected.
-     */
-    boolean isConnected();
+    ConnectionHandle getConnectionHandle();
 
-    ConnectionHandle getCurrentConnection();
+    ConnectionState getConnectionState();
 
     /**
      * Initiate a raw TCP connection to the signal server ASYNCHRONOUSLY. This

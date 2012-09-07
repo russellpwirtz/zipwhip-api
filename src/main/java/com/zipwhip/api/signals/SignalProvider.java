@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
@@ -17,21 +18,23 @@ import java.util.Map;
  */
 public interface SignalProvider extends Destroyable {
 
-    /**
-     * Determines if the state is CONNECTED
-     *
-     * @return
-     */
-    boolean isConnected();
+    ConnectionState getConnectionState();
 
-    /**
-     * Determines if the state is AUTHENTICATED
-     *
-     * (isConnected() && has an active clientId)
-     *
-     * @return
-     */
-    boolean isAuthenticated();
+//    /**
+//     * Determines if the state is CONNECTED
+//     *
+//     * @return
+//     */
+//    boolean isConnected();
+//
+//    /**
+//     * Determines if the state is AUTHENTICATED
+//     *
+//     * (isConnected() && has an active clientId)
+//     *
+//     * @return
+//     */
+//    boolean isAuthenticated();
 
     /**
      * The SignalServer uses a separate id to track you, because it's an Id

@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import org.junit.Before;
@@ -58,13 +59,13 @@ public class NettySignalConnectionTest {
             }
         });
 
-        assertTrue(connection.isConnected());
+        assertTrue(connection.getConnectionState() == ConnectionState.CONNECTED);
         assertFalse(connection.connectionHandle.isDestroyed());
         assertTrue(((ChannelWrapperConnectionHandle) connection.connectionHandle).channelWrapper.channel.isConnected());
         ((ChannelWrapperConnectionHandle)connection.connectionHandle).channelWrapper.channel.close().await();
 
         latch.await(50, TimeUnit.SECONDS);
-        assertFalse(connection.isConnected());
+        assertFalse(connection.getConnectionState() == ConnectionState.CONNECTED);
         assertNull("After a close, the wrapper should be null", connection.connectionHandle);
         assertTrue(disconnectCalled[0]);
     }
@@ -85,15 +86,15 @@ public class NettySignalConnectionTest {
 
     @Test
     public void testConnectDisconnectCycle() throws Exception {
-        assertFalse("Expected connection to be connected", connection.isConnected());
+        assertFalse("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
         assertFalse("Expected connection to be connected", connection.connect().get().isDestroyed());
-        assertTrue("Expected connection to be connected", connection.isConnected());
+        assertTrue("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
 
         ConnectionHandle con = connection.disconnect().get();
 
         assertNotNull("Expected connection to be connected", con);
         assertTrue("Expected connection to be connected", con.isDestroyed());
-        assertFalse("Expected connection to be connected", connection.isConnected());
+        assertFalse("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     /**
@@ -104,17 +105,21 @@ public class NettySignalConnectionTest {
     @Test
     public void testMultipleConnectDisconnects() throws Exception {
         for (int i = 0; i < 100; i++) {
-            assertFalse("Expected connection to be connected", connection.isConnected());
+            assertFalse("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
             ObservableFuture<ConnectionHandle> future = connection.connect();
             future.await();
 
             assertTrue(future.isSuccess());
             assertFalse("Expected connection to be connected", future.getResult().isDestroyed());
-            assertTrue("Expected connection to be connected", connection.isConnected());
+            assertTrue("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
 
             assertNotNull("Expected connection to be connected", connection.disconnect().get());
-            assertFalse("Expected connection to be connected", connection.isConnected());
+            assertFalse("Expected connection to be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
         }
+    }
+
+    @Test
+    public void testName() throws Exception {
     }
 
     @Test
@@ -147,9 +152,9 @@ public class NettySignalConnectionTest {
         connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
             public void notify(Object sender, ConnectionHandle item) {
-                if (connection.isConnected()) {
+                if (connection.getConnectionState() == ConnectionState.CONNECTED) {
                     latch.countDown();
-                    System.out.println("After onConnect event " + connection.isConnected());
+                    System.out.println("After onConnect event " + (connection.getConnectionState() == ConnectionState.CONNECTED));
                 }
             }
         });
@@ -159,8 +164,8 @@ public class NettySignalConnectionTest {
         // assume a connect is happening
         latch.await(5, TimeUnit.SECONDS);
 
-        System.out.println(connection.isConnected());
-        assertTrue("IsConnected", connection.isConnected());
+        System.out.println(connection.getConnectionState() == ConnectionState.CONNECTED);
+        assertTrue("IsConnected", connection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
 //    @Test
@@ -185,12 +190,12 @@ public class NettySignalConnectionTest {
 //        Future<Boolean> sendFuture = connection.send(new ConnectCommand(StringUtil.EMPTY_STRING));
 //        sendFuture.get();
 //
-//        System.out.println("Connection isConnected returns " + connection.isConnected());
-//        assertTrue(connection.isConnected());
+//        System.out.println("Connection isConnected returns " + connection.getConnectionState() == ConnectionState.CONNECTED);
+//        assertTrue(connection.getConnectionState() == ConnectionState.CONNECTED);
 //        assertEquals(1, connectObserver.connectCount);
 //
 //        latch.await(50, TimeUnit.SECONDS);
-//        assertFalse(connection.isConnected());
+//        assertFalse(connection.getConnectionState() == ConnectionState.CONNECTED);
 //        assertEquals(1, disconnectObserver.disconnectCount);
 //        assertEquals(1, reconnectStrategy.reconnectCount);
 //

@@ -75,7 +75,7 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testIsConnected() throws Exception {
-        assertFalse(provider.isConnected());
+        assertFalse(provider.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -101,9 +101,8 @@ public class SocketSignalProviderTest {
         //synchronously connect
         connect();
 
-        assertTrue("Not connected even though we just connected!", provider.isConnected());
-        assertTrue("Not connected even though we just connected!", provider.isAuthenticated());
-        assertTrue(signalConnection.isConnected());
+        assertTrue("Not connected even though we just connected!", provider.getConnectionState() == ConnectionState.AUTHENTICATED);
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch = new CountDownLatch(1);
         //add our handler
@@ -122,8 +121,8 @@ public class SocketSignalProviderTest {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
 
-        assertFalse(provider.isConnected());
-        assertFalse("Connection should be disconnected too!", signalConnection.isConnected());
+        assertFalse(provider.getConnectionState() == ConnectionState.CONNECTED);
+        assertFalse("Connection should be disconnected too!", signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     private void connect() throws Exception, InterruptedException, ExecutionException {

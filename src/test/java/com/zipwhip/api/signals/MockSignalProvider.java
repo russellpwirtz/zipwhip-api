@@ -54,21 +54,9 @@ public class MockSignalProvider implements SignalProvider {
         }
     }
 
-    public boolean isConnected() {
-        if (stateManager.get() == ConnectionState.AUTHENTICATED) {
-            Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Authenticated !connected)");
-            return true;
-        } else {
-            if (stateManager.get() == ConnectionState.CONNECTED) {
-                Asserts.assertTrue(isConnected, "The connection and stateManager disagreed! (Connected !connected)");
-            }
-
-            return false;
-        }
-    }
-
-    public boolean isAuthenticated() {
-        return stateManager.get() == ConnectionState.AUTHENTICATED;
+    @Override
+    public ConnectionState getConnectionState() {
+        return stateManager.get();
     }
 
     @Override

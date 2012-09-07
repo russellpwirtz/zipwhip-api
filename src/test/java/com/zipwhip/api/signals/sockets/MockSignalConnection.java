@@ -54,11 +54,11 @@ public class MockSignalConnection extends SignalConnectionBase {
     public void mockReceive(Command<?> command) {
         LOGGER.debug("notify observers of " + command);
 
-        receiveEvent.notifyObservers(getCurrentConnection(), command);
+        receiveEvent.notifyObservers(getConnectionHandle(), command);
     }
 
     public void mockPingPongCommand(PingPongCommand command) {
-        receivePong(getCurrentConnection(), command);
+        receivePong(getConnectionHandle(), command);
     }
 
     /**

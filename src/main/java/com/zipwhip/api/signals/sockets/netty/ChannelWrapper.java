@@ -15,6 +15,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +69,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         this.stateManager = ConnectionStateManagerFactory.newStateManager();
         this.link(stateManager);
         this.connection = new ChannelWrapperConnectionHandle(id, delegate.signalConnectionBase, this);
-        this.link(connection);
+        this.connection.link(this);
         if (executor == null){
             this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
             this.link(new DestroyableBase() {
@@ -97,16 +98,20 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         delegate.pause();
         // do the connect async.
-        ChannelFuture future = channel.connect(remoteAddress);
+        ChannelFuture future = null;
         boolean completed;
 
         try {
+            future = channel.connect(remoteAddress);
             // since we're on the IO thread, we need to block here.
             completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
             delegate.resume();
-        } catch (InterruptedException e) {
-            if (!future.isDone()) {
+        } catch (Exception e) {
+            if (future == null){
+                // oh shit! it crashed!
+                // Subsequent calls to close have no effect
+            } else if (!future.isDone()) {
                 future.cancel();
                 // Subsequent calls to close have no effect
                 future.getChannel().close();
@@ -227,7 +232,9 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
     @Override
     protected void onDestroy() {
-        LOGGER.debug(String.format("Destroying ChannelWrapper %s / %s", this.channel, Thread.currentThread().toString()));
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(String.format("Destroying ChannelWrapper %s / %s", this.channel, Thread.currentThread().toString()));
+        }
 
         // ref counting
         this.channel = null;
