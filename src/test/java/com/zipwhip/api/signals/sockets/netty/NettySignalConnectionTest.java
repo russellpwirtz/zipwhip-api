@@ -1,14 +1,21 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
+import com.zipwhip.api.signals.sockets.SocketSignalProvider;
+import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.util.StringUtil;
+import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.management.relation.RelationSupport;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
@@ -24,11 +31,84 @@ import static junit.framework.Assert.*;
  */
 public class NettySignalConnectionTest {
 
+    private static final Logger LOGGER = Logger.getLogger(NettySignalConnectionTest.class);
+
     NettySignalConnection connection;
 
     @Before
     public void setUp() throws Exception {
         connection = new NettySignalConnection();
+    }
+
+    @Test
+    public void testCancelWhileConnectingFuture1() throws Exception {
+        NettySignalConnection connection = new NettySignalConnection();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
+            @Override
+            public void notify(Object sender, ConnectionHandle item) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
+            }
+        });
+
+        ObservableFuture<ConnectionHandle> future1 = connection.connect();
+
+        ObservableFuture<ConnectionHandle> future2 = connection.disconnect(true);
+
+        latch.countDown();
+
+        TestUtil.awaitAndAssertSuccess(future2);
+
+        future1.await();
+
+        assertTrue(future1.isCancelled());
+        assertTrue(connection.getConnectionState() == ConnectionState.DISCONNECTED);
+        assertTrue(connection.getConnectionHandle() == null);
+        assertNull(connection.connectFuture);
+        assertNull(connection.disconnectFuture);
+        assertTrue("ReconnectStrategy must be bound!", connection.getReconnectStrategy().isStarted());
+    }
+
+    @Test
+    public void testCancelWhileConnectingFuture2() throws Exception {
+        NettySignalConnection connection = new NettySignalConnection();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        connection.getDisconnectEvent().addObserver(new Observer<ConnectionHandle>() {
+            @Override
+            public void notify(Object sender, ConnectionHandle item) {
+                try {
+                    LOGGER.debug("hit the latch!");
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        ObservableFuture<ConnectionHandle> future1 = connection.connect();
+        TestUtil.awaitAndAssertSuccess(future1);
+
+        ObservableFuture<ConnectionHandle> future2 = connection.disconnect(true);
+        ObservableFuture<ConnectionHandle> future3 = connection.connect();
+
+        latch.countDown();
+
+        TestUtil.awaitAndAssertSuccess(future3);
+
+//        future2.await();
+
+        assertTrue(future2.isCancelled());
+        assertTrue("State should be connected", connection.getConnectionState() == ConnectionState.CONNECTED);
+        assertNotNull("Connection should exist", connection.getConnectionHandle());
+        assertNull(connection.connectFuture);
+        assertNull(connection.disconnectFuture);
+        assertTrue("ReconnectStrategy must be bound!", connection.getReconnectStrategy().isStarted());
     }
 
     /**
@@ -76,7 +156,7 @@ public class NettySignalConnectionTest {
         connection.setConnectTimeoutSeconds(1);
         connection.setAddress(new InetSocketAddress(((InetSocketAddress)connection.getAddress()).getAddress(), 23423));
 
-        assertNull("Expected connection to be connected", connection.connect().get());
+        assertNull("Expected connection to be connected", connection.connect().get(300, TimeUnit.SECONDS));
     }
 
     @Test
@@ -119,18 +199,32 @@ public class NettySignalConnectionTest {
     }
 
     @Test
-    public void testName() throws Exception {
+    public void testSimpleConnectDisconnect() throws Exception {
+
+        ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(connection.connect());
+        assertNotNull(connectionHandle);
+        assertFalse(connectionHandle.isDestroyed());
+        assertTrue(connection.getConnectionState() == ConnectionState.CONNECTED);
+
+        ConnectionHandle connectionHandle2 = TestUtil.awaitAndAssertSuccess(connection.disconnect());
+
+        assertSame(connectionHandle, connectionHandle2);
     }
 
     @Test
     public void testReconnectStrategy() throws Exception {
 
         final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch2 = new CountDownLatch(1);
 
         connection.setReconnectStrategy(new ReconnectStrategy() {
             @Override
             protected void doStrategyWithoutBlocking() {
                 try {
+                    LOGGER.debug("Doing await on latch2");
+                    latch2.await();
+                    LOGGER.debug("latch2 cleared. doing connect unblocking");
+
                     // can't block
                     connection.connect();
                 } catch (Exception e) {
@@ -152,55 +246,114 @@ public class NettySignalConnectionTest {
         connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
             public void notify(Object sender, ConnectionHandle item) {
+                LOGGER.debug("Hit connectEvent: " + item);
+                LOGGER.debug("Hit connectEvent: " + connection);
                 if (connection.getConnectionState() == ConnectionState.CONNECTED) {
                     latch.countDown();
-                    System.out.println("After onConnect event " + (connection.getConnectionState() == ConnectionState.CONNECTED));
+                    LOGGER.debug("After onConnect event " + (connection.getConnectionState() == ConnectionState.CONNECTED));
                 }
             }
         });
 
-        connection.disconnect(true).get();
+        ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(connection.disconnect(true));
+        assertNotNull(connectionHandle);
+        assertTrue(connectionHandle.isDestroyed());
+        assertNull(connection.getConnectionHandle());
+        assertEquals(connection.getConnectionState(), ConnectionState.DISCONNECTED);
+        assertTrue(connection.getReconnectStrategy().isStarted());
+        assertFalse(connection.getReconnectStrategy().isDestroyed());
+
+        LOGGER.debug("Doing count down");
+        latch2.countDown();
+
+        // reconnecting should happen here.
 
         // assume a connect is happening
-        latch.await(5, TimeUnit.SECONDS);
+        latch.await(60, TimeUnit.SECONDS);
 
         System.out.println(connection.getConnectionState() == ConnectionState.CONNECTED);
         assertTrue("IsConnected", connection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
-//    @Test
-//    public void testPongTimeoutCausesReconnect() throws Exception{
-//
-//        CountDownLatch latch = new CountDownLatch(1);
-//
-//        ReconnectRightAwayReconnectStrategy reconnectStrategy = new ReconnectRightAwayReconnectStrategy(latch);
-//        TestRawSocketIoChannelPipelineFactory pipelineFactory = new TestRawSocketIoChannelPipelineFactory(1, 1);
-//
-//        connection = new NettySignalConnection(reconnectStrategy, pipelineFactory);
-//
-//        ConnectObserver connectObserver = new ConnectObserver();
-//        connection.onConnect(connectObserver);
-//
-//        DisconnectObserver disconnectObserver = new DisconnectObserver();
-//        connection.onDisconnect(disconnectObserver);
-//
-//        Future<Boolean> connectFuture = connection.connect();
-//        connectFuture.get();
-//
-//        Future<Boolean> sendFuture = connection.send(new ConnectCommand(StringUtil.EMPTY_STRING));
-//        sendFuture.get();
-//
-//        System.out.println("Connection isConnected returns " + connection.getConnectionState() == ConnectionState.CONNECTED);
-//        assertTrue(connection.getConnectionState() == ConnectionState.CONNECTED);
-//        assertEquals(1, connectObserver.connectCount);
-//
-//        latch.await(50, TimeUnit.SECONDS);
-//        assertFalse(connection.getConnectionState() == ConnectionState.CONNECTED);
-//        assertEquals(1, disconnectObserver.disconnectCount);
-//        assertEquals(1, reconnectStrategy.reconnectCount);
-//
-//        System.out.println("DONE:testPongTimeoutCausesReconnect");
-//    }
+    @Test
+    public void testPongTimeoutCausesReconnect() throws Exception{
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ReconnectRightAwayReconnectStrategy reconnectStrategy = new ReconnectRightAwayReconnectStrategy(latch);
+        TestRawSocketIoChannelPipelineFactory pipelineFactory = new TestRawSocketIoChannelPipelineFactory(1, 1);
+
+        connection = new NettySignalConnection(reconnectStrategy, pipelineFactory);
+
+        ConnectObserver connectObserver = new ConnectObserver();
+        connection.getConnectEvent().addObserver(connectObserver);
+
+        DisconnectObserver disconnectObserver = new DisconnectObserver();
+        connection.getDisconnectEvent().addObserver(disconnectObserver);
+
+        Future<ConnectionHandle> connectFuture = connection.connect();
+        connectFuture.get();
+
+        Future<Boolean> sendFuture = connection.send(new ConnectCommand(StringUtil.EMPTY_STRING));
+        sendFuture.get();
+
+        System.out.println("Connection isConnected returns " + (connection.getConnectionState() == ConnectionState.CONNECTED));
+        assertTrue(connection.getConnectionState() == ConnectionState.CONNECTED);
+        assertEquals(1, connectObserver.connectCount);
+
+        latch.await(50, TimeUnit.SECONDS);
+        assertFalse(connection.getConnectionState() == ConnectionState.CONNECTED);
+        assertEquals(1, disconnectObserver.disconnectCount);
+        assertEquals(1, reconnectStrategy.reconnectCount);
+
+        System.out.println("DONE:testPongTimeoutCausesReconnect");
+    }
+
+    @Test
+    public void testPongTimeoutCausesReconnect2() throws Exception{
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        ReconnectRightAwayReconnectStrategy reconnectStrategy = new ReconnectRightAwayReconnectStrategy(latch);
+        TestRawSocketIoChannelPipelineFactory pipelineFactory = new TestRawSocketIoChannelPipelineFactory(1, 1);
+        ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
+
+        connection = new NettySignalConnection(reconnectStrategy, pipelineFactory);
+        SocketSignalProvider signalProvider = new SocketSignalProvider(connection);
+
+        signalProvider.getConnectionChangedEvent().addObserver(connectionChangedObserver);
+
+        ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
+        assertFalse(connectionHandle.isDestroyed());
+
+        assertTrue(signalProvider.getConnectionState().toString(), signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
+        assertEquals(1,connectionChangedObserver.hitCount);
+
+        signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                if (item == true) {
+                    latch.countDown();
+                }
+            }
+        });
+
+        assertTrue(latch.await(50, TimeUnit.SECONDS));
+        assertTrue(connection.getConnectionState().toString(), connection.getConnectionState() == ConnectionState.CONNECTED);
+        assertTrue(signalProvider.getConnectionState().toString(), signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
+
+        assertEquals(3, connectionChangedObserver.hitCount);
+
+        System.out.println("DONE:testPongTimeoutCausesReconnect");
+    }
+
+    private class ConnectionChangedObserver implements Observer<Boolean> {
+        int hitCount = 0;
+
+        @Override
+        public void notify(Object sender, Boolean item) {
+            hitCount ++;
+        }
+    }
 
     private class ReconnectRightAwayReconnectStrategy extends ReconnectStrategy {
 
@@ -215,6 +368,7 @@ public class NettySignalConnectionTest {
         protected void doStrategyWithoutBlocking() {
             System.out.println("doStrategyWithoutBlocking");
             reconnectCount++;
+            connection.connect();
             latch.countDown();
         }
 
@@ -224,22 +378,22 @@ public class NettySignalConnectionTest {
         }
     }
 
-    private class ConnectObserver implements Observer<Boolean> {
+    private class ConnectObserver implements Observer<ConnectionHandle> {
 
         int connectCount = 0;
 
         @Override
-        public void notify(Object sender, Boolean item) {
+        public void notify(Object sender, ConnectionHandle item) {
             connectCount++;
         }
     }
 
-    private class DisconnectObserver implements Observer<Boolean> {
+    private class DisconnectObserver implements Observer<ConnectionHandle> {
 
         int disconnectCount = 0;
 
         @Override
-        public void notify(Object sender, Boolean item) {
+        public void notify(Object sender, ConnectionHandle item) {
             disconnectCount++;
         }
     }

@@ -64,7 +64,7 @@ public class NettyConnectionTests extends MockConnectionTests {
         assertTrue(waiting[0]);
 
         // future is blocked waiting for connectEvent to finish?
-        assertFalse(future.isDone());
+        assertFalse("Future was not done", future.isDone());
 
         waitLatch.countDown();
         assertTrue("Future finished", future.await(2, TimeUnit.SECONDS));

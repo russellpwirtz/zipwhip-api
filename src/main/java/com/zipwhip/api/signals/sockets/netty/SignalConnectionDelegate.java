@@ -7,6 +7,7 @@ import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 
 /**
@@ -43,7 +44,7 @@ public class SignalConnectionDelegate extends DestroyableBase {
      *
      * @param network
      */
-    public void disconnectAsyncIfActive(final Boolean network) {
+    public void disconnectAsyncIfActive(final boolean network) {
         runIfActive(new Runnable() {
             @Override
             public void run() {
@@ -108,6 +109,8 @@ public class SignalConnectionDelegate extends DestroyableBase {
                 return;
             }
 
+            Asserts.assertTrue(connectionHandle != null, "No way this can be null!");
+
             signalConnectionBase.runIfActive(connectionHandle, runnable);
         }
     }
@@ -137,10 +140,13 @@ public class SignalConnectionDelegate extends DestroyableBase {
 
     public void setConnectionHandle(ConnectionHandle connectionHandle) {
         this.connectionHandle = connectionHandle;
+
+        Asserts.assertTrue(connectionHandle != null, "The connectionHandle cannot be null!");
     }
 
     @Override
     protected synchronized void onDestroy() {
+        LOGGER.error(String.format("Destroying %s / %s", this, Thread.currentThread().toString()));
         connectionHandle = null;
     }
 

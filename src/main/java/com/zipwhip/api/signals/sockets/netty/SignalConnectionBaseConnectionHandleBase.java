@@ -1,5 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.Writable;
+import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionHandleBase;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -15,7 +17,7 @@ import com.zipwhip.util.Asserts;
  * though it's redundant. I'm still looking for a better name than "Connection" since we have so many connection
  * objects floating around.
  */
-public abstract class SignalConnectionBaseConnectionHandleBase extends ConnectionHandleBase {
+public abstract class SignalConnectionBaseConnectionHandleBase extends ConnectionHandleBase implements Writable {
 
     private SignalConnectionBase signalConnection;
 
@@ -52,6 +54,11 @@ public abstract class SignalConnectionBaseConnectionHandleBase extends Connectio
     @Override
     public synchronized ObservableFuture<ConnectionHandle> reconnect() {
         return signalConnection.reconnect(this);
+    }
+
+    @Override
+    public ObservableFuture<Boolean> write(Object object) {
+        return signalConnection.send((SerializingCommand) object);
     }
 
     @Override

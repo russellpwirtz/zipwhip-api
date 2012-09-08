@@ -15,6 +15,7 @@ import com.zipwhip.util.Asserts;
 public class SignalProviderConnectionHandle extends ConnectionHandleBase implements Writable {
 
     private final SocketSignalProvider signalProvider;
+    public boolean finishedActionConnect = false;
     protected ConnectionHandle connectionHandle;
 
     public SignalProviderConnectionHandle(long id, SocketSignalProvider signalProvider) {
@@ -52,7 +53,7 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
             return ((Writable) connectionHandle).write(object);
         }
 
-        throw new IllegalStateException("The connection is not writable");
+        throw new IllegalStateException("The connection is not writable " + connectionHandle);
     }
 
     /**

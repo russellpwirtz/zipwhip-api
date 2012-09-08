@@ -104,6 +104,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
     public synchronized ObservableFuture connect(final Presence presence) throws Exception {
         if (connectingFuture != null) {
+            LOGGER.debug(String.format("Returning %s since it's still active", connectingFuture));
             return connectingFuture;
         }
 

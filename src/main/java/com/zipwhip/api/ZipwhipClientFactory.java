@@ -113,7 +113,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @return An authenticated ZipwhipClient.
      */
     @Override
-    public ZipwhipClient create() throws Exception {
+    public ZipwhipClient create() {
         DefaultZipwhipClient client = new DefaultZipwhipClient(connectionFactory.create(), signalProviderFactory.create());
 
         // this guy will do our /signals/connect calls with cancellation and timeout support.

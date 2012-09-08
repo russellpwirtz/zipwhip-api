@@ -17,6 +17,7 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
@@ -35,7 +36,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
 
-    public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 45;
+    public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 10;
 
     protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
     protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
@@ -52,7 +53,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     // this is how we prevent redundant requests to disconnect/connect.
     // NOTE: Maybe it's a good thing that you can disconnect twice??
-    private ObservableFuture<ConnectionHandle> disconnectFuture;
+    protected ObservableFuture<ConnectionHandle> disconnectFuture;
     protected ObservableFuture<ConnectionHandle> connectFuture;
     protected ConnectionHandle connectionHandle;
 
@@ -93,14 +94,25 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         } else if (connectFuture != null) {
             return connectFuture;
         } else if (disconnectFuture != null) {
-            throw new IllegalStateException("Currently already trying to disconnect");
+            final ObservableFuture f = disconnectFuture;
+            disconnectFuture = null;
+            f.cancel();
         }
 
-        synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
-            final ObservableFuture<ConnectionHandle> finalConnectingFuture = createSelfHealingConnectingFuture();
-            connectFuture = finalConnectingFuture;
+        final ObservableFuture<ConnectionHandle> finalConnectingFuture = createSelfHealingConnectingFuture();
+        connectFuture = finalConnectingFuture;
 
+        synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
             cancelAndUbindReconnectStrategy();
+
+            connectFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
+                    // when the connection finishes for any reason (cancelled or error)
+                    // rebind the reconnect strategy since we disconnected it.
+                    bindReconnectStrategy();
+                }
+            });
 
             executor.execute(new Runnable() {
                 @Override
@@ -121,40 +133,34 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                             synchronized (finalConnectingFuture) {
                                 if (finalConnectingFuture.isCancelled()) {
-                                    LOGGER.error("While connecting they cancelled!");
+                                    LOGGER.error("While connecting they cancelled! 1");
                                     executeDisconnectDestroyConnection(connectionHandle, false);
                                     return;
                                 }
-                            }
 
-                            // setting this as this.connection makes it "current"
-                            SignalConnectionBase.this.connectionHandle = connectionHandle;
+                                // setting this as this.connection makes it "current"
+                                SignalConnectionBase.this.connectionHandle = connectionHandle;
+
+                                connectFuture = null;
+                                bindReconnectStrategy();
+                            }
                         } catch (Throwable e) {
                             synchronized (finalConnectingFuture) {
                                 if (finalConnectingFuture.isCancelled()) {
                                     // TODO: what does this do for the ReconnectStrategy? Has it been unbound?
-                                    LOGGER.error("While connecting they cancelled!");
+                                    LOGGER.error("While connecting they cancelled! 2");
                                     return;
                                 }
+
+                                // setting this as this.connection makes it "current"
+                                SignalConnectionBase.this.connectionHandle = null;
                             }
-
-                            // setting this as this.connection makes it "current"
-                            SignalConnectionBase.this.connectionHandle = null;
-
-                            bindReconnectStrategy();
 
                             finalConnectingFuture.setFailure(e);
                             return;
                         }
                     }
 
-                    bindReconnectStrategy();
-
-                    if (connectFuture == finalConnectingFuture) {
-                        connectFuture = null;
-                    }
-
-                    // throw the connectEvent BEFORE we finish the future.
                     connectEvent.notifyObservers(connectionHandle, connectionHandle);
                     finalConnectingFuture.setSuccess(connectionHandle);
                 }
@@ -197,26 +203,36 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
             throw new IllegalStateException("The connection is destroyed");
         }
 
-        switch (getConnectionState()) {
-            case CONNECTING:
-                final ObservableFuture f = connectFuture;
-                connectFuture = null;
-                f.cancel();
-                break;
-            case CONNECTED:
-                break;
-            case DISCONNECTED:
-            case DISCONNECTING:
-                return disconnectFuture;
-            default:
-                throw new IllegalStateException("Not possible!");
-        }
-
-
         synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+            ConnectionState state = getConnectionState();
+            switch (state) {
+                case CONNECTING:
+                    final ObservableFuture f = connectFuture;
+                    synchronized (f) {
+                        connectFuture = null;
+                        f.cancel();
+
+                        if (connectionHandle == null) {
+                            // it's possible that we're already disconnected (haven't gotten to the
+                            // connect part yet). We have to synchronize around the future because then our
+                            // cancellation will take effect.
+                            return new FakeObservableFuture<ConnectionHandle>(null, null);
+                        }
+                    }
+
+                    break;
+                case CONNECTED:
+                    break;
+                case DISCONNECTED:
+                case DISCONNECTING:
+                    return disconnectFuture;
+                default:
+                    throw new IllegalStateException("Not possible!");
+            }
+
             final ConnectionHandle connectionHandle = this.connectionHandle;
 
-            Asserts.assertTrue(connectionHandle != null, "The connectionHandle was null even though we did a safe state check!");
+            Asserts.assertTrue(connectionHandle != null, "The connectionHandle was null even though we did a safe state check! " + state);
 
             synchronized (connectionHandle) {
                 final ObservableFuture<ConnectionHandle> finalDisconnectingFuture = connectionHandle.getDisconnectFuture();
@@ -236,28 +252,36 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                                 return;
                             }
 
-                            synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
-                                synchronized (connectionHandle) {
-                                    // we can't call connection.execute() because it would be
-                                    // an infinite loop. We need to let our base class (who created this guy)
-                                    // to handle the synchronous disconnection.
-                                    executeDisconnectDestroyConnection(connectionHandle, causedByNetwork);
-                                    SignalConnectionBase.this.connectionHandle = null;
-                                }
-                            }
-
                             synchronized (SignalConnectionBase.this) {
                                 synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+                                    synchronized (connectionHandle) {
+
+                                        // we can't call connection.execute() because it would be
+                                        // an infinite loop. We need to let our base class (who created this guy)
+                                        // to handle the synchronous disconnection.
+                                        try {
+                                            executeDisconnectDestroyConnection(connectionHandle, causedByNetwork);
+                                        } catch (Exception e) {
+                                            LOGGER.error("Error with disconnection?", e);
+                                        }
+
+                                        if (SignalConnectionBase.this.connectionHandle == connectionHandle) {
+                                            SignalConnectionBase.this.connectionHandle = null;
+                                        } else {
+                                            LOGGER.error(String.format("The connectionHandle was not matching. (%s/%s)", SignalConnectionBase.this.connectionHandle, connectionHandle));
+                                        }
+                                    }
+
                                     if (disconnectFuture == finalDisconnectingFuture) {
                                         disconnectFuture = null;
                                     }
 
                                     bindReconnectStrategy();
-
-                                    finalDisconnectingFuture.setSuccess(connectionHandle);
-                                    disconnectEvent.notifyObservers(connectionHandle, connectionHandle);
                                 }
                             }
+
+                            finalDisconnectingFuture.setSuccess(connectionHandle);
+                            disconnectEvent.notifyObservers(connectionHandle, connectionHandle);
                         }
                     }
                 });
@@ -275,6 +299,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public ObservableFuture<ConnectionHandle> reconnect() {
+        LOGGER.error("Issuing reconnect()");
+
         final NestedObservableFuture<ConnectionHandle> resultFuture = new NestedObservableFuture<ConnectionHandle>(this);
 
         disconnect().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
@@ -333,13 +359,14 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     // TODO: actually dont crash here. It takes down the phone and isn't necessary.
     protected void runIfActive(final ConnectionHandle connectionHandle, Executor executor, final Runnable runnable) {
+        final ConnectionHandle c = getConnectionHandle();
         if (connectionHandle == null) {
             LOGGER.error("The connectionHandle was null, so most certainly was not active. Quitting");
             return;
         } else if (runnable == null) {
             throw new NullPointerException("The runnable can never be null.");
-        } else if (connectionHandle != this.getConnectionHandle()) {
-            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, getConnectionHandle()));
+        } else if (connectionHandle != c) {
+            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, c));
             return;
         }
 
@@ -353,6 +380,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                             // they are not the same instance, they are not active.
                             // Kick them out.
                             LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, getConnectionHandle()));
+                            return;
                         } else if (w.isDestroyed()) {
                             // the wrapper is currently in the state of terminating.
                             LOGGER.error(String.format("The connectionHandle %s was destroyed. Quitting.", w));
@@ -446,23 +474,33 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    public synchronized ConnectionState getConnectionState() {
+    public ConnectionState getConnectionState() {
         // The futures cannot change without a synchronization on "SignalConnection"
 
-        if (connectFuture != null && !connectFuture.isDone() && !connectFuture.isCancelled()) {
-            return ConnectionState.CONNECTING;
-        } else if (disconnectFuture != null && !disconnectFuture.isDone() && !disconnectFuture.isCancelled()) {
-            return ConnectionState.DISCONNECTING;
+        ObservableFuture<?> cF = connectFuture;
+        if (cF != null) {
+            synchronized (cF) {
+                if (!cF.isDone() && !cF.isCancelled() && connectFuture == cF) {
+                    return ConnectionState.CONNECTING;
+                }
+            }
         }
 
-        synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
-            // you cannot change the current ConnectionHandle while holding the CONNECTION_BEING_TOUCHED_LOCK
-            final ConnectionHandle finalConnectionHandle = getConnectionHandle();
-            if (finalConnectionHandle == null || finalConnectionHandle.isDestroyed()) {
-                return ConnectionState.DISCONNECTED;
-            } else {
-                return ConnectionState.CONNECTED;
+        ObservableFuture<?> dF = disconnectFuture;
+        if (dF != null) {
+            synchronized (dF) {
+                if (!dF.isDone() && !dF.isCancelled() && disconnectFuture == dF) {
+                    return ConnectionState.DISCONNECTING;
+                }
             }
+        }
+
+        // you cannot change the current ConnectionHandle while holding the CONNECTION_BEING_TOUCHED_LOCK
+        final ConnectionHandle finalConnectionHandle = getConnectionHandle();
+        if (finalConnectionHandle == null || finalConnectionHandle.isDestroyed()) {
+            return ConnectionState.DISCONNECTED;
+        } else {
+            return ConnectionState.CONNECTED;
         }
     }
 
@@ -504,9 +542,20 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     private final Observer<ObservableFuture<ConnectionHandle>> resetConnectFutureIfActiveObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
         @Override
-        public void notify(Object sender, ObservableFuture<ConnectionHandle> finalConnectingFuture) {
-            if (connectFuture == finalConnectingFuture) {
-                connectFuture = null;
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
+            synchronized (SignalConnectionBase.this) {
+                synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+                    final ObservableFuture cF = connectFuture;
+                    if (cF == null) {
+                        return;
+                    }
+
+                    synchronized (cF) {
+                        if (cF == future && connectFuture == future) {
+                            connectFuture = null;
+                        }
+                    }
+                }
             }
         }
     };
@@ -514,8 +563,19 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     private final Observer<ObservableFuture<ConnectionHandle>> resetDisconnectFutureIfActiveObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
         @Override
         public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
-            if (disconnectFuture == future) {
-                disconnectFuture = null;
+            synchronized (SignalConnectionBase.this) {
+                synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+                    final ObservableFuture cF = disconnectFuture;
+                    if (cF == null) {
+                        return;
+                    }
+
+                    synchronized (cF) {
+                        if (cF == future && disconnectFuture == future) {
+                            disconnectFuture = null;
+                        }
+                    }
+                }
             }
         }
     };

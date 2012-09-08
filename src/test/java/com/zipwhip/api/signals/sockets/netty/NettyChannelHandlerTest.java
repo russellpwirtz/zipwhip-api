@@ -214,7 +214,7 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public void disconnectAsyncIfActive(Boolean network) {
+        public void disconnectAsyncIfActive(boolean network) {
             isConnected = false;
             isNetwork = network;
         }

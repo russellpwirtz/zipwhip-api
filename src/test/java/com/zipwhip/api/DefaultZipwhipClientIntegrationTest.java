@@ -62,7 +62,7 @@ public class DefaultZipwhipClientIntegrationTest {
 
 
         @Override
-        public ZipwhipClient create() throws Exception {
+        public ZipwhipClient create() {
 
             try {
                 ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance()
@@ -82,7 +82,7 @@ public class DefaultZipwhipClientIntegrationTest {
                 return zipwhipClient;
             } catch (Exception e) {
                 LOGGER.error("Error creating ZipwhipClient: ", e);
-                throw e;
+                throw new RuntimeException(e);
             }
         }
 

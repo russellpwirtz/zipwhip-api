@@ -5,14 +5,14 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.util.Factory;
+import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,7 +42,7 @@ public class SocketSignalProviderTest {
     @Before
     public void setUp() throws Exception {
 
-        signalConnection = new MockSignalConnection();
+        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor());
         provider = new SocketSignalProvider(signalConnection, null, null);
 
         presence = new Presence();
@@ -71,6 +71,33 @@ public class SocketSignalProviderTest {
         assertFalse(disconnectFuture1 == disconnectFuture2);
         disconnectFuture2.await();
         assertTrue(disconnectFuture2.isSuccess());
+    }
+
+    @Test
+    public void testCancelConnectingFuture() throws InterruptedException {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
+            }
+        });
+
+        ObservableFuture<ConnectionHandle> future1 = provider.connect();
+
+        ObservableFuture<ConnectionHandle> future2 = provider.disconnect();
+
+        latch.countDown();
+
+        TestUtil.awaitAndAssertSuccess(future2);
+        TestUtil.awaitAndAssertSuccess(future1);
+
+        assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
     }
 
     @Test

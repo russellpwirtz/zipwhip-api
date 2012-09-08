@@ -101,11 +101,12 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         boolean completed;
 
         try {
+            LOGGER.debug(String.format("Connecting %s to %s", channel,  remoteAddress));
+            channel.getConfig().setConnectTimeoutMillis(delegate.getConnectTimeoutSeconds() * 100);
             future = channel.connect(remoteAddress);
             // since we're on the IO thread, we need to block here.
             completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
 
-            delegate.resume();
         } catch (Exception e) {
             if (future == null){
                 // oh shit! it crashed!
@@ -127,6 +128,8 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             future.cancel();
             // Subsequent calls to close have no effect
             future.getChannel().close();
+        } else {
+            delegate.resume();
         }
 
         if (future.isSuccess()) {
@@ -136,7 +139,11 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         }
 
         if (!future.isSuccess()) {
-            throw future.getCause();
+            if (future.getCause() != null) {
+                throw future.getCause();
+            } else {
+                throw new IllegalStateException("The future was not successful " + future);
+            }
         }
     }
 
