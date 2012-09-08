@@ -262,8 +262,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
             // We are in the SignalConnection executor thread.
             // it's dicey to sync on the SignalProvider object (deadlock?)
             synchronized (SocketSignalProvider.this) {
-                final SignalProviderConnectionHandle wrappedConnection = (SignalProviderConnectionHandle) getCurrentConnection();
-
                 if (isConnecting()) {
                     LOGGER.warn(String.format("We were currently 'connecting' and got a %s hit", this));
                     return;
@@ -271,8 +269,18 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                     throw new NullPointerException("The socketConnectionHandle can never be null!");
                 }
 
-                Asserts.assertTrue(wrappedConnection.isFor(socketConnectionHandle), String.format("getCurrentConnection() said this was for a different connection (%s/%s)!", socketConnectionHandle, wrappedConnection.connectionHandle));
+                if (getConnectionState() == ConnectionState.DISCONNECTED) {
+                    // we just transitioned to a connected state!
+                    currentSignalProviderConnection = createAndSetActiveSelfHealingSignalProviderConnection();
+                    currentSignalProviderConnection.setConnectionHandle(socketConnectionHandle);
+
+                    Asserts.assertTrue(getConnectionState() == ConnectionState.CONNECTED, "Transitioned to the connectedState correctly.");
+                }
+
+                final SignalProviderConnectionHandle wrappedConnection = (SignalProviderConnectionHandle) getCurrentConnection();
+
                 Asserts.assertTrue(wrappedConnection != null, "getCurrentConnection() was null!");
+                Asserts.assertTrue(wrappedConnection.isFor(socketConnectionHandle), String.format("getCurrentConnection() said this was for a different connection (%s/%s)!", socketConnectionHandle, wrappedConnection.connectionHandle));
 
                 synchronized (SocketSignalProvider.this.signalConnection) {
                     synchronized (socketConnectionHandle) {

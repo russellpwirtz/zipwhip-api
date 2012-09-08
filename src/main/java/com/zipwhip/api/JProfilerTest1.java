@@ -38,7 +38,7 @@ public class JProfilerTest1 {
     SocketSignalProvider signalProvider;
 
     public static void main(String[] args) throws Exception {
-//        BasicConfigurator.configure();
+        BasicConfigurator.configure();
 
         JProfilerTest1 t = new JProfilerTest1();
         t.setUp();
