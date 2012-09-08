@@ -681,7 +681,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<ConnectionHandle> disconnect() throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect();
 
     /**
      * Tell the SignalProvider to disconnect from the server.  If causedByNetwork, the reconnect strategy will
@@ -690,7 +690,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork);
 
     /**
      * Listen for signals. This is a convenience method

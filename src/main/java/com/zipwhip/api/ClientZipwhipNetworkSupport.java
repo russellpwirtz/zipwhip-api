@@ -170,12 +170,12 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         return future;
     }
 
-    public synchronized ObservableFuture<ConnectionHandle> disconnect() throws Exception {
+    public synchronized ObservableFuture<ConnectionHandle> disconnect() {
         return disconnect(false);
     }
 
-    public synchronized ObservableFuture<ConnectionHandle> disconnect(final boolean causedByNetwork) throws Exception {
-        validateConnectState();
+    public synchronized ObservableFuture<ConnectionHandle> disconnect(final boolean causedByNetwork) {
+//        validateConnectState();
 
         return signalProvider.disconnect(causedByNetwork);
     }
