@@ -801,6 +801,9 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         @Override
         public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
             final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+            if (connectFuture == null) {
+                return;
+            }
 
             synchronized (connectFuture) {
                 if (future == connectFuture) {
@@ -862,61 +865,6 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     @Override
     public void ping() {
         signalConnection.ping();
-    }
-
-    @Override
-    public Observable<List<Signal>> getSignalReceivedEvent() {
-        return signalReceivedEvent;
-    }
-
-    @Override
-    public Observable<List<SignalCommand>> getSignalCommandReceivedEvent() {
-        return signalCommandReceivedEvent;
-    }
-
-    @Override
-    public Observable<Boolean> getConnectionChangedEvent() {
-        return connectionChangedEvent;
-    }
-
-    @Override
-    public Observable<String> getNewClientIdReceivedEvent() {
-        return newClientIdReceivedEvent;
-    }
-
-    @Override
-    public Observable<SubscriptionCompleteCommand> getSubscriptionCompleteReceivedEvent() {
-        return subscriptionCompleteReceivedEvent;
-    }
-
-    @Override
-    public Observable<Boolean> getPhonePresenceReceivedEvent() {
-        return presenceReceivedEvent;
-    }
-
-    @Override
-    public Observable<Void> getSignalVerificationReceivedEvent() {
-        return signalVerificationReceivedEvent;
-    }
-
-    @Override
-    public Observable<VersionMapEntry> getVersionChangedEvent() {
-        return newVersionEvent;
-    }
-
-    @Override
-    public Observable<PingEvent> getPingReceivedEvent() {
-        return pingReceivedEvent;
-    }
-
-    @Override
-    public Observable<String> getExceptionEvent() {
-        return exceptionEvent;
-    }
-
-    @Override
-    public Observable<Command> getCommandReceivedEvent() {
-        return commandReceivedEvent;
     }
 
     private void handleConnectCommand(SignalProviderConnectionHandle connectionHandle, ConnectCommand command) {

@@ -268,6 +268,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                     break;
 
                 case DISCONNECTED:
+                    return new FakeObservableFuture<ConnectionHandle>(null, null);
                 case DISCONNECTING:
                     return disconnectFuture;
                 default:

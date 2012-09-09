@@ -73,7 +73,8 @@ public class TestUtil {
     public static void assertDisconnected(ConnectionHandle connectionHandle) {
         assertNotNull(connectionHandle);
         assertTrue(connectionHandle.isDestroyed());
-        assertTrue(connectionHandle.getDisconnectFuture().isDone());
+        // it MAY not be done yet. ( order of operations is notify observers before future)
+//        assertTrue(connectionHandle.getDisconnectFuture().isDone());
     }
 
     public static void assertDisconnected(SocketSignalProvider signalProvider) {

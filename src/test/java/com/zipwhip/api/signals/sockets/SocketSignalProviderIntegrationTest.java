@@ -114,7 +114,7 @@ public class SocketSignalProviderIntegrationTest {
     public void testBasicConnect() throws Exception {
         final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
 
-        // let the events die down. (The rule is to notify observers after the future finishes!).
+        // let the events die down. (The rule is to notify observers after the future finishes!
         Thread.sleep(100);
 
         final CountDownLatch latch = new CountDownLatch(3);
@@ -191,11 +191,12 @@ public class SocketSignalProviderIntegrationTest {
         signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean connected) {
-                assertFalse(connected);
-                assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
-                assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
-                assertTrue(connectionHandle.isDestroyed());
-                latch.countDown();
+                if (connected) {
+                    assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                    assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
+                    assertTrue(connectionHandle.isDestroyed());
+                    latch.countDown();
+                }
             }
         });
 

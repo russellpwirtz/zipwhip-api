@@ -12,6 +12,8 @@ import com.zipwhip.concurrent.AssertDisconnectedStateObserver;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -22,6 +24,7 @@ import javax.management.relation.RelationSupport;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -64,7 +67,11 @@ public class NettySignalConnectionTest {
 
     @After
     public void tearDown() throws Exception {
-        connection.destroy();
+        if (connection == null || connection.isDestroyed()){
+            return;
+        }
+
+        connection.disconnect().await();
     }
 
     @Test
@@ -222,7 +229,7 @@ public class NettySignalConnectionTest {
 
     @Test
     public void testGoodPort() throws Exception {
-        assertFalse("Expected connection to be connected", connection.connect().get().isDestroyed());
+        TestUtil.awaitAndAssertSuccess(connection.connect());
     }
 
     @Test
@@ -372,6 +379,15 @@ public class NettySignalConnectionTest {
 
     @Test
     public void testPongTimeoutCausesReconnect2() throws Exception{
+        connection.destroy();
+        connection = new NettySignalConnection(new Factory<ExecutorService>() {
+            @Override
+            public ExecutorService create() {
+                return SimpleExecutor.getInstance();
+            }
+        }, null, null);
+
+
         final CountDownLatch latch = new CountDownLatch(2);
 
         ReconnectRightAwayReconnectStrategy reconnectStrategy = new ReconnectRightAwayReconnectStrategy(latch);
@@ -387,6 +403,7 @@ public class NettySignalConnectionTest {
         assertFalse(connectionHandle.isDestroyed());
 
         assertTrue(signalProvider.getConnectionState().toString(), signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
+        connectionChangedObserver.latch.await();
         assertEquals(1,connectionChangedObserver.hitCount);
 
         signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
@@ -408,11 +425,14 @@ public class NettySignalConnectionTest {
     }
 
     private class ConnectionChangedObserver implements Observer<Boolean> {
+        CountDownLatch latch = new CountDownLatch(1);
+
         int hitCount = 0;
 
         @Override
         public void notify(Object sender, Boolean item) {
             hitCount ++;
+            latch.countDown();
         }
     }
 

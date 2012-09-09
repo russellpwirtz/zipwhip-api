@@ -31,6 +31,8 @@ public class StopReconnectStrategyObserver extends StartReconnectStrategyObserve
                 boolean causedByNetwork = connectionHandle.disconnectedViaNetwork();
                 if (causedByNetwork) {
                     strategy.start();
+                } else {
+                    strategy.stop();
                 }
             } else if (connectionHandle.getDisconnectFuture().isFailed()) {
                 // a failed disconnect is as good as "causedByNetwork"
