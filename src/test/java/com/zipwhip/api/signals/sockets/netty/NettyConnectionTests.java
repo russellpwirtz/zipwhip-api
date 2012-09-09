@@ -3,6 +3,8 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.concurrent.AssertDisconnectedStateFutureObserver;
+import com.zipwhip.concurrent.AssertDisconnectedStateObserver;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import org.junit.Before;
@@ -11,6 +13,7 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.zipwhip.concurrent.TestUtil.assertSuccess;
 import static junit.framework.Assert.*;
 
 /**
@@ -77,7 +80,7 @@ public class NettyConnectionTests extends MockConnectionTests {
         ConnectionHandle connectionHandle = connect();
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(true));
-        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(true));
+        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, true));
 
         final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);

@@ -1,21 +1,14 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.signals.sockets.ConnectionHandle;
-import com.zipwhip.api.signals.sockets.ConnectionState;
-import com.zipwhip.api.signals.sockets.MockSignalConnection;
-import com.zipwhip.api.signals.sockets.SocketSignalProvider;
+import com.zipwhip.api.signals.sockets.*;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
-import com.zipwhip.util.Factory;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.*;
@@ -33,7 +26,7 @@ public class SignalProviderTests {
 
     @Before
     public void setUp() throws Exception {
-        signalProvider = new SocketSignalProvider(new MockSignalConnection(), new ImportantTaskExecutor(), null);
+        signalProvider = new SocketSignalProvider(new MockSignalConnection());
     }
 
     @Test
@@ -142,17 +135,17 @@ public class SignalProviderTests {
     public void testConnectDisconnect() throws Exception {
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();
 
-        future.addObserver(new AssertConnectedStateObserver(signalProvider));
+        future.addObserver(new AssertSignalProviderConnectedStateObserver(signalProvider));
 
         future.await();
 
         assertSuccess(future);
-        assertNotNull((signalProvider).getCurrentConnection());
+        assertNotNull((signalProvider).getCurrentConnectionHandle());
 
         future = signalProvider.disconnect();
 
         TestUtil.awaitAndAssertSuccess(future);
-        assertNull((signalProvider).getCurrentConnection());
+        assertNull((signalProvider).getCurrentConnectionHandle());
     }
 
     public static <T> void assertSuccess(ObservableFuture<T> future) {
@@ -162,23 +155,4 @@ public class SignalProviderTests {
         assertFalse(future.isFailed());
     }
 
-    public static class AssertConnectedStateObserver implements Observer<ObservableFuture<ConnectionHandle>> {
-
-        final SocketSignalProvider signalProvider;
-
-        public AssertConnectedStateObserver(SocketSignalProvider signalProvider) {
-            this.signalProvider = signalProvider;
-        }
-
-        @Override
-        public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
-            assertNotNull(item);
-            assertSuccess(item);
-            assertSame(signalProvider.getCurrentConnection(), sender);
-            assertTrue(signalProvider.getCurrentConnection() == sender);
-            assertTrue(signalProvider.getCurrentConnection() == item.getResult());
-            assertFalse(item.getResult().isDestroyed());
-            assertFalse(item.getResult().getDisconnectFuture().isDone());
-        }
-    }
 }

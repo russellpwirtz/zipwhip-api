@@ -109,5 +109,9 @@ public class MockSignalConnection extends SignalConnectionBase {
             super(id++, MockSignalConnection.this);
         }
 
+        @Override
+        public String toString() {
+            return "MockConnectionHandle";
+        }
     }
 }

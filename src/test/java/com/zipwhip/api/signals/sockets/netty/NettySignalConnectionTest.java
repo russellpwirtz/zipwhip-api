@@ -7,16 +7,20 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipelineFactory;
+import com.zipwhip.concurrent.AssertDisconnectedStateFutureObserver;
+import com.zipwhip.concurrent.AssertDisconnectedStateObserver;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.management.relation.RelationSupport;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +42,62 @@ public class NettySignalConnectionTest {
     @Before
     public void setUp() throws Exception {
         connection = new NettySignalConnection();
+    }
+
+    @Test
+    public void testConnectAndDisconnectWithNull() throws Exception {
+
+        ConnectionHandle connectionHandle = TestUtil.connect(connection);
+
+        assertNotNull(connection.getConnectionHandle());
+
+        ConnectionHandle connectionHandle1 = TestUtil.awaitAndAssertSuccess(connection.disconnect());
+
+        assertNull(connection.getConnectionHandle());
+    }
+
+    @Test
+    public void testDestroy() {
+        TestUtil.awaitAndAssertSuccess(TestUtil.connect(connection).disconnect());
+        connection.destroy();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        connection.destroy();
+    }
+
+    @Test
+    public void testCancelWhileConnecting() throws Exception {
+
+        final CountDownLatch latch1 = new CountDownLatch(1);
+        final CountDownLatch latch2 = new CountDownLatch(1);
+        final CountDownLatch latch3 = new CountDownLatch(1);
+        final ObservableFuture[] future = new ObservableFuture[1];
+
+        connection = new NettySignalConnection() {
+            @Override
+            protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+                future[0].cancel();
+
+                return super.executeConnectReturnConnection(address);
+            }
+
+            @Override
+            protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {
+                super.executeDisconnectDestroyConnection(connectionHandle, causedByNetwork);
+
+                latch3.countDown();
+            }
+        };
+
+        future[0] = connection.connect();
+
+        latch2.countDown();
+        latch3.await();
+
+        assertTrue(connection.getConnectionState() == ConnectionState.DISCONNECTED);
+
     }
 
     @Test
@@ -158,6 +218,7 @@ public class NettySignalConnectionTest {
 
         assertNull("Expected connection to be connected", connection.connect().get(300, TimeUnit.SECONDS));
     }
+
 
     @Test
     public void testGoodPort() throws Exception {

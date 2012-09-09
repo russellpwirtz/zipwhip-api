@@ -3,7 +3,6 @@ package com.zipwhip.api.signals.sockets;
 import com.zipwhip.api.*;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProviderTests;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
@@ -115,6 +114,9 @@ public class SocketSignalProviderIntegrationTest {
     public void testBasicConnect() throws Exception {
         final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
 
+        // let the events die down. (The rule is to notify observers after the future finishes!).
+        Thread.sleep(100);
+
         final CountDownLatch latch = new CountDownLatch(3);
 
         connectionHandle.link(new DestroyableBase() {
@@ -210,13 +212,13 @@ public class SocketSignalProviderIntegrationTest {
     public void testConnectDisconnect() throws Exception {
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();
 
-        future.addObserver(new SignalProviderTests.AssertConnectedStateObserver(signalProvider));
+        future.addObserver(new AssertSignalProviderConnectedStateObserver(signalProvider));
 
         TestUtil.awaitAndAssertSuccess(future);
-        assertNotNull((signalProvider).getCurrentConnection());
+        assertNotNull((signalProvider).getCurrentConnectionHandle());
 
         TestUtil.awaitAndAssertSuccess(signalProvider.disconnect());
-        assertNull("Current connection must be null after a synchronous disconnect", (signalProvider).getCurrentConnection());
+        assertNull("Current connection must be null after a synchronous disconnect", (signalProvider).getCurrentConnectionHandle());
     }
 
     @After

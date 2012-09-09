@@ -17,13 +17,13 @@ import org.apache.log4j.Logger;
  * Time: 3:36 PM
  * <p/>
  * We can't allow the ChannelHandlers to talk with the SignalConnection directly. The problem is that they operate on
- * a number of crazy threads and theoretically 2 ChannelHandlers will access the same state of the parent object.
+ * a number of crazy threads and theoretically 2 ChannelHandlers will ensureAbleTo the same state of the parent object.
  * <p/>
  * To solve this problem we need a way to destroy the ChannelHandler.. But we can't since it's in a list (and doesn't
  * extend Destroyable). The other suggestion is to compare the channel on-create to the channel on-event.
  * However we can't pass it into the constructor so that defeats the purpose.
  * <p/>
- * So we're going to use a Delegate that we can destroy. That way we can say: "Hey you're stale, block access"
+ * So we're going to use a Delegate that we can destroy. That way we can say: "Hey you're stale, block ensureAbleTo"
  *
  * This was built for Netty but can be used for all underlying socket technology stacks.
  */

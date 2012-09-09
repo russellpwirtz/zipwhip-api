@@ -4,28 +4,32 @@ import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
+import com.zipwhip.concurrent.DebugObserver;
+import com.zipwhip.concurrent.DifferentExecutorObserverAdapter;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
-import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
 import com.zipwhip.important.schedulers.HashedWheelScheduler;
-import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.util.*;
+import com.zipwhip.util.Asserts;
+import com.zipwhip.util.CollectionUtil;
+import com.zipwhip.util.FutureDateUtil;
+import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+
+import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/1/11 Time: 4:30 PM
@@ -35,109 +39,103 @@ import java.util.concurrent.atomic.AtomicLong;
  * This interface is intended to be used by 1 and only 1 ZipwhipClient object.
  * This is a very high level interaction where you connect for 1 user.
  */
-public class SocketSignalProvider extends CascadingDestroyableBase implements SignalProvider {
+public class SocketSignalProvider extends SignalProviderBase implements SignalProvider {
 
     private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
-    private static AtomicLong ID = new AtomicLong();
 
-    private final ObservableHelper<PingEvent> pingReceivedEvent = new ObservableHelper<PingEvent>("pingReceivedEvent");
-    private final ObservableHelper<List<Signal>> signalReceivedEvent = new ObservableHelper<List<Signal>>("signalReceivedEvent");
-    private final ObservableHelper<List<SignalCommand>> signalCommandReceivedEvent = new ObservableHelper<List<SignalCommand>>("signalCommandReceivedEvent");
-    private final ObservableHelper<Void> signalVerificationReceivedEvent = new ObservableHelper<Void>("signalVerificationReceivedEvent");
-    private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>("commandReceivedEvent");
-    private final ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>("presenceReceivedEvent");
-    private final ObservableHelper<String> newClientIdReceivedEvent = new ObservableHelper<String>("newClientIdReceivedEvent");
+    private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
 
-    private final ObservableHelper<Boolean> connectionChangedEvent = new ObservableHelper<Boolean>("connectionChangedEvent");
-    private final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>("exceptionEvent");
-    private final ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>("newVersionEvent");
-    private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteReceivedEvent = new ObservableHelper<SubscriptionCompleteCommand>("subscriptionCompleteReceivedEvent");
+    protected ImportantTaskExecutor importantTaskExecutor;
+    protected final Scheduler scheduler;
 
     // this is how we interact with the underlying signal server.
     protected final SignalConnection signalConnection;
-
-    protected final Scheduler scheduler;
-
-    private ImportantTaskExecutor importantTaskExecutor;
-
-    private Executor executor;
-
-    private String clientId;
-    private String originalClientId; //So we can detect change
-
-    private Presence presence;
-    private Map<String, Long> versions = new HashMap<String, Long>();
-    private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
-
-    private ObservableFuture<ConnectionHandle> connectingFuture;
-    private SignalProviderConnectionHandle currentSignalProviderConnection;
 
     public SocketSignalProvider() {
         this(new NettySignalConnection());
     }
 
-    public SocketSignalProvider(SignalConnection conn) {
-        this(conn, null, null);
+    public SocketSignalProvider(SignalConnection connection) {
+        this(connection, null);
     }
 
-    public SocketSignalProvider(SignalConnection conn, ImportantTaskExecutor importantTaskExecutor, Scheduler scheduler) {
-        if (conn == null) {
+    public SocketSignalProvider(SignalConnection connection, Executor executor) {
+        this(connection, executor, null);
+    }
+
+    public SocketSignalProvider(SignalConnection connection, Executor executor, ImportantTaskExecutor importantTaskExecutor) {
+        this(connection, executor, importantTaskExecutor, null);
+    }
+
+    public SocketSignalProvider(SignalConnection connection, Executor executor, ImportantTaskExecutor importantTaskExecutor, Scheduler scheduler) {
+        super(executor);
+
+        if (scheduler == null) {
+            scheduler = new HashedWheelScheduler("SocketSignalProvider");
+            this.link((Destroyable) scheduler);
+        }
+        this.scheduler = scheduler;
+
+        // TODO: we need to double check that the connection state hasn't changed while waiting.
+        scheduler.onScheduleComplete(this.onScheduleComplete);
+
+        if (connection == null) {
             this.signalConnection = new NettySignalConnection();
+            this.link(signalConnection);
         } else {
-            this.signalConnection = conn;
+            this.signalConnection = connection;
         }
 
         if (importantTaskExecutor == null) {
             importantTaskExecutor = new ImportantTaskExecutor();
             this.link(importantTaskExecutor);
         }
+        this.importantTaskExecutor = importantTaskExecutor;
 
-        if (scheduler == null) {
-            scheduler = new HashedWheelScheduler("SocketSignalProvider");
-            this.link((Destroyable) scheduler);
-        }
-
-        this.scheduler = scheduler;
-
-        // TODO: we need to double check that the connection state hasn't changed while waiting.
-        scheduler.onScheduleComplete(this.onScheduleComplete);
-
-        this.setImportantTaskExecutor(importantTaskExecutor);
-        this.link(signalConnection);
-
-        this.initEvents();
+        this.initEvents2();
     }
 
-    private void initEvents() {
-        this.link(pingReceivedEvent);
-        this.link(connectionChangedEvent);
-        this.link(newClientIdReceivedEvent);
-        this.link(signalReceivedEvent);
-        this.link(exceptionEvent);
-        this.link(signalVerificationReceivedEvent);
-        this.link(newVersionEvent);
-        this.link(presenceReceivedEvent);
-        this.link(subscriptionCompleteReceivedEvent);
-        this.link(signalCommandReceivedEvent);
-        this.link(commandReceivedEvent);
+    private void initEvents2() {
+        resetConnectFutureIfMatchingObserver = new DifferentExecutorObserverAdapter<ObservableFuture<ConnectionHandle>>(executor,
+                new ThreadSafeObserverAdapter<ObservableFuture<ConnectionHandle>>(
+                        resetConnectFutureIfMatchingObserver));
+
+        notifyConnectedOnFinishObserver = new DifferentExecutorObserverAdapter<ObservableFuture<ConnectionHandle>>(executor,
+                new ThreadSafeObserverAdapter<ObservableFuture<ConnectionHandle>>(
+                        notifyConnectedOnFinishObserver));
+
 
         // TODO: do we really have to do this? Isn't the "importantTaskExecutor" responsible for this?
-        this.signalConnection.getConnectEvent().addObserver(sendConnectCommandIfConnectedObserver_ON_CONNECTION_THREAD);
+        this.signalConnection.getConnectEvent().addObserver(
+                new DifferentExecutorObserverAdapter<ConnectionHandle>(executor,
+                        new ThreadSafeObserverAdapter<ConnectionHandle>(sendConnectCommandIfConnectedObserver)));
 
         /**
          * Forward disconnect events up to clients
          */
-        this.signalConnection.getDisconnectEvent().addObserver(new ActiveConnectionObserverAdapter<ConnectionHandle>(this, executeDisconnectStateObserver_ON_CONNECTION_THREAD));
-        this.signalConnection.getCommandReceivedEvent().addObserver(new ActiveConnectionObserverAdapter<Command>(this, onMessageReceived_ON_CHANNEL_THREAD));
-        this.signalConnection.getPingEventReceivedEvent().addObserver(new ActiveConnectionObserverAdapter<PingEvent>(this, pingReceivedEvent));
+        this.signalConnection.getDisconnectEvent().addObserver(
+                new DifferentExecutorObserverAdapter<ConnectionHandle>(executor,
+                        new ThreadSafeObserverAdapter<ConnectionHandle>(
+                                new ActiveConnectionObserverAdapter<ConnectionHandle>(executeDisconnectStateObserver))));
+
+        this.signalConnection.getCommandReceivedEvent().addObserver(
+                new DifferentExecutorObserverAdapter<Command>(executor,
+                        new ThreadSafeObserverAdapter<Command>(
+                                new ActiveConnectionObserverAdapter<Command>(onMessageReceived_ON_CHANNEL_THREAD))));
+
+        this.signalConnection.getPingEventReceivedEvent().addObserver(
+                new DifferentExecutorObserverAdapter<PingEvent>(executor,
+                        new ThreadSafeObserverAdapter<PingEvent>(
+                                new ActiveConnectionObserverAdapter<PingEvent>(pingReceivedEvent))));
 
         // the ActiveConnectionObserverAdapter will filter out old noise and adapt over the "sender" to the currentConnection if/only if they are active.
-        this.signalConnection.getExceptionEvent().addObserver(new ActiveConnectionObserverAdapter<String>(this, exceptionEvent));
+        this.signalConnection.getExceptionEvent().addObserver(new ActiveConnectionObserverAdapter<String>(exceptionEvent));
+
         /**
          * Observe our own version changed events so we can stay in sync internally
          */
-        newVersionEvent.addObserver(updateVersionsOnVersionChanged);
-        newClientIdReceivedEvent.addObserver(updateStateOnNewClientIdReceived);
+        getVersionChangedEvent().addObserver(updateVersionsOnVersionChanged);
+        getNewClientIdReceivedEvent().addObserver(updateStateOnNewClientIdReceived);
     }
 
     private final Observer<Command> onMessageReceived_ON_CHANNEL_THREAD = new Observer<Command>() {
@@ -219,38 +217,46 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private final Observer<ConnectionHandle> sendConnectCommandIfConnectedObserver_ON_CONNECTION_THREAD = new Observer<ConnectionHandle>() {
+    private final Observer<ConnectionHandle> sendConnectCommandIfConnectedObserver = new Observer<ConnectionHandle>() {
 
         /**
          * The NettySignalConnection will call this method when a TCP socket connection is attempted.
          */
         @Override
         public void notify(Object sender, final ConnectionHandle socketConnectionHandle) {
-            // We are in the SignalConnection executor thread.
-            // it's dicey to sync on the SignalProvider object (deadlock?)
-            synchronized (signalConnection) {
-                if (connectingFuture != null) {
-                    LOGGER.warn(String.format("We were currently 'connecting' and got a %s hit", this));
-                    return;
-                } else if (socketConnectionHandle == null) {
-                    throw new NullPointerException("The socketConnectionHandle can never be null!");
-                }
 
-                SignalProviderConnectionHandle connectionHandle;
+            ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+            if (connectFuture != null) {
+                LOGGER.warn(String.format("We were currently 'connecting' and got a %s hit", this));
+                return;
+            } else if (socketConnectionHandle == null) {
+                throw new NullPointerException("The socketConnectionHandle can never be null!");
+            }
 
-                if (getCurrentConnection() == null) {
+            synchronized (CONNECTION_HANDLE_LOCK) {
+                SignalProviderConnectionHandle connectionHandle = getUnchangingConnectionHandle();
+
+                if (connectionHandle == null) {
+                    // this might be an unsolicited reconnect due to the ReconnectStrategy of the SignalConnection.
+                    // In that scenario we won't see this connection coming. We need to just accept this case and self heal.
                     ensureState(ConnectionState.DISCONNECTED);
 
                     // we just transitioned to a connected state!
                     connectionHandle = createAndSetActiveSelfHealingSignalProviderConnection();
                     connectionHandle.setConnectionHandle(socketConnectionHandle);
-                    currentSignalProviderConnection = connectionHandle;
                 }
 
-                final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = (SignalProviderConnectionHandle) getCurrentConnection();
+                final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = connectionHandle;
 
-                Asserts.assertTrue(finalSignalProviderConnectionHandle != null, "getCurrentConnection() was null!");
-                Asserts.assertTrue(finalSignalProviderConnectionHandle.isFor(socketConnectionHandle), String.format("getCurrentConnection() said this was for a different connection (%s/%s)!", socketConnectionHandle, finalSignalProviderConnectionHandle.connectionHandle));
+                Asserts.assertTrue(finalSignalProviderConnectionHandle != null, "getCurrentConnectionHandle() was null!");
+
+                if (!finalSignalProviderConnectionHandle.isFor(socketConnectionHandle)) {
+                    // that's ok.
+                    LOGGER.error(String.format("Got a stale request? Connection %s was not for %s", finalSignalProviderConnectionHandle, socketConnectionHandle));
+                    return;
+                }
+
+                Asserts.assertTrue(finalSignalProviderConnectionHandle.isFor(socketConnectionHandle), String.format("getCurrentConnectionHandle() said this was for a different connection (%s/%s)!", socketConnectionHandle, finalSignalProviderConnectionHandle.connectionHandle));
 
                 synchronized (socketConnectionHandle) {
                     boolean connected = !socketConnectionHandle.isDestroyed();
@@ -269,34 +275,40 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                      */
                     ObservableFuture<ConnectCommand> connectCommandFuture = writeConnectCommandAsyncWithTimeoutBakedIn(socketConnectionHandle);
 
-                    connectCommandFuture.addObserver(new HandleConnectCommandIfDoneObserver(finalSignalProviderConnectionHandle));
+                    connectCommandFuture.addObserver(
+                            new DifferentExecutorObserverAdapter<ObservableFuture<ConnectCommand>>(executor,
+                                    new ThreadSafeObserverAdapter<ObservableFuture<ConnectCommand>>(
+                                            new HandleConnectCommandIfDoneObserver(finalSignalProviderConnectionHandle))));
 
-                    connectCommandFuture.addObserver(new Observer<ObservableFuture<ConnectCommand>>() {
-                        @Override
-                        public void notify(Object sender, final ObservableFuture<ConnectCommand> future) {
+                    connectCommandFuture.addObserver(
+                            new DifferentExecutorObserverAdapter<ObservableFuture<ConnectCommand>>(executor,
+                                    new ThreadSafeObserverAdapter<ObservableFuture<ConnectCommand>>(
+                                            new Observer<ObservableFuture<ConnectCommand>>() {
+                                                @Override
+                                                public void notify(Object sender, final ObservableFuture<ConnectCommand> future) {
 
-                            if (future.isSuccess()) {
-                                finalSignalProviderConnectionHandle.finishedActionConnect = true;
+                                                    if (future.isSuccess()) {
+                                                        finalSignalProviderConnectionHandle.finishedActionConnect = true;
 
-                                if (!socketConnectionHandle.isDestroyed()) {
-                                    // great, we're still active and we got a success from the future
-                                    // transition our state.
-                                    notifyConnected(finalSignalProviderConnectionHandle, true);
-                                } else {
-                                    // the socketConnection isn't active. Someone else torn it down or we're late to the game.
-                                    // just quit.
-                                    LOGGER.error("The socketConnectionHandle was destroyed!");
-                                }
-                            } else {
-                                // we might be in a timeout scenario?
-                                // who's job is it to kill the connection?
-                                // we'll kill it. This shoud cause a reconnect because we passed in true
-                                // the reconnect strategy should kick in?
-                                LOGGER.error("Issuing disconnect request since future was not successful.");
-                                socketConnectionHandle.disconnect(true);
-                            }
-                        }
-                    });
+                                                        if (!socketConnectionHandle.isDestroyed()) {
+                                                            // great, we're still active and we got a success from the future
+                                                            // transition our state.
+                                                            notifyConnected(finalSignalProviderConnectionHandle, true);
+                                                        } else {
+                                                            // the socketConnection isn't active. Someone else torn it down or we're late to the game.
+                                                            // just quit.
+                                                            LOGGER.error("The socketConnectionHandle was destroyed!");
+                                                        }
+                                                    } else {
+                                                        // we might be in a timeout scenario?
+                                                        // who's job is it to kill the connection?
+                                                        // we'll kill it. This shoud cause a reconnect because we passed in true
+                                                        // the reconnect strategy should kick in?
+                                                        LOGGER.error("Issuing disconnect request since future was not successful.");
+                                                        socketConnectionHandle.disconnect(true);
+                                                    }
+                                                }
+                                            })));
                 }
             }
         }
@@ -307,10 +319,12 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private final Observer<ConnectionHandle> executeDisconnectStateObserver_ON_CONNECTION_THREAD = new Observer<ConnectionHandle>() {
+    private final Observer<ConnectionHandle> executeDisconnectStateObserver = new Observer<ConnectionHandle>() {
 
         @Override
         public void notify(Object sender, ConnectionHandle socketConnectionHandle) {
+            accessConnectionHandle();
+
             ConnectionHandle myConnectionHandle = (ConnectionHandle) sender;
 
             executeDisconnect(myConnectionHandle);
@@ -318,13 +332,15 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 
         @Override
         public String toString() {
-            return "executeDisconnectStateObserver_ON_CONNECTION_THREAD";
+            return "executeDisconnectStateObserver";
         }
     };
 
     private void executeDisconnect(ConnectionHandle connectionHandle) {
         synchronized (signalConnection) {
-            final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = currentSignalProviderConnection;
+            accessConnectionHandle();
+
+            final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = this.getCurrentConnectionHandle();
 
             if (finalSignalProviderConnectionHandle == null) {
                 LOGGER.error("Does not seem to be an active ConnectionHandle. Quitting executeDisconnect()");
@@ -334,15 +350,16 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                 return;
             }
 
-            // We have the SignalConnection lock so we're allowed to set this.
-            currentSignalProviderConnection = null;
-            ((SignalProviderConnectionHandle) connectionHandle).destroy();
-
-            // TODO: is this the right connection we should use?
-            connectionChangedEvent.notifyObservers(connectionHandle, Boolean.FALSE);
-
-            connectionHandle.getDisconnectFuture().setSuccess(connectionHandle);
+            synchronized (finalSignalProviderConnectionHandle) {
+                // We have the SignalConnection lock so we're allowed to set this.
+                clearConnectionHandle(connectionHandle);
+                ((SignalProviderConnectionHandle) connectionHandle).destroy();
+            }
         }
+
+        // TODO: do we execute these observers while holding locks?
+        connectionHandle.getDisconnectFuture().setSuccess(connectionHandle);
+        connectionChangedEvent.notifyObservers(connectionHandle, Boolean.FALSE);
     }
 
     private final Observer<String> updateStateOnNewClientIdReceived = new Observer<String>() {
@@ -449,18 +466,54 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     }
 
     private void notifyConnected(ConnectionHandle connectionHandle, boolean connected) {
-        Asserts.assertTrue(connectionHandle == currentSignalProviderConnection, "Connections not matched up?");
-//        currentSignalProviderConnection = new SignalProviderConnection(0, this, connection);
 
-        // If the state has changed then notify
-        connectionChangedEvent.notifyObservers(connectionHandle, connected);
+        synchronized (CONNECTION_HANDLE_LOCK) {
+            ensureCorrectConnectionHandle(connectionHandle);
+
+            // If the state has changed then notify
+            connectionChangedEvent.notifyObservers(connectionHandle, connected);
+        }
+    }
+
+    /**
+     * Won't change for the duration of your locks
+     */
+    public synchronized ConnectionState getUnchangingConnectionState() {
+        synchronized (signalConnection) {
+            accessConnectionState();
+            ConnectionState signalConnectionState = signalConnection.getConnectionState();
+
+            accessConnectionHandle();
+            final SignalProviderConnectionHandle connectionHandle = getCurrentConnectionHandle();
+
+            if (connectionHandle == null) {
+                return ConnectionState.DISCONNECTED;
+            }
+
+            switch (signalConnectionState) {
+                case CONNECTING:
+                    return ConnectionState.CONNECTING;
+                case CONNECTED:
+                    if (connectionHandle.finishedActionConnect) {
+                        return ConnectionState.AUTHENTICATED;
+                    }
+
+                    return ConnectionState.CONNECTED;
+                case DISCONNECTING:
+                    return ConnectionState.DISCONNECTING;
+                case DISCONNECTED:
+                    return ConnectionState.DISCONNECTED;
+                default:
+                    throw new IllegalStateException("Odd unexpected state");
+            }
+        }
     }
 
     public ConnectionState getConnectionState() {
         synchronized (signalConnection) {
 
             ConnectionState signalConnectionState = signalConnection.getConnectionState();
-            final SignalProviderConnectionHandle connectionHandle = (SignalProviderConnectionHandle) getCurrentConnection();
+            final SignalProviderConnectionHandle connectionHandle = (SignalProviderConnectionHandle) getCurrentConnectionHandle();
 
             if (connectionHandle == null) {
                 return ConnectionState.DISCONNECTED;
@@ -490,175 +543,84 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         return state == ConnectionState.CONNECTED || state == ConnectionState.AUTHENTICATED;
     }
 
-    @Override
-    public String getClientId() {
-        return clientId;
-    }
-
-    @Override
-    public Presence getPresence() {
-        return presence;
-    }
-
-    @Override
-    public void setPresence(Presence presence) {
-        this.presence = presence;
-    }
-
-    @Override
-    public Map<String, Long> getVersions() {
-        return versions;
-    }
-
-    @Override
-    public void setVersions(Map<String, Long> versions) {
-        this.versions = versions;
-    }
-
-    @Override
-    public ObservableFuture<ConnectionHandle> connect() {
-        return connect(originalClientId, null, null);
-    }
-
-    @Override
-    public ObservableFuture<ConnectionHandle> connect(String clientId) {
-        return connect(clientId, null, null);
-    }
-
-    @Override
-    public ObservableFuture<ConnectionHandle> connect(String clientId, Map<String, Long> versions) {
-        return connect(clientId, versions, presence);
-    }
 
     @Override
     public synchronized ObservableFuture<ConnectionHandle> connect(String clientId, final Map<String, Long> versions, Presence presence) {
 
-        // if already connected, return a nonfailing future.
-        if (isConnected()) {
-            return new FakeFailingObservableFuture<ConnectionHandle>(this, new IllegalStateException("Already connected"));
-        } else if (connectingFuture != null) {
-            LOGGER.debug(String.format("Returning %s since it's still active", connectingFuture));
-            return connectingFuture;
-        }
-
-        // keep track of the original one, so we can detect change
-        final String finalClientId = clientId;
-        if (StringUtil.exists(clientId)) {
-            originalClientId = clientId;
-        }
-
-        // Hold onto these objects for internal reconnect attempts
-        if (presence != null) {
-            this.presence = presence;
-        }
-
-        if (CollectionUtil.exists(versions)) {
-            this.versions = versions;
-        }
-
         synchronized (signalConnection) {
-
-            Asserts.assertTrue(this.currentSignalProviderConnection == null, "Should be no other connection");
-
-            final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = createAndSetActiveSelfHealingSignalProviderConnection();
-
-            final NestedObservableFuture<ConnectionHandle> finalConnectingFuture = createSelfHealingConnectingFuture(finalSignalProviderConnectionHandle);
-            this.connectingFuture = finalConnectingFuture;
-
-            try {
-                // This future already has an underlying timeout.
-                // this signalConnection.connect() is
-                ObservableFuture<ConnectionHandle> requestFuture = signalConnection.connect();
-
-                requestFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
-                    @Override
-                    public void notify(Object sender, ObservableFuture<ConnectionHandle> signalConnectionFuture) {
-                        synchronized (signalConnection) {
-                            synchronized (finalConnectingFuture) {
-                                if (finalConnectingFuture.isCancelled()) {
-                                    tearDownConnection(finalSignalProviderConnectionHandle);
-                                    // oh shit the returned future was cancelled!
-                                    Asserts.assertTrue(connectingFuture != finalConnectingFuture, "The futures shouldn't be the same!");
-                                    return;
-                                }
-
-                                final ConnectionHandle c = getCurrentConnection();
-                                if (signalConnectionFuture.isCancelled()) {
-                                    tearDownConnection(finalSignalProviderConnectionHandle);
-                                    LOGGER.warn("Our connection was cancelled. " + signalConnectionFuture);
-                                    finalConnectingFuture.setFailure(new Exception(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle)));
-                                    return;
-                                } else if (signalConnectionFuture.isFailed()) {
-                                    tearDownConnection(finalSignalProviderConnectionHandle);
-                                    LOGGER.warn("Our connection was failed. " + signalConnectionFuture);
-                                    finalConnectingFuture.setFailure(signalConnectionFuture.getCause());
-                                    return;
-                                } else if (finalSignalProviderConnectionHandle != c) {
-                                    tearDownConnection(finalSignalProviderConnectionHandle);
-                                    LOGGER.error(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle));
-                                    finalConnectingFuture.setFailure(new Exception(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle)));
-                                    return;
-                                }
-
-                                if (!signalConnectionFuture.isSuccess()) {
-                                    try {
-                                        ensureState(ConnectionState.DISCONNECTED);
-
-                                        finalSignalProviderConnectionHandle.destroy();
-                                        LOGGER.error(String.format("2 Set currentSignalProviderConnection to null! %s", Thread.currentThread()));
-                                        currentSignalProviderConnection = null;
-                                        connectingFuture = null;
-                                    } finally {
-                                        finalConnectingFuture.setFailure(new Exception("Couldn't connect!"));
-                                    }
-                                    return;
-                                }
-
-                                try {
-                                    ensureState(ConnectionState.CONNECTED);
-                                } catch (Exception e) {
-                                    finalConnectingFuture.setFailure(e);
-                                    throw new RuntimeException(e);
-                                }
-
-                                synchronized (finalSignalProviderConnectionHandle) {
-                                    final ConnectionHandle connectionHandle = signalConnectionFuture.getResult();
-
-                                    // set the currently active connection's internal connection.
-                                    finalSignalProviderConnectionHandle.setConnectionHandle(connectionHandle);
-
-                                    sendConnectCommand(finalConnectingFuture, finalSignalProviderConnectionHandle, finalClientId, versions);
-                                }
-                            }
-                        }
-                    }
-                });
-            } catch (Exception e) {
-                connectingFuture = null;
-                throw new RuntimeException(e);
+            final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+            if (connectFuture != null) {
+                return connectFuture;
             }
 
+            // Make sure ConnectionHandler doesn't change while you work on it.
+            synchronized (CONNECTION_HANDLE_LOCK) {
+                final ConnectionHandle connectionHandle = getUnchangingConnectionHandle();
+                if (connectionHandle != null) {
+                    return new FakeObservableFuture<ConnectionHandle>(connectionHandle, connectionHandle);
+                }
+            }
 
-            return finalConnectingFuture;
+            Asserts.assertTrue(this.getCurrentConnectionHandle() == null, "Should be no other connection");
+
+            // keep track of the original one, so we can detect change
+            final String finalClientId = clientId;
+            if (StringUtil.exists(clientId)) {
+                originalClientId = clientId;
+            }
+
+            // Hold onto these objects for internal reconnect attempts
+            if (presence != null) {
+                this.presence = presence;
+            }
+
+            if (CollectionUtil.exists(versions)) {
+                this.versions = versions;
+            }
+
+            synchronized (CONNECTION_HANDLE_LOCK) {
+                final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = createAndSetActiveSelfHealingSignalProviderConnection();
+
+                final NestedObservableFuture<ConnectionHandle> finalConnectFuture = createSelfHealingConnectFuture(finalSignalProviderConnectionHandle);
+                synchronized (finalConnectFuture) {
+                    setConnectFuture(finalConnectFuture);
+
+                    try {
+                        // This future already has an underlying timeout.
+                        // this signalConnection.connect() is
+                        ObservableFuture<ConnectionHandle> requestFuture = signalConnection.connect();
+
+                        requestFuture.addObserver(
+                                new DifferentExecutorObserverAdapter<ObservableFuture<ConnectionHandle>>(executor,
+                                        new ThreadSafeObserverAdapter<ObservableFuture<ConnectionHandle>>(
+                                                new UpdateStateOnConnectCompleteObserver(finalConnectFuture, finalSignalProviderConnectionHandle, finalClientId))));
+
+
+                    } catch (Exception e) {
+                        clearConnectFuture(finalConnectFuture);
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                return finalConnectFuture;
+            }
         }
     }
 
-    private void tearDownConnection(SignalProviderConnectionHandle connectionHandle) {
+    private void tearDownConnection(SignalProviderConnectionHandle connectionHandle, final ObservableFuture<ConnectionHandle> connectFuture) {
         connectionHandle.destroy();
-        LOGGER.error(String.format("2 Set currentSignalProviderConnection to null! %s", Thread.currentThread()));
-        currentSignalProviderConnection = null;
-        connectingFuture = null;
+        LOGGER.error(String.format("2 Set connectionHandle to null! %s", Thread.currentThread()));
+        clearConnectFuture(connectFuture);
     }
 
-    private void sendConnectCommand(final ObservableFuture<ConnectionHandle> finalConnectingFuture, final SignalProviderConnectionHandle connectionHandle, final String clientId, Map<String, Long> versions) {
+    private void sendConnectCommand(final ObservableFuture<ConnectionHandle> finalConnectFuture, final SignalProviderConnectionHandle connectionHandle, final String clientId, Map<String, Long> versions) {
         // send in the connect command (will queue up and execute in our signalProvider.executor
         // so we must be sure not to block (it's the current thread we're on right now!)).
         ObservableFuture<ConnectCommand> sendConnectCommandFuture
                 = writeConnectCommandAsyncWithTimeoutBakedIn(connectionHandle, clientId, versions);
 
         sendConnectCommandFuture.addObserver(new HandleConnectCommandIfDoneObserver(connectionHandle));
-
-        sendConnectCommandFuture.addObserver(new CascadeSuccessToFuture(connectionHandle, finalConnectingFuture));
+        sendConnectCommandFuture.addObserver(new CascadeSuccessToFuture(connectionHandle, finalConnectFuture));
 
 //        /**
 //         * Because the sendConnectCommandFuture will self-timeout, we don't have to do a block/timeout
@@ -672,8 +634,8 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 //            // we're in the connection thread or the scheduler thread.
 //            @Override
 //            public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
-//                if (finalConnectingFuture.isCancelled()) {
-//                    LOGGER.warn("Our connectingFuture was cancelled!");
+//                if (finalConnectFuture.isCancelled()) {
+//                    LOGGER.warn("Our connectFuture was cancelled!");
 //                    return;
 //                }
 //
@@ -687,7 +649,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 //                            // THE handleConnectCommand METHOD WILL THROW THE APPROPRIATE EVENTS.
 //                            handleConnectCommand(connectionHandle, connectCommand);
 //
-//                            LOGGER.debug("Success finalConnectingFuture!");
+//                            LOGGER.debug("Success finalConnectFuture!");
 //                            connectionHandle.finishedActionConnect = true;
 //                        } finally {
 //
@@ -695,7 +657,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 //                    } else {
 //                        // NOTE: what thread are we in? is this a deadlock?
 //                        // who's job is it to tear down the connection?
-//                        NestedObservableFuture.syncState(future, finalConnectingFuture, connectionHandle);
+//                        NestedObservableFuture.syncState(future, finalConnectFuture, connectionHandle);
 //
 //                        // TODO: what happens if the ConnectCommand times out? Who's job is it to tear down?
 //                        disconnect(true);
@@ -710,53 +672,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
 //        });
     }
 
-    private class CascadeSuccessToFuture implements Observer<ObservableFuture<ConnectCommand>> {
-
-        final ConnectionHandle connectionHandle;
-        final ObservableFuture<ConnectionHandle> finalConnectingFuture;
-
-        private CascadeSuccessToFuture(ConnectionHandle connectionHandle, ObservableFuture<ConnectionHandle> finalConnectingFuture) {
-            this.connectionHandle = connectionHandle;
-            this.finalConnectingFuture = finalConnectingFuture;
-        }
-
-        @Override
-        public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
-            synchronized (signalConnection) {
-                if (future.isSuccess()) {
-                    finalConnectingFuture.setSuccess(connectionHandle);
-                } else {
-                    NestedObservableFuture.syncState(future, finalConnectingFuture, connectionHandle);
-                }
-            }
-        }
-    }
-
-    private class HandleConnectCommandIfDoneObserver implements Observer<ObservableFuture<ConnectCommand>> {
-
-        private final SignalProviderConnectionHandle connectionHandle;
-
-        private HandleConnectCommandIfDoneObserver(SignalProviderConnectionHandle connectionHandle) {
-            this.connectionHandle = connectionHandle;
-        }
-
-        @Override
-        public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
-            if (!future.isSuccess()) {
-                // shit!
-                return;
-            } else {
-
-            }
-
-            ConnectCommand connectCommand = future.getResult();
-
-            connectionHandle.finishedActionConnect = true;
-
-            handleConnectCommand(connectionHandle, connectCommand);
-        }
-    }
-
     @Override
     public synchronized ObservableFuture<ConnectionHandle> disconnect() {
         return disconnect(false);
@@ -765,85 +680,137 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     @Override
     public synchronized ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) {
         synchronized (signalConnection) {
+            accessConnectionState();
             ConnectionState state = getConnectionState();
             switch (state) {
                 case CONNECTING:
                     // we'll be interrupting the signalConnection, but that's ok.
                 case CONNECTED:
-                    // we're interrupting our tasks
-                    connectingFuture.cancel();
+                    final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+                    synchronized (connectFuture) {
+                        // we're interrupting our tasks
+                        cancelConnectFuture();
+                    }
                     break;
                 case AUTHENTICATED:
                     // we are allowed to disconnect in this case.
                     break;
                 case DISCONNECTING:
-                    return getCurrentConnection().getDisconnectFuture();
+                    return getCurrentConnectionHandle().getDisconnectFuture();
                 case DISCONNECTED:
                     return new FakeFailingObservableFuture<ConnectionHandle>(this, new IllegalStateException("Not currently connected"));
             }
 
-            final SignalProviderConnectionHandle finalConnectionHandle = currentSignalProviderConnection;
+            synchronized (CONNECTION_HANDLE_LOCK) {
+                final SignalProviderConnectionHandle finalConnectionHandle = getUnchangingConnectionHandle();
 
-            Asserts.assertTrue(finalConnectionHandle != null, "The current connectionHandle must never disagree with the stateManager!");
-            if (finalConnectionHandle == null) return null; // not reachable. just here for compiler warnings.
+                Asserts.assertTrue(finalConnectionHandle != null, "The current connectionHandle must never disagree with the stateManager!");
+                if (finalConnectionHandle == null) return null; // not reachable. just here for compiler warnings.
 
-            synchronized (finalConnectionHandle) {
-                ObservableFuture<ConnectionHandle> disconnectFuture = signalConnection.disconnect(causedByNetwork);
+                synchronized (finalConnectionHandle) {
+                    ObservableFuture<ConnectionHandle> disconnectFuture = signalConnection.disconnect(causedByNetwork);
 
-                Asserts.assertTrue(disconnectFuture != null, "DisconnectFuture null?");
-                if (finalConnectionHandle.connectionHandle != null) {
-                    // it might be null if the connection was never fully baked.
-                    Asserts.assertTrue(disconnectFuture == finalConnectionHandle.connectionHandle.getDisconnectFuture(), "The different handles didnt agree?");
+                    Asserts.assertTrue(disconnectFuture != null, "DisconnectFuture null?");
+                    if (disconnectFuture == null) return null; // not reachable. just here for compiler warnings.
+
+                    if (finalConnectionHandle.connectionHandle != null) {
+                        // it might be null if the connection was never fully baked.
+                        Asserts.assertTrue(disconnectFuture == finalConnectionHandle.connectionHandle.getDisconnectFuture(), "The different handles didnt agree?");
+                    } else {
+                        disconnectFuture.addObserver(new DebugObserver<ConnectionHandle>());
+                        disconnectFuture.addObserver(
+                                new DifferentExecutorObserverAdapter<ObservableFuture<ConnectionHandle>>(executor,
+                                        new ThreadSafeObserverAdapter<ObservableFuture<ConnectionHandle>>(
+                                                new Observer<ObservableFuture<ConnectionHandle>>() {
+                                                    @Override
+                                                    public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                                                        synchronized (CONNECTION_HANDLE_LOCK) {
+                                                            final ConnectionHandle c = getUnchangingConnectionHandle();
+                                                            if (c == finalConnectionHandle) {
+                                                                synchronized (c) {
+                                                                    clearConnectionHandle(c);
+                                                                }
+                                                            }
+                                                        }
+
+                                                        NestedObservableFuture.syncState(item, finalConnectionHandle.getDisconnectFuture(), finalConnectionHandle);
+                                                    }
+                                                })));
+                    }
+
+                    return finalConnectionHandle.getDisconnectFuture();
                 }
-
-                return finalConnectionHandle.getDisconnectFuture();
             }
         }
     }
 
     private SignalProviderConnectionHandle createAndSetActiveSelfHealingSignalProviderConnection() {
-        SignalProviderConnectionHandle connection = new SignalProviderConnectionHandle(ID.incrementAndGet(), this);
-        this.currentSignalProviderConnection = connection;
+        SignalProviderConnectionHandle connection = newConnectionHandle();
+        synchronized (connection) {
+            this.setConnectionHandle(connection);
 
-        connection.getDisconnectFuture().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
-                ConnectionHandle connectionHandle = (ConnectionHandle) sender;
-
-                synchronized (SocketSignalProvider.this) {
-                    final ConnectionHandle finalConnectionHandle = SocketSignalProvider.this.currentSignalProviderConnection;
-
-                    if (finalConnectionHandle == connectionHandle) {
-                        executeDisconnect(finalConnectionHandle);
-                    }
-                }
-            }
-        });
+//            /**
+//             * We need this in case it does not connect successfully.
+//             */
+//            connection.getDisconnectFuture().addObserver(
+//                    new DifferentExecutorObserverAdapter<ObservableFuture<ConnectionHandle>>(executor,
+//                            new ThreadSafeObserverAdapter<ObservableFuture<ConnectionHandle>>(
+//                                    new ActiveConnectionObserverAdapter<ObservableFuture<ConnectionHandle>>(
+//                                            new Observer<ObservableFuture<ConnectionHandle>>() {
+//                                                @Override
+//                                                public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+//                                                    ConnectionHandle connectionHandle = (ConnectionHandle) sender;
+//
+//                                                    synchronized (SocketSignalProvider.this) {
+//                                                        final ConnectionHandle finalConnectionHandle = getUnchangingConnectionHandle();
+//
+//                                                        synchronized (finalConnectionHandle) {
+//                                                            if (finalConnectionHandle == connectionHandle) {
+//                                                                executeDisconnect(finalConnectionHandle);
+//                                                            }
+//                                                        }
+//                                                    }
+//                                                }
+//
+//                                                @Override
+//                                                public String toString() {
+//                                                    return "selfHealOnConnectionDisconnect";
+//                                                }
+//                                            }))));
+        }
 
         return connection;
     }
 
-    private NestedObservableFuture<ConnectionHandle> createSelfHealingConnectingFuture(ConnectionHandle connectionHandle) {
-        NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(connectionHandle);
+    private NestedObservableFuture<ConnectionHandle> createSelfHealingConnectFuture(ConnectionHandle connectionHandle) {
+        NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(connectionHandle) {
+            @Override
+            public String toString() {
+                return "connectFuture";
+            }
+        };
 
-        future.addObserver(resetConnectingFutureIfMatchingObserver);
+        future.addObserver(new DebugObserver<ConnectionHandle>());
+        future.addObserver(resetConnectFutureIfMatchingObserver);
         future.addObserver(notifyConnectedOnFinishObserver);
 
         return future;
     }
 
-    private final Observer<ObservableFuture<ConnectionHandle>> resetConnectingFutureIfMatchingObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+    private Observer<ObservableFuture<ConnectionHandle>> resetConnectFutureIfMatchingObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
         @Override
         public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
-            synchronized (signalConnection) {
-                if (future == connectingFuture) {
-                    connectingFuture = null;
+            final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+
+            synchronized (connectFuture) {
+                if (future == connectFuture) {
+                    clearConnectFuture(future);
                 }
             }
         }
     };
 
-    private final Observer<ObservableFuture<ConnectionHandle>> notifyConnectedOnFinishObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+    private Observer<ObservableFuture<ConnectionHandle>> notifyConnectedOnFinishObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
         @Override
         public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
             ConnectionHandle connectionHandle = (SignalProviderConnectionHandle) sender;
@@ -864,7 +831,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
     // TODO: THIS METHOD HAS SERIOUS PROBLEMS AND NEEDS TESTING
     public ObservableFuture<ConnectionHandle> resetDisconnectAndConnect() {
         synchronized (signalConnection) {
-            final ConnectionHandle connectionHandle = getCurrentConnection();
+            final ConnectionHandle connectionHandle = getCurrentConnectionHandle();
             if (connectionHandle != null) {
                 synchronized (connectionHandle) {
                     return executeResetDisconnectAndConnect();
@@ -887,9 +854,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
 
         // todo: is this the right event?
-        newClientIdReceivedEvent.notifyObservers(getCurrentConnection(), c);
-
-        LOGGER.error("resetAndDisconnect called: " + connectingFuture);
+        newClientIdReceivedEvent.notifyObservers(getCurrentConnectionHandle(), c);
 
         return signalConnection.reconnect();
     }
@@ -1001,10 +966,6 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
                         .addObserver((Observer) logIfWriteFailedObserver);
             }
         }
-    }
-
-    private boolean isConnecting() {
-        return connectingFuture != null && !connectingFuture.isDone();
     }
 
     private void handleDisconnectCommand(SignalProviderConnectionHandle connection, DisconnectCommand command) {
@@ -1166,7 +1127,7 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         public void notify(Object sender, List<Command> commands) {
             LOGGER.warn(commands.size() + " packets released due to timeout, leaving a hole.");
             // TODO: how do we know this is the right connection???
-            handleCommands((SignalProviderConnectionHandle) getCurrentConnection(), commands);
+            handleCommands((SignalProviderConnectionHandle) getCurrentConnectionHandle(), commands);
         }
     };
 
@@ -1192,80 +1153,227 @@ public class SocketSignalProvider extends CascadingDestroyableBase implements Si
         }
     };
 
-    private class TransitionThreadObserver<T> implements Observer<T> {
-
-        private final Observer<T> observer;
-        private final Executor executor;
-
-        public TransitionThreadObserver(Executor executor, Observer<T> observer) {
-            this.observer = observer;
-            this.executor = executor;
-        }
-
-        @Override
-        public void notify(final Object sender, final T item) {
-            Executor e = executor == null ? SimpleExecutor.getInstance() : executor;
-
-            e.execute(new Runnable() {
-                @Override
-                public void run() {
-                    observer.notify(sender, item);
-                }
-            });
-        }
-
-        @Override
-        public String toString() {
-            return observer.toString();
-        }
-    }
-
-    public ConnectionHandle getCurrentConnection() {
-        return currentSignalProviderConnection;
+    @Override
+    protected void accessConnectFuture() {
+        ensureLock(signalConnection);
+        super.accessConnectFuture();
     }
 
     @Override
-    protected void onDestroy() {
-        //To change body of implemented methods use File | Settings | File Templates.
+    protected void accessConnectionHandle() {
+        ensureLock(signalConnection);
+        super.accessConnectionHandle();
+    }
+
+    @Override
+    protected void clearConnectionHandle(ConnectionHandle finalConnectionHandle) {
+        ensureLock(signalConnection);
+        super.clearConnectionHandle(finalConnectionHandle);
     }
 
     private void ensureState(ConnectionState state) {
+        accessConnectionState();
+
         final ConnectionState existingState = getConnectionState();
 
         Asserts.assertTrue(existingState == state, String.format("The state was supposed to be %s but was %s", state, existingState));
     }
 
-    private static class ActiveConnectionObserverAdapter<T> implements Observer<T> {
+    private void accessConnectionState() {
+        ensureLock(SocketSignalProvider.this);
+        ensureLock(signalConnection);
+    }
+
+    @Override
+    protected void onDestroy() {
+
+    }
+
+    /**
+     * This class is attached to the signalConnection.connect() future. It will execute in our executor in a
+     * thread-safe way.
+     */
+    private class UpdateStateOnConnectCompleteObserver implements Observer<ObservableFuture<ConnectionHandle>> {
+
+        final ObservableFuture<ConnectionHandle> finalConnectFuture;
+        final SignalProviderConnectionHandle finalSignalProviderConnectionHandle;
+        final String finalClientId;
+
+        private UpdateStateOnConnectCompleteObserver(ObservableFuture<ConnectionHandle> finalConnectFuture, SignalProviderConnectionHandle finalSignalProviderConnectionHandle, String finalClientId) {
+            this.finalConnectFuture = finalConnectFuture;
+            this.finalSignalProviderConnectionHandle = finalSignalProviderConnectionHandle;
+            this.finalClientId = finalClientId;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> signalConnectionFuture) {
+            synchronized (finalConnectFuture) {
+                if (finalConnectFuture.isCancelled()) {
+                    synchronized (finalSignalProviderConnectionHandle) {
+                        tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
+                        // oh shit the returned future was cancelled!
+                        Asserts.assertTrue(getConnectFuture() != finalConnectFuture, "The futures shouldn't be the same!");
+                        return;
+                    }
+                }
+
+                final ConnectionHandle c = getCurrentConnectionHandle();
+                if (signalConnectionFuture.isCancelled()) {
+                    tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
+                    LOGGER.warn("Our connection was cancelled. " + signalConnectionFuture);
+                    finalConnectFuture.setFailure(new Exception(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle)));
+                    return;
+                } else if (signalConnectionFuture.isFailed()) {
+                    tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
+                    LOGGER.warn("Our connection was failed. " + signalConnectionFuture);
+                    finalConnectFuture.setFailure(signalConnectionFuture.getCause());
+                    return;
+                } else if (finalSignalProviderConnectionHandle != c) {
+                    tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
+                    LOGGER.error(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle));
+                    finalConnectFuture.setFailure(new Exception(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle)));
+                    return;
+                }
+
+                if (!signalConnectionFuture.isSuccess()) {
+                    try {
+                        ensureState(ConnectionState.DISCONNECTED);
+
+                        finalSignalProviderConnectionHandle.destroy();
+                        LOGGER.error(String.format("2 Set connectionHandle to null! %s", Thread.currentThread()));
+                        clearConnectionHandle(finalSignalProviderConnectionHandle);
+                        clearConnectFuture(finalConnectFuture);
+                    } finally {
+                        finalConnectFuture.setFailure(new Exception("Couldn't connect!"));
+                    }
+                    return;
+                }
+
+                try {
+                    ensureState(ConnectionState.CONNECTED);
+                } catch (Exception e) {
+                    finalConnectFuture.setFailure(e);
+                    throw new RuntimeException(e);
+                }
+
+                synchronized (finalSignalProviderConnectionHandle) {
+                    final ConnectionHandle connectionHandle = signalConnectionFuture.getResult();
+
+                    // set the currently active connection's internal connection.
+                    finalSignalProviderConnectionHandle.setConnectionHandle(connectionHandle);
+
+                    sendConnectCommand(finalConnectFuture, finalSignalProviderConnectionHandle, finalClientId, versions);
+                }
+            }
+        }
+    }
+
+    private class CascadeSuccessToFuture implements Observer<ObservableFuture<ConnectCommand>> {
+
+        final ConnectionHandle connectionHandle;
+        final ObservableFuture<ConnectionHandle> future;
+
+        private CascadeSuccessToFuture(ConnectionHandle connectionHandle, ObservableFuture<ConnectionHandle> future) {
+            this.connectionHandle = connectionHandle;
+            this.future = future;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
+            synchronized (signalConnection) {
+                if (future.isSuccess()) {
+                    this.future.setSuccess(connectionHandle);
+                } else {
+                    NestedObservableFuture.syncState(future, this.future, connectionHandle);
+                }
+            }
+        }
+    }
+
+    private class HandleConnectCommandIfDoneObserver implements Observer<ObservableFuture<ConnectCommand>> {
+
+        private final SignalProviderConnectionHandle finalConnectionHandle;
+
+        private HandleConnectCommandIfDoneObserver(SignalProviderConnectionHandle finalConnectionHandle) {
+            this.finalConnectionHandle = finalConnectionHandle;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
+            if (!future.isSuccess()) {
+                // shit!
+                return;
+            }
+
+            ConnectCommand connectCommand = future.getResult();
+
+            finalConnectionHandle.finishedActionConnect = true;
+
+            handleConnectCommand(finalConnectionHandle, connectCommand);
+        }
+    }
+
+    private class ThreadSafeObserverAdapter<T> implements Observer<T> {
+
+        final Observer<T> observer;
+
+        private ThreadSafeObserverAdapter(Observer<T> observer) {
+            this.observer = observer;
+        }
+
+        @Override
+        public void notify(Object sender, T item) {
+            synchronized (SocketSignalProvider.this) {
+                synchronized (signalConnection) {
+                    observer.notify(sender, item);
+                }
+            }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("[t: %s]", observer.toString());
+        }
+    }
+
+    private class ActiveConnectionObserverAdapter<T> implements Observer<T> {
 
         private final Observer<T> observer;
-        private final SocketSignalProvider signalProvider;
 
-        private ActiveConnectionObserverAdapter(SocketSignalProvider signalProvider, Observer<T> observer) {
+        private ActiveConnectionObserverAdapter(Observer<T> observer) {
             this.observer = observer;
-            this.signalProvider = signalProvider;
         }
 
         @Override
         public void notify(Object sender, T data) {
             ConnectionHandle connectionHandle = (ConnectionHandle) sender;
 
-            final SignalProviderConnectionHandle signalProviderConnectionHandle = (SignalProviderConnectionHandle) signalProvider.getCurrentConnection();
-            if (signalProviderConnectionHandle == null) {
-                LOGGER.error("The signalProviderConnection is null, so it must be inactive. Quitting.");
-                return;
-            }
-
-            synchronized (signalProviderConnectionHandle) {
-                if (signalProviderConnectionHandle.isDestroyed()) {
-                    LOGGER.error("The signalProviderConnection is not active. Quitting.");
-                    return;
-                } else if (!signalProviderConnectionHandle.isFor(connectionHandle)) {
-                    LOGGER.error("The signalProviderConnection is not for the current connection. Quitting.");
+            synchronized (CONNECTION_HANDLE_LOCK) {
+                final SignalProviderConnectionHandle signalProviderConnectionHandle = getUnchangingConnectionHandle();
+                if (signalProviderConnectionHandle == null) {
+                    LOGGER.error(String.format("%s: The signalProviderConnection is null, so it must be inactive. Quitting.", this));
                     return;
                 }
 
-                observer.notify(signalProviderConnectionHandle, data);
+                synchronized (signalProviderConnectionHandle) {
+                    if (signalProviderConnectionHandle.isDestroyed()) {
+                        LOGGER.error(String.format("%s: The signalProviderConnection is not active. Quitting.", this));
+                        return;
+                    } else if (!signalProviderConnectionHandle.isFor(connectionHandle)) {
+                        LOGGER.error(String.format("%s: The signalProviderConnection is not for the current connection. Quitting", this));
+                        return;
+                    }
+
+                    // during this observer.notify call you are guaranteed that the currentConnectionHandle cannot change
+                    // underneath you.
+                    observer.notify(signalProviderConnectionHandle, data);
+                }
             }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("[a: %s]", observer);
         }
     }
 }

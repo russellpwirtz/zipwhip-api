@@ -2,17 +2,18 @@ package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.Signal;
-import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
+import com.zipwhip.api.signals.sockets.netty.ChannelWrapperConnectionHandle;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
+import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,18 +36,49 @@ public class SocketSignalProviderTest {
 
     private static final Logger LOG = Logger.getLogger(SocketSignalProviderTest.class);
 
-    private SignalProvider provider;
+    private SocketSignalProvider provider;
     private MockSignalConnection signalConnection;
     private Presence presence;
 
     @Before
     public void setUp() throws Exception {
 
-        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor());
+        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-")));
         provider = new SocketSignalProvider(signalConnection, null, null);
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
+    }
+
+    @Test
+    public void testSimpleConnect() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+
+        ConnectionHandle connectionHandle1 = TestUtil.connect(provider);
+        ConnectionHandle connectionHandle2 = TestUtil.awaitAndAssertSuccess(provider.disconnect());
+
+        assertSame(connectionHandle1, connectionHandle2);
+    }
+
+    @Test
+    public void testSimpleConnect2() throws Exception {
+        ConnectionHandle connectionHandle1 = TestUtil.awaitAndAssertSuccess(provider.connect());
+        ConnectionHandle connectionHandle2 = TestUtil.awaitAndAssertSuccess(provider.disconnect());
+
+        assertSame(connectionHandle1, connectionHandle2);
+    }
+
+    @Test
+    public void testConnectTwice() throws Exception {
+        ConnectionHandle connectionHandle1 = TestUtil.connect(provider);
+        ConnectionHandle connectionHandle2 = TestUtil.connect(provider);
+
+        assertSame(connectionHandle1, connectionHandle2);
+        assertSame(provider.getCurrentConnectionHandle(), connectionHandle1);
+        assertFalse(connectionHandle1.isDestroyed());
+
+        TestUtil.awaitAndAssertSuccess(provider.disconnect());
     }
 
     @Test
@@ -95,9 +127,88 @@ public class SocketSignalProviderTest {
         latch.countDown();
 
         TestUtil.awaitAndAssertSuccess(future2);
-        TestUtil.awaitAndAssertSuccess(future1);
+        future1.await();
+        assertTrue(future1.isCancelled());
 
+        assertNull("Current handle must be null after a disconnect", ((SocketSignalProvider) provider).getCurrentConnectionHandle());
         assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
+    }
+
+    @Test
+    public void testConnectDisconnect() throws InterruptedException {
+
+        ConnectionHandle connectionHandle1 = TestUtil.awaitAndAssertSuccess(provider.connect());
+        ConnectionHandle connectionHandle2 = TestUtil.awaitAndAssertSuccess(provider.disconnect());
+
+        assertSame(connectionHandle1, connectionHandle2);
+
+        assertNull(((SocketSignalProvider)provider).getCurrentConnectionHandle());
+        assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
+        assertTrue(connectionHandle1.isDestroyed());
+        assertTrue(connectionHandle1.getDisconnectFuture().isSuccess());
+
+    }
+
+    @Test
+    public void testConnectDisconnectAbruptly() throws InterruptedException {
+
+        ConnectionHandle connectionHandle1 = TestUtil.awaitAndAssertSuccess(provider.connect());
+        final CountDownLatch latch = new CountDownLatch(1);
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean connected) {
+                if (!connected) {
+                    latch.countDown();
+                    try {
+                        // slow it down to test multithreading.
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                    }
+                }
+            }
+        });
+
+        TestUtil.awaitAndAssertSuccess(((SignalProviderConnectionHandle) connectionHandle1).getConnectionHandle().disconnect());
+
+        latch.await(50, TimeUnit.SECONDS);
+
+        assertNull("Current connection should notice", ((SocketSignalProvider) provider).getCurrentConnectionHandle());
+        assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
+        assertTrue(connectionHandle1.isDestroyed());
+        assertTrue(connectionHandle1.getDisconnectFuture().isSuccess());
+
+    }
+
+    @Test
+    public void testConnectDisconnectAbruptly2() throws InterruptedException {
+
+        provider = new SocketSignalProvider(new NettySignalConnection());
+
+        ConnectionHandle connectionHandle1 = TestUtil.awaitAndAssertSuccess(provider.connect());
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean item) {
+                ConnectionHandle connectionHandle = (ConnectionHandle) sender;
+                if (item == Boolean.FALSE) {
+                    latch.countDown();
+                    assertTrue(connectionHandle.getDisconnectFuture().isDone());
+                    assertTrue(connectionHandle.isDestroyed());
+                }
+            }
+        });
+
+        ((ChannelWrapperConnectionHandle)((SignalProviderConnectionHandle) connectionHandle1).getConnectionHandle()).channelWrapper.channel.disconnect();
+
+        latch.await(50, TimeUnit.SECONDS);
+
+        assertNull("Current connection should notice", ((SocketSignalProvider)provider).getCurrentConnectionHandle());
+        assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
+        assertTrue(connectionHandle1.isDestroyed());
+        assertTrue(connectionHandle1.getDisconnectFuture().isSuccess());
+
     }
 
     @Test
@@ -162,7 +273,10 @@ public class SocketSignalProviderTest {
     @Test
     public void testOnSignalReceived() throws Exception {
 
-        provider.connect().await();
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+
+        ConnectionHandle connectionHandle = TestUtil.connect(provider);
 
         SignalObserver signalObserver = new SignalObserver();
         provider.getSignalReceivedEvent().addObserver(signalObserver);
@@ -170,11 +284,13 @@ public class SocketSignalProviderTest {
         SignalCommandObserver signalCommandObserver = new SignalCommandObserver();
         provider.getSignalCommandReceivedEvent().addObserver(signalCommandObserver);
 
-        signalConnection.send(null);
         Signal signal = new Signal();
         SignalCommand signalCommand = new SignalCommand(signal);
         VersionMapEntry versionMapEntry = new VersionMapEntry("key", 1l);
         signalCommand.setVersion(versionMapEntry);
+
+        // why are we sending null?
+        signalConnection.send(null).await();
 
         assertFalse(signalObserver.isSignalReceived());
         assertFalse(signalCommandObserver.isSignalCommandReceived());
@@ -187,6 +303,9 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnSignalReceivedOutOfOrder() throws Exception {
+
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
 
         provider.connect().await();
 
@@ -239,6 +358,9 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnSignalReceivedHoleTimeout() throws Exception {
+
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
 
         provider.connect().await();
 
@@ -305,6 +427,8 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnMuchHigherVersionReceived() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
 
         provider.connect().await();
 
@@ -358,7 +482,8 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnMuchHigherVersionReceivedAfterInit() throws Exception {
-
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
         provider.connect().await();
 
         Map<String, Long> versions = new HashMap<String, Long>();
@@ -414,6 +539,9 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnNewClientIdReceived() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+
         connect();
 
         String originalClientId = provider.getClientId();
@@ -439,6 +567,9 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnSubscriptionComplete() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+
         connect();
 
         LOG.debug("Sending a SubscriptionCompleteCommand from the server to our client");
@@ -461,6 +592,9 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnPresenceReceived() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+
         connect();
 
         // In this section, we ensure that a null presence doesn't cause a crash
@@ -568,6 +702,8 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testOnVersionChanged() throws Exception {
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
 
         connect();
 

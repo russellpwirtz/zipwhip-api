@@ -51,8 +51,6 @@ public abstract class ConnectionHandleBase extends CascadingDestroyableBase impl
         this.disconnectRequested = true;
         this.causedByNetwork = causedByNetwork;
 
-
-
         proxyDisconnectFromRequestorToParent(disconnectFuture, causedByNetwork);
 
         return disconnectFuture;

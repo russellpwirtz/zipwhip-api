@@ -10,13 +10,13 @@ import com.zipwhip.concurrent.ObservableFuture;
  * Date: 9/4/12
  * Time: 2:20 PM
  * <p/>
- * This class allows callers to have "correct access" to the underlying connection. They might need to disconnect
+ * This class allows callers to have "correct ensureAbleTo" to the underlying connection. They might need to disconnect
  * THE SPECIFIC connection that they created. If another connection has taken its place then they want to just noop.
  */
 public class ChannelWrapperConnectionHandle extends SignalConnectionBaseConnectionHandleBase implements ConnectionHandle, Writable {
 
-    ChannelWrapper channelWrapper;
-    // we use pause to prevent any concurrent access. Is this needed?
+    public ChannelWrapper channelWrapper;
+    // we use pause to prevent any concurrent ensureAbleTo. Is this needed?
 
     public ChannelWrapperConnectionHandle(long id, SignalConnectionBase signalConnectionBase, ChannelWrapper channelWrapper) {
         super(id, signalConnectionBase);

@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * Date: 8/15/12
  * Time: 2:47 PM
  * <p/>
- * This wrapper controls the access to a channel. The concept is that 1 wrapper controls all access to 1 channel.
+ * This wrapper controls the ensureAbleTo to a channel. The concept is that 1 wrapper controls all ensureAbleTo to 1 channel.
  * Since all requests to a channel must go through this wrapper, we can safely control the threading behavior.
  *
  * THIS WRAPPER IS NEVER ALLOWED TO SELF DESTRUCT!
@@ -35,21 +35,21 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapper.class);
 
     /**
-     * This delegate represents the channel's access to our SignalConnectionBase class. The ChannelHandlers
+     * This delegate represents the channel's ensureAbleTo to our SignalConnectionBase class. The ChannelHandlers
      * need to be able to talk into the SignalProvider 'safely'. If their connection gets torn down we need to
-     * terminate their access to the provider.
+     * terminate their ensureAbleTo to the provider.
      */
     private SignalConnectionDelegate delegate;
 
     /**
      * This is the channel that we're trying to protect.
      */
-    protected Channel channel;
+    public Channel channel;
 
     /**
      * This connection is our external representation of the connection. External entities can interact with it
      * through this 'connection' object. It's very similar to the "delegate" though I was concerned about combining
-     * them since they have different purposes and access.
+     * them since they have different purposes and ensureAbleTo.
      */
     protected final ChannelWrapperConnectionHandle connection;
 
@@ -208,22 +208,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         return FutureUtil.execute(executor, null,
                 new WriteOnChannelSafelyCallable(this, message));
-    }
-
-    public boolean shouldBeConnected() {
-        synchronized (stateManager) {
-            return stateManager.get() == ConnectionState.CONNECTED;
-        }
-    }
-
-    /**
-     * Safely check if the underlying channel is connected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is connected.
-     */
-    protected ConnectionState getState() {
-        return stateManager.get();
     }
 
     private void assertClosed(Channel channel) {

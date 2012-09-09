@@ -4,6 +4,8 @@ import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.MockSignalConnection;
+import com.zipwhip.concurrent.AssertDisconnectedStateFutureObserver;
+import com.zipwhip.concurrent.AssertDisconnectedStateObserver;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.MockObserver;
@@ -16,6 +18,9 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
+import static com.zipwhip.concurrent.TestUtil.assertNotDone;
+import static com.zipwhip.concurrent.TestUtil.assertSignalConnectionDisconnected;
+import static com.zipwhip.concurrent.TestUtil.assertSuccess;
 import static junit.framework.Assert.*;
 import static junit.framework.Assert.assertFalse;
 
@@ -70,7 +75,7 @@ public class MockConnectionTests {
         connectionHandle.getDisconnectFuture().addObserver(observer);
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(false));
-        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(false));
+        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, false) );
 
         assertFalse(observer.isCalled());
 
@@ -89,7 +94,7 @@ public class MockConnectionTests {
         connectionHandle.getDisconnectFuture().addObserver(observer);
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(true));
-        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(true));
+        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, true));
 
         assertFalse(observer.isCalled());
 
@@ -105,7 +110,7 @@ public class MockConnectionTests {
         ConnectionHandle connectionHandle = connect();
         MockObserver<ObservableFuture<ConnectionHandle>> observer = new MockObserver<ObservableFuture<ConnectionHandle>>();
         connectionHandle.getDisconnectFuture().addObserver(observer);
-        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(false));
+        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, false) );
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(false));
 
         assertFalse(observer.isCalled());
@@ -113,7 +118,7 @@ public class MockConnectionTests {
         signalConnection.disconnect().await();
 
         assertTrue("getDisconnectFuture() wasn't called on signalConnection.disconnect()", observer.isCalled());
-        assertSignalConnectionDisconnected(connectionHandle, false);
+        assertSignalConnectionDisconnected(signalConnection, connectionHandle, false);
     }
 
     @Test
@@ -123,7 +128,7 @@ public class MockConnectionTests {
         connectionHandle.getDisconnectFuture().addObserver(observer);
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(true));
-        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(true));
+        connectionHandle.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, true));
 
         signalConnection.getDisconnectEvent().addObserver(new Observer<ConnectionHandle>() {
             @Override
@@ -175,7 +180,7 @@ public class MockConnectionTests {
         assertTrue("Didn't connect?", future.isSuccess());
         assertNotNull("Result null?", future.getResult());
 
-        future.getResult().getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(false));
+        future.getResult().getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, false));
 
         latch.await();
 
@@ -238,7 +243,7 @@ public class MockConnectionTests {
         ConnectionHandle conn1 = future1.getResult();
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(false));
-        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(false));
+        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, false) );
 
         assertTrue(!conn1.isDestroyed());
         assertNotDone(conn1.getDisconnectFuture());
@@ -269,7 +274,7 @@ public class MockConnectionTests {
         ConnectionHandle conn1 = future1.getResult();
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(false));
-        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(false));
+        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, false) );
 
         assertTrue(!conn1.isDestroyed());
         assertNotDone(conn1.getDisconnectFuture());
@@ -300,7 +305,7 @@ public class MockConnectionTests {
         ConnectionHandle conn1 = future1.getResult();
 
         signalConnection.getDisconnectEvent().addObserver(new AssertDisconnectedStateObserver(true));
-        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(true));
+        conn1.getDisconnectFuture().addObserver(new AssertDisconnectedStateFutureObserver(signalConnection, true) );
 
         assertTrue(!conn1.isDestroyed());
         assertNotDone(conn1.getDisconnectFuture());
@@ -342,67 +347,6 @@ public class MockConnectionTests {
         assertSuccess(connectionHandle.getDisconnectFuture());
         // causedByNetwork
         assertFalse(connectionHandle.getDisconnectFuture().getResult().disconnectedViaNetwork());
-    }
-
-    public void assertSuccess(ObservableFuture<?> future) {
-        assertNotNull(future);
-        assertTrue(future.isDone());
-        assertTrue(future.isSuccess());
-        assertFalse(future.isCancelled());
-        assertFalse(future.isFailed());
-        assertNotNull(future.getResult());
-    }
-
-    private void assertNotDone(ObservableFuture<?> future) {
-        assertNotNull(future);
-        assertFalse(future.isDone());
-        assertFalse(future.isSuccess());
-        assertFalse(future.isCancelled());
-        assertFalse(future.isFailed());
-        assertNull(future.getResult());
-    }
-
-    public class AssertDisconnectedStateObserver implements Observer<ConnectionHandle> {
-
-        final boolean causedByNetwork;
-
-        public AssertDisconnectedStateObserver(boolean causedByNetwork) {
-            this.causedByNetwork = causedByNetwork;
-        }
-
-        @Override
-        public void notify(Object sender, ConnectionHandle item) {
-            assertSuccess(item.getDisconnectFuture());
-            assertSame(item.disconnectedViaNetwork(), causedByNetwork);
-            assertTrue(item.isDestroyed());
-        }
-    }
-
-    protected class AssertDisconnectedStateFutureObserver implements Observer<ObservableFuture<ConnectionHandle>> {
-
-        final boolean causedByNetwork;
-
-        public AssertDisconnectedStateFutureObserver(boolean causedByNetwork) {
-            this.causedByNetwork = causedByNetwork;
-        }
-
-        public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
-            assertSuccess(item);
-            assertSuccess(item.getResult().getDisconnectFuture());
-            assertSignalConnectionDisconnected(item.getResult(), causedByNetwork);
-            assertTrue(item.getResult().isDestroyed());
-        }
-    }
-
-    private void assertSignalConnectionDisconnected(ConnectionHandle connectionHandle, boolean causedByNetwork) {
-        if (connectionHandle != null) {
-            assertTrue(connectionHandle.isDestroyed());
-            assertSame("Network values must agree", connectionHandle.disconnectedViaNetwork(), causedByNetwork);
-            assertSuccess(connectionHandle.getDisconnectFuture());
-        }
-
-        assertNull("Current connection null because disconnected", signalConnection.getConnectionHandle());
-        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     public ConnectionHandle connect() throws Exception {

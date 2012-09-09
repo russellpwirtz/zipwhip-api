@@ -14,14 +14,19 @@ import com.zipwhip.util.Asserts;
  */
 public class SignalProviderConnectionHandle extends ConnectionHandleBase implements Writable {
 
-    private final SocketSignalProvider signalProvider;
+    private final SignalProviderBase signalProvider;
     public boolean finishedActionConnect = false;
     protected ConnectionHandle connectionHandle;
 
-    public SignalProviderConnectionHandle(long id, SocketSignalProvider signalProvider) {
+    public SignalProviderConnectionHandle(long id, SignalProviderBase signalProvider, ConnectionHandle connectionHandle) {
         super(id);
         this.signalProvider = signalProvider;
         this.connectionHandle = connectionHandle;
+    }
+
+    public SignalProviderConnectionHandle(long id, SignalProviderBase signalProvider) {
+        super(id);
+        this.signalProvider = signalProvider;
     }
 
     @Override
@@ -30,14 +35,19 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
     }
 
     @Override
-    protected void proxyDisconnectFromRequestorToParent(ObservableFuture<ConnectionHandle> disconnectFuture, boolean causedByNetwork) {
-        Asserts.assertTrue(getDisconnectFuture() == disconnectFuture, "Bad futures 1");
-        Asserts.assertTrue(disconnectFuture == signalProvider.disconnect(causedByNetwork), "Bad futures 2");
+    protected void proxyDisconnectFromRequestorToParent(final ObservableFuture<ConnectionHandle> disconnectFuture, final boolean causedByNetwork) {
+        signalProvider.executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                Asserts.assertTrue(getDisconnectFuture() == disconnectFuture, "Bad futures 1");
+                Asserts.assertTrue(disconnectFuture == signalProvider.disconnect(causedByNetwork), "Bad futures 2");
+            }
+        });
     }
 
     @Override
     public ObservableFuture<ConnectionHandle> reconnect() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new RuntimeException("Not implemented");
     }
 
     public ConnectionHandle getConnectionHandle() {
@@ -64,6 +74,11 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
      */
     public boolean isFor(ConnectionHandle connectionHandle) {
        return this.connectionHandle == connectionHandle;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("SignalProviderConnectionHandle[%s]", connectionHandle);
     }
 
     @Override

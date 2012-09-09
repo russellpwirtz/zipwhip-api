@@ -19,8 +19,8 @@ import java.util.*;
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
  * <p/>
- * This provides an Object Oriented way to access the Zipwhip API. It uses a
- * Connection internally for low-level Zipwhip access. This class does not
+ * This provides an Object Oriented way to ensureAbleTo the Zipwhip API. It uses a
+ * Connection internally for low-level Zipwhip ensureAbleTo. This class does not
  * manage your authentication, the Connection abstracts this away from
  * the "Zipwhip" class.
  */

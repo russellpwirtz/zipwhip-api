@@ -29,7 +29,7 @@ public class DebuggingExecutor extends SimpleExecutor {
         final DebugDurationHelper helper = new DebugDurationHelper(String.format("%s:%s", DebuggingExecutor.this, command.toString()));
 
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace(String.format("[%s event=\"%s\" item=\"%s\" queue=%s]", DebuggingExecutor.this, "enqueue", command, runnableSet));
+            LOGGER.trace(String.format("[%s %s queue=%s]", "enqueue", command, runnableSet));
         }
         runnableSet.add(command);
 
@@ -39,14 +39,14 @@ public class DebuggingExecutor extends SimpleExecutor {
                 try {
                     runnableSet.remove(command);
                     if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(String.format("[%s event=\"%s\" item=\"%s\" queue=%s]", DebuggingExecutor.this, "run", command, runnableSet));
+                        LOGGER.trace(String.format("[%s %s queue=%s]", "run", command, runnableSet));
                         LOGGER.trace(helper.start());
                     }
                     command.run();
                 } finally {
                     if (LOGGER.isTraceEnabled()) {
                         LOGGER.trace(helper.stop());
-                        LOGGER.trace(String.format("[%s event=\"%s\" item=\"%s\" queue=%s]", DebuggingExecutor.this, "finish", command, runnableSet));
+                        LOGGER.trace(String.format("[%s %s queue=%s]", "finish", command, runnableSet));
                     }
                 }
             }
@@ -59,7 +59,7 @@ public class DebuggingExecutor extends SimpleExecutor {
 
     @Override
     public String toString() {
-        return String.format("DebuggingExecutor(%s)", executor);
+        return executor.toString();
     }
 
 }

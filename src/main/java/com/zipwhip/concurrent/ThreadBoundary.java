@@ -17,7 +17,7 @@ import java.util.concurrent.locks.Lock;
  * Date: 8/15/12
  * Time: 9:29 AM
  * <p/>
- * Allows us to safely control threaded access
+ * Allows us to safely control threaded ensureAbleTo
  */
 public class ThreadBoundary<T extends Enum> extends DestroyableBase {
 
