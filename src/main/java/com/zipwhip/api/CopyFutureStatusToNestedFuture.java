@@ -5,7 +5,7 @@ import com.zipwhip.events.Observer;
 import org.apache.log4j.Logger;
 
 /**
- * When the future finishes, if it's the current "connectingFuture" clean up the references.
+ * When the future finishes, if it's the current "connectFuture" clean up the references.
  */
 class CopyFutureStatusToNestedFuture<T> implements Observer<ObservableFuture<T>> {
 

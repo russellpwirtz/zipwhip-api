@@ -1,7 +1,6 @@
-package com.zipwhip.api.signals.sockets.netty.pipeline.handler;
+package com.zipwhip.important;
 
 import com.zipwhip.events.Observer;
-import com.zipwhip.important.Scheduler;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.HashCodeComparator;
 import org.apache.log4j.Logger;

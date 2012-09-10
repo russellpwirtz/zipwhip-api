@@ -1,5 +1,6 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.util;
 
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.util.StateManager;
 import org.junit.Before;
 import org.junit.Test;

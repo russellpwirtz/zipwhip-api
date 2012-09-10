@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.netty.pipeline.NettyChannelHandler;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
@@ -57,7 +57,7 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         SignalConnectionDelegate delegate = new SignalConnectionDelegate(signalConnection);
 
         // add the 'business logic' ChannelHandler to the pipeline
-        pipeline.addLast("nettyChannelHandler", new NettyChannelHandler(delegate));
+        pipeline.addLast("nettyChannelHandler", new SignalsChannelHandler(delegate));
 
         // create the channel
         Channel channel = channelFactory.newChannel(pipeline);

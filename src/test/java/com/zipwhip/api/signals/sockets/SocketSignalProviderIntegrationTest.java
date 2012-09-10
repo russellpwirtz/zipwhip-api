@@ -104,7 +104,7 @@ public class SocketSignalProviderIntegrationTest {
 
         LOGGER.debug(DownloadURL.get("http://staging.zipwhip.com/mvc/signals/signal?session=" + sessionKey + "&requestId=" + requestId + "&type=" + requestId + "&scope=" + index));
 
-        assertTrue("Latch didn't finish?", latch.await(50, TimeUnit.SECONDS));
+        assertTrue("Latch didn't finish?", latch.await(5, TimeUnit.SECONDS));
 
         assertNotNull(verifySignal[0]);
     }
@@ -162,12 +162,25 @@ public class SocketSignalProviderIntegrationTest {
 
     @Test
     public void testBasicConnect2() throws Exception {
+
+        final ConnectionHandle[] connectionHandles = new ConnectionHandle[1];
+        final CountDownLatch latch = new CountDownLatch(3);
+        signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
+            @Override
+            public void notify(Object sender, Boolean connected) {
+                if (!connected) {
+                    assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
+                    assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
+                    assertTrue(connectionHandles[0].isDestroyed());
+                    latch.countDown();
+                }
+            }
+        });
+
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();
 
-        TestUtil.awaitAndAssertSuccess(future);
-
-        final ConnectionHandle connectionHandle = future.getResult();
-        final CountDownLatch latch = new CountDownLatch(3);
+        final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(future);
+        connectionHandles[0] = connectionHandle;
 
         connectionHandle.link(new DestroyableBase() {
             @Override
@@ -183,22 +196,14 @@ public class SocketSignalProviderIntegrationTest {
                 assertNotNull(item.getResult());
                 assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
                 assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
-                assertTrue(connectionHandle.isDestroyed());
+                assertTrue(connectionHandles[0].isDestroyed());
+                assertSame(connectionHandle, connectionHandles[0]);
+                assertSame(item.getResult(), connectionHandles[0]);
+                assertSame(sender, connectionHandles[0]);
                 latch.countDown();
             }
         });
 
-        signalProvider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
-            @Override
-            public void notify(Object sender, Boolean connected) {
-                if (connected) {
-                    assertFalse(signalProvider.getConnectionState() == ConnectionState.CONNECTED);
-                    assertFalse(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
-                    assertTrue(connectionHandle.isDestroyed());
-                    latch.countDown();
-                }
-            }
-        });
 
         assertTrue(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
 
