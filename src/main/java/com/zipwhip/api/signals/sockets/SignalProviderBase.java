@@ -167,6 +167,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
         if (connectFuture != null) {
             Asserts.assertTrue(future == connectFuture, String.format("Caught a bug with check? %s/%s", future, connectFuture));
         }
+
         ensureLock(connectFuture);
         ensureLock(future);
     }
