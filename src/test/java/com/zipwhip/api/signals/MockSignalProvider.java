@@ -4,7 +4,10 @@ import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.api.signals.sockets.*;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionHandleBase;
+import com.zipwhip.api.signals.sockets.ConnectionState;
+import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -13,8 +16,6 @@ import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.util.Asserts;
-import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.util.StateManager;
 
 import java.util.List;
@@ -47,11 +48,7 @@ public class MockSignalProvider implements SignalProvider {
     public Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
 
     public MockSignalProvider() {
-        try {
-            stateManager = ConnectionStateManagerFactory.getInstance().create();
-        } catch (Exception e) {
-            // bad api :(
-        }
+        stateManager = ConnectionStateManagerFactory.getInstance().create();
     }
 
     @Override

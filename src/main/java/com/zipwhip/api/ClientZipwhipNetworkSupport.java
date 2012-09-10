@@ -761,7 +761,11 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                                 SubscriptionCompleteCommand command = future.getResult();
 
                                 // do some quick assertions to ensure that we're doing things right.
-                                Asserts.assertTrue(StringUtil.equals(command.getSubscriptionId(), sessionKey), "");
+//                                Asserts.assertTrue(StringUtil.equals(command.getSubscriptionId(), sessionKey), "");
+                                // Just logging for now - we should have gotten the subscriptionId in the SubscriptionCompleteCommand: http://angela.zipwhip.com/issues/7678
+                                if (!StringUtil.equals(command.getSubscriptionId(), sessionKey)) {
+                                    LOGGER.error("SubscriptionCompleteCommand did not provide the subscriptionId!");
+                                }
 
                                 client.onSubscriptionComplete(clientId, future.getResult());
                             }
