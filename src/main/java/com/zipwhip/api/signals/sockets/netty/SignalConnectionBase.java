@@ -90,6 +90,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized ObservableFuture<ConnectionHandle> connect() {
+        LOGGER.debug("connect()");
         if (isDestroyed()) {
             throw new IllegalStateException("The connection is destroyed");
         } else if (connectFuture != null) {
@@ -210,6 +211,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized ObservableFuture<ConnectionHandle> disconnect(final boolean causedByNetwork) {
+        if (LOGGER.isDebugEnabled()){
+            LOGGER.debug(String.format("disconnect(%b)", causedByNetwork));
+        }
+
         if (isDestroyed()) {
             throw new IllegalStateException("The connection is destroyed");
         }

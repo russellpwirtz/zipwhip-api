@@ -125,6 +125,29 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
         return disconnect(false);
     }
 
+    protected synchronized ObservableFuture<ConnectionHandle> disconnect(ConnectionHandle connectionHandle, boolean causedByNetwork) {
+        if (connectionHandle == null) {
+            throw new NullPointerException("Connection cannot be null");
+        }
+
+        synchronized (CONNECTION_HANDLE_LOCK) {
+            synchronized (connectionHandle) {
+                ConnectionHandle finalConnectionHandle = getUnchangingConnectionHandle();
+                if (finalConnectionHandle == null || finalConnectionHandle.isDestroyed()) {
+                    throw new IllegalStateException("The connection cannot be destroyed");
+                } else if (connectionHandle.getDisconnectFuture().isDone()) {
+                    return connectionHandle.getDisconnectFuture();
+                }
+
+                if (finalConnectionHandle == connectionHandle) {
+                    return disconnect(causedByNetwork);
+                } else {
+                    throw new IllegalStateException("How can the future not be done, but not currently active?");
+                }
+            }
+        }
+    }
+
     protected void accessConnectionHandle() {
         ensureLock(SignalProviderBase.this);
         ensureLock(CONNECTION_HANDLE_LOCK);

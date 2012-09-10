@@ -130,7 +130,7 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) throws Exception {
-        LOGGER.error("Caught exception on channel... ", event.getCause());
+        LOGGER.error("Caught exception in ChannelHandler... ", event.getCause());
         if (event.getCause() != null){
             event.getCause().printStackTrace();
         }

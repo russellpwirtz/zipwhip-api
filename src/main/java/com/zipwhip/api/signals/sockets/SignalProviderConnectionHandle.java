@@ -40,7 +40,7 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
             @Override
             public void run() {
                 Asserts.assertTrue(getDisconnectFuture() == disconnectFuture, "Bad futures 1");
-                Asserts.assertTrue(disconnectFuture == signalProvider.disconnect(causedByNetwork), "Bad futures 2");
+                Asserts.assertTrue(disconnectFuture == signalProvider.disconnect(SignalProviderConnectionHandle.this, causedByNetwork), "Bad futures 2");
             }
         });
     }

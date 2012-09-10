@@ -125,7 +125,10 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                                 new ActiveConnectionObserverAdapter<PingEvent>(pingReceivedEvent))));
 
         // the ActiveConnectionObserverAdapter will filter out old noise and adapt over the "sender" to the currentConnection if/only if they are active.
-        this.signalConnection.getExceptionEvent().addObserver(new ActiveConnectionObserverAdapter<String>(exceptionEvent));
+        this.signalConnection.getExceptionEvent().addObserver(
+                new DifferentExecutorObserverAdapter<String>(executor,
+                    new ThreadSafeObserverAdapter<String>(
+                        new ActiveConnectionObserverAdapter<String>(exceptionEvent))));
 
         /**
          * Observe our own version changed events so we can stay in sync internally
@@ -930,21 +933,38 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
             // If the command has not said 'ban' or 'stop'
             if (!command.isStop() || !command.isBan()) {
-                // TODO: what are the initial values?
-                String host = null;
-                int port = 0;
 
+                String host;
+                int port;
+
+                try {
+                    InetSocketAddress address = (InetSocketAddress) this.signalConnection.getAddress();
+                    host = address.getHostName();
+                    port = address.getPort();
+                }
+                catch (Exception e) {
+                    LOGGER.error("Could not determine host/port: ", e);
+                    return;
+                }
+
+                boolean hostChanged = false;
                 if (!StringUtil.EMPTY_STRING.equals(command.getHost())) {
                     host = command.getHost();
+                    hostChanged = true;
                 }
 
+                boolean portChanged = false;
                 if (command.getPort() > 0) {
                     port = command.getPort();
+                    portChanged = true;
                 }
 
-                this.signalConnection.setAddress(new InetSocketAddress(host, port));
-
-                LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
+                if (hostChanged || portChanged) {
+                    this.signalConnection.setAddress(new InetSocketAddress(host, port));
+                    LOGGER.warn(String.format("We are going to connect again %d seconds from now to host: %s and port: %s", command.getReconnectDelay(), host, port));
+                } else {
+                    LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
+                }
 
                 scheduler.schedule(originalClientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
             }
@@ -1098,6 +1118,13 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     };
 
     @Override
+    protected synchronized ObservableFuture<ConnectionHandle> disconnect(ConnectionHandle connectionHandle, boolean causedByNetwork) {
+        synchronized (signalConnection) {
+            return super.disconnect(connectionHandle, causedByNetwork);
+        }
+    }
+
+    @Override
     protected void accessConnectFuture() {
         ensureLock(signalConnection);
         super.accessConnectFuture();
@@ -1249,11 +1276,11 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 return;
             }
 
-//            ConnectCommand connectCommand = future.getResult();
+            ConnectCommand connectCommand = future.getResult();
 
             finalConnectionHandle.finishedActionConnect = true;
 
-//            handleConnectCommand(finalConnectionHandle, connectCommand);
+            handleConnectCommand(finalConnectionHandle, connectCommand);
         }
     }
 
