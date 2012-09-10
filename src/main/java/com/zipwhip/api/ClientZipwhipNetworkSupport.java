@@ -591,13 +591,15 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
             ObservableFuture<SubscriptionCompleteCommand> signalsConnectFuture = processNewClientId(connectionHandle, sessionKey, clientId, newClientId);
 
-            // debugging
-            signalsConnectFuture.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
-                @Override
-                public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
-                    LOGGER.debug("Future<SubscriptionCompleteCommand>: " + item);
-                }
-            });
+            if (signalsConnectFuture != null){
+                // debugging
+                signalsConnectFuture.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+                    @Override
+                    public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> item) {
+                        LOGGER.debug("Future<SubscriptionCompleteCommand>: " + item);
+                    }
+                });
+            }
         }
     };
 

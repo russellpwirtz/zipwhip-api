@@ -156,7 +156,9 @@ public class NettySignalConnection extends SignalConnectionBase {
         ChannelWrapper w = con.channelWrapper;
 
         con.causedByNetwork = causedByNetwork;
-        con.channelWrapper.disconnect();
+        if (con.channelWrapper.stateManager.get() != ConnectionState.DISCONNECTED){
+            con.channelWrapper.disconnect();
+        }
         // dont manually trigger the disconnectFuture. The caller will do that later.
 
 

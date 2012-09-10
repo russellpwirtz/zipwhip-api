@@ -984,7 +984,9 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
             LOGGER.debug("Executing the connect that was requested by the server. Nulled out the clientId...");
             try {
-                connect();
+                if (getConnectionState() != ConnectionState.CONNECTED) {
+                    connect();
+                }
                 // TODO: what if this never finishes? Will the reconnectStrategy pay off?
             } catch (Exception e) {
                 LOGGER.error("Crash on connect. We hope that the reconnectStrategy will do us good.", e);
@@ -1015,7 +1017,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 }
 
                 if (presence.getCategory().equals(PresenceCategory.Phone)) {
-                    presenceReceivedEvent.notifyObservers(this, presence.getConnected());
+                    presenceReceivedEvent.notifyObservers(connection, presence.getConnected());
                 }
             }
         }
@@ -1039,8 +1041,8 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         LOGGER.debug("Handling SignalCommand");
 
         // Distribute the command and the raw signal to give client's flexibility regarding what data they need
-        signalCommandReceivedEvent.notifyObservers(this, Collections.singletonList(command));
-        signalReceivedEvent.notifyObservers(this, Collections.singletonList(command.getSignal()));
+        signalCommandReceivedEvent.notifyObservers(connection, Collections.singletonList(command));
+        signalReceivedEvent.notifyObservers(connection, Collections.singletonList(command.getSignal()));
     }
 
     private void handleSubscriptionCompleteCommand(SignalProviderConnectionHandle connection, SubscriptionCompleteCommand command) {
@@ -1239,7 +1241,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         }
     }
 
-    private class CascadeSuccessToFuture implements Observer<ObservableFuture<ConnectCommand>> {
+    private static class CascadeSuccessToFuture implements Observer<ObservableFuture<ConnectCommand>> {
 
         final ConnectionHandle connectionHandle;
         final ObservableFuture<ConnectionHandle> future;
@@ -1250,14 +1252,14 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         }
 
         @Override
-        public void notify(Object sender, ObservableFuture<ConnectCommand> future) {
-            synchronized (signalConnection) {
-                if (future.isSuccess()) {
+        public void notify(Object sender, ObservableFuture<ConnectCommand> otherFuture) {
+//            synchronized (signalConnection) {
+                if (otherFuture.isSuccess()) {
                     this.future.setSuccess(connectionHandle);
                 } else {
-                    NestedObservableFuture.syncState(future, this.future, connectionHandle);
+                    NestedObservableFuture.syncState(otherFuture, this.future, connectionHandle);
                 }
-            }
+//            }
         }
     }
 
