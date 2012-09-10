@@ -1,6 +1,5 @@
 package com.zipwhip.api;
 
-import com.sun.org.apache.bcel.internal.generic.FALOAD;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.settings.PreferencesSettingsStore;
@@ -696,7 +695,11 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                 if (future.isSuccess()) {
                     // the subscriptionId is the sessionKey because we request it as so.
-                    Asserts.assertTrue(StringUtil.equals(future.getResult().getSubscriptionId(), sessionKey), "");
+//                    Asserts.assertTrue(StringUtil.equals(future.getResult().getSubscriptionId(), sessionKey), "");
+                    // TODO: Signal Server needs to provide subscriptionId in SubscriptionCompleteCommand: http://angela.zipwhip.com/issues/7678
+                    if (!StringUtil.equals(future.getResult().getSubscriptionId(), sessionKey)) {
+                        LOGGER.error("SubscriptionCompleteCommand did not provide subscriptionId!");
+                    }
 
                     client.getSettingsStore().put(SettingsStore.Keys.EXPECTS_SUBSCRIPTION_COMPLETE, "false");
                     client.getSettingsStore().put(SettingsStore.Keys.LAST_SUBSCRIBED_CLIENT_ID, clientId);
@@ -730,14 +733,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
         @Override
         public synchronized ObservableFuture<SubscriptionCompleteCommand> call() throws Exception {
-            Map<String, Object> params = new HashMap<String, Object>();
-
-            params.put("sessions", sessionKey);
-            params.put("clientId", clientId);
-
-            if (signalProvider.getPresence() != null) {
-                params.put("category", signalProvider.getPresence().getCategory());
-            }
 
             // it's important that this future is synchronous (no executor)
             final ObservableFuture<SubscriptionCompleteCommand> resultFuture = new DefaultObservableFuture<SubscriptionCompleteCommand>(this);
@@ -803,7 +798,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
             ServerResponse response;
             try {
-                response = executeSync(ZipwhipNetworkSupport.SIGNALS_CONNECT, params);
+                response = executeSync(ZipwhipNetworkSupport.SIGNALS_CONNECT, getSignalsConnectParams(sessionKey, clientId));
             } catch (Exception e) {
                 LOGGER.error("Failed to execute request: ", e);
                 resultFuture.setFailure(e);
@@ -853,6 +848,20 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         public String toString() {
             return "SignalsConnectTask(Waiting for SubscriptionCompleteCommand)";
         }
+    }
+
+    private Map<String, Object> getSignalsConnectParams(String sessionKey, String clientId) {
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("sessions", sessionKey);
+        params.put("clientId", clientId);
+        params.put("subscriptionId", sessionKey);
+
+        if (signalProvider.getPresence() != null) {
+            params.put("category", signalProvider.getPresence().getCategory());
+        }
+
+        return params;
     }
 
     private static class TearDownConnectionIfFailureObserver implements Observer<ObservableFuture<SubscriptionCompleteCommand>> {
