@@ -62,7 +62,7 @@ public class SchedulerTimer implements Timer {
         public void notify(Object sender, String requestId) {
 
             if (map == null) {
-                LOGGER.error("SchedulerTimer map was null!");
+                LOGGER.warn("SchedulerTimer map was null!");
                 return;
             }
 
@@ -70,12 +70,12 @@ public class SchedulerTimer implements Timer {
                 Timeout timeout = map.get(requestId);
 
                 if (timeout == null) {
-                    LOGGER.error(String.format("timeout was null for requestId: %s", requestId));
+                    LOGGER.warn(String.format("timeout was null for requestId: %s", requestId));
                 } else {
                     try {
                         TimerTask task = timeout.getTask();
                         if (task == null) {
-                            LOGGER.error("TimeoutTask was null!");
+                            LOGGER.warn("TimeoutTask was null!");
                         } else {
                             LOGGER.debug(String.format("Running requestId: %s task: %s!", requestId, task));
                             task.run(timeout);
