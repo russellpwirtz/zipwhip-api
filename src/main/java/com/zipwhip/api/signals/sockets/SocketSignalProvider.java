@@ -125,7 +125,10 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                                 new ActiveConnectionObserverAdapter<PingEvent>(pingReceivedEvent))));
 
         // the ActiveConnectionObserverAdapter will filter out old noise and adapt over the "sender" to the currentConnection if/only if they are active.
-        this.signalConnection.getExceptionEvent().addObserver(new ActiveConnectionObserverAdapter<String>(exceptionEvent));
+        this.signalConnection.getExceptionEvent().addObserver(
+                new DifferentExecutorObserverAdapter<String>(executor,
+                    new ThreadSafeObserverAdapter<String>(
+                        new ActiveConnectionObserverAdapter<String>(exceptionEvent))));
 
         /**
          * Observe our own version changed events so we can stay in sync internally
