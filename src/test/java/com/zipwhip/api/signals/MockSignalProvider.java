@@ -46,6 +46,7 @@ public class MockSignalProvider implements SignalProvider {
 
     //    protected Executor executor = SimpleExecutor.getInstance();
     public Executor executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MockSignalProvider-"));
+    private ConnectionHandle connectionHandle;
 
     public MockSignalProvider() {
         stateManager = ConnectionStateManagerFactory.getInstance().create();
@@ -67,7 +68,7 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     public void sendSubscriptionCompleteCommand(SubscriptionCompleteCommand command) {
-        subscriptionCompleteEvent.notifyObservers(this, command);
+        subscriptionCompleteEvent.notifyObservers(connectionHandle, command);
     }
 
     @Override
@@ -138,6 +139,7 @@ public class MockSignalProvider implements SignalProvider {
                     connectionChangedEvent.notify(connectionHandle, Boolean.TRUE);
                     newClientIdEvent.notify(connectionHandle, clientId);
 
+                    MockSignalProvider.this.connectionHandle = connectionHandle;
                     future.setSuccess(connectionHandle);
                 }
             }
@@ -164,7 +166,7 @@ public class MockSignalProvider implements SignalProvider {
             return new FakeObservableFuture<ConnectionHandle>(this, null);
         }
 
-        final ObservableFuture<ConnectionHandle> result = new DefaultObservableFuture<ConnectionHandle>(this);
+        final ObservableFuture<ConnectionHandle> result = connectionHandle.getDisconnectFuture();
 
         disconnectingFuture = result;
         stateManager.transitionOrThrow(ConnectionState.DISCONNECTING);

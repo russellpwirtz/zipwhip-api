@@ -62,6 +62,7 @@ public class TestUtil {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+
         assertTrue("future wasn't done!", future.isDone());
         assertNull(String.format("Future failure was %s", future.getCause()), future.getCause());
         assertFalse("future was cancelled!", future.isCancelled());

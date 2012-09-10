@@ -25,6 +25,10 @@ public class DifferentExecutorObserverAdapter<T> implements Observer<T> {
 
     public DifferentExecutorObserverAdapter(Executor executor, Observer<T> observer) {
         this.observer = observer;
+
+        if (executor == null){
+            executor = SimpleExecutor.getInstance();
+        }
         this.executor = executor;
     }
 

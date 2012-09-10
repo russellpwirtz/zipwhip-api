@@ -415,7 +415,7 @@ public class DefaultZipwhipClientTest {
         assertTrue("Latch finished?", latch.await(10, TimeUnit.SECONDS));
 
         // it reconnected succesfully?
-        assertTrue("SignalProvider connection should be torn down", client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
+        assertTrue("SignalProvider connection should be brought back up", client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
         assertEquals(3, connectionChangedObserver.connectionChangedEvents);
         assertTrue(connectionChangedObserver.connected);
     }
