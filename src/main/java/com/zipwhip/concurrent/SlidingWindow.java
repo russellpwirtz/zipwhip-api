@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.concurrent;
 
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.events.*;
@@ -387,7 +387,7 @@ public class SlidingWindow<P> extends DestroyableBase {
         return results;
     }
 
-    protected static class HoleRange {
+    public static class HoleRange {
 
         protected String key;
         protected long start;
@@ -411,6 +411,18 @@ public class SlidingWindow<P> extends DestroyableBase {
             if (obj == null || !(obj instanceof HoleRange)) return false;
             HoleRange o = (HoleRange) obj;
             return o.start == start && o.end == end;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public long getStart() {
+            return start;
+        }
+
+        public long getEnd() {
+            return end;
         }
 
         @Override

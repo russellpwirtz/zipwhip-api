@@ -1,5 +1,6 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.concurrent;
 
+import com.zipwhip.concurrent.SlidingWindow;
 import com.zipwhip.events.Observer;
 import junit.framework.Assert;
 import org.junit.Before;

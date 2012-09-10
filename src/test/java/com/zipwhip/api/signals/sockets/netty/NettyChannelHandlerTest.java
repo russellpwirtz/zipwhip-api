@@ -6,7 +6,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
-import com.zipwhip.api.signals.sockets.netty.pipeline.NettyChannelHandler;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import junit.framework.Assert;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.ChannelState;
@@ -26,14 +26,14 @@ import java.net.SocketAddress;
  */
 public class NettyChannelHandlerTest {
 
-    NettyChannelHandler nettyChannelHandler;
+    SignalsChannelHandler signalsChannelHandler;
     MockSignalConnectionDelegate delegate;
     MockChannel mockChannel;
 
     @Before
     public void doBefore() {
         delegate = new MockSignalConnectionDelegate();
-        nettyChannelHandler = new NettyChannelHandler(delegate);
+        signalsChannelHandler = new SignalsChannelHandler(delegate);
         mockChannel = new MockChannel();
     }
 
@@ -51,7 +51,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertNull(delegate.receiveEventCommand);
@@ -72,7 +72,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertEquals(1, delegate.pongReceivedCount);
@@ -94,7 +94,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pongReceivedCount);
         Assert.assertNotNull(delegate.receiveEventCommand);
@@ -113,7 +113,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         Assert.assertTrue(delegate.isNetwork);
         Assert.assertFalse(delegate.isConnected);
     }
@@ -129,7 +129,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         // SEND PING
         Assert.assertNotNull(delegate.sentCommand);
         Assert.assertTrue(delegate.sentCommand instanceof PingPongCommand);
@@ -155,7 +155,7 @@ public class NettyChannelHandlerTest {
         mockChannel.connected = false;
         Assert.assertFalse(mockChannel.isConnected());
 
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         Assert.assertNull(delegate.sentCommand);
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertTrue(delegate.isNetwork);
@@ -173,7 +173,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelClosed(null, event);
+        signalsChannelHandler.channelClosed(null, event);
         Assert.assertTrue(delegate.isNetwork);
         Assert.assertFalse(delegate.isConnected);
     }
@@ -189,7 +189,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.exceptionCaught(null, event);
+        signalsChannelHandler.exceptionCaught(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertNull(delegate.receiveEventCommand);
@@ -223,7 +223,7 @@ public class NettyChannelHandlerTest {
         public synchronized void sendAsyncIfActive(SerializingCommand command) {
             sentCommand = command;
             try {
-                nettyChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
+                signalsChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);

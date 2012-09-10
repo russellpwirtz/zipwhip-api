@@ -43,8 +43,10 @@ public class SocketSignalProviderTest {
     @Before
     public void setUp() throws Exception {
 
-        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-")));
-        provider = new SocketSignalProvider(signalConnection, null, null);
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
+//        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-")));
+//        provider = new SocketSignalProvider(signalConnection, null, null);
 
         presence = new Presence();
         presence.setCategory(PresenceCategory.Car);
@@ -52,9 +54,6 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testSimpleConnect() throws Exception {
-        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
-        provider = new SocketSignalProvider(signalConnection, SimpleExecutor.getInstance(), null);
-
         ConnectionHandle connectionHandle1 = TestUtil.connect(provider);
         ConnectionHandle connectionHandle2 = TestUtil.awaitAndAssertSuccess(provider.disconnect());
 
@@ -107,6 +106,12 @@ public class SocketSignalProviderTest {
 
     @Test
     public void testCancelConnectingFuture() throws InterruptedException {
+        signalConnection.destroy();
+        provider.destroy();
+
+        // need a thread or else deadlock.
+        signalConnection = new MockSignalConnection(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-")));
+        provider = new SocketSignalProvider(signalConnection, null, null);
 
         final CountDownLatch latch = new CountDownLatch(1);
         provider.getConnectionChangedEvent().addObserver(new Observer<Boolean>() {

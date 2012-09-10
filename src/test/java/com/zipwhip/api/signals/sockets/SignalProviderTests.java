@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.sockets.*;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,7 +27,7 @@ public class SignalProviderTests {
 
     @Before
     public void setUp() throws Exception {
-        signalProvider = new SocketSignalProvider(new MockSignalConnection());
+        signalProvider = new SocketSignalProvider(new MockSignalConnection(), SimpleExecutor.getInstance());
     }
 
     @Test
@@ -83,11 +84,14 @@ public class SignalProviderTests {
 
     @Test
     public void testBasicConnect2() throws Exception {
+
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();
 
         future.await();
 
         assertSuccess(future);
+
+        // because of threading we have to wait a bit.
 
         final ConnectionHandle connectionHandle = future.getResult();
         final CountDownLatch latch = new CountDownLatch(3);

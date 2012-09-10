@@ -16,14 +16,16 @@ import org.jboss.netty.handler.timeout.IdleStateEvent;
  * User: jed
  * Date: 5/31/12
  * Time: 5:22 PM
+ *
+ * This class links the SignalConnection and the ChannelHandler.
  */
-public class NettyChannelHandler extends IdleStateAwareChannelHandler {
+public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
 
-    protected static final Logger LOGGER = Logger.getLogger(NettyChannelHandler.class);
+    protected static final Logger LOGGER = Logger.getLogger(SignalsChannelHandler.class);
 
     private SignalConnectionDelegate delegate;
 
-    public NettyChannelHandler(SignalConnectionDelegate delegate) {
+    public SignalsChannelHandler(SignalConnectionDelegate delegate) {
         this.delegate = delegate;
     }
 

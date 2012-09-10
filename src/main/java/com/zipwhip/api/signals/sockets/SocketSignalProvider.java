@@ -4,11 +4,7 @@ import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.*;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
-import com.zipwhip.concurrent.DebugObserver;
-import com.zipwhip.concurrent.DifferentExecutorObserverAdapter;
-import com.zipwhip.concurrent.FakeFailingObservableFuture;
-import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observable;
+import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
 import com.zipwhip.important.ImportantTaskExecutor;
@@ -121,7 +117,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         this.signalConnection.getCommandReceivedEvent().addObserver(
                 new DifferentExecutorObserverAdapter<Command>(executor,
                         new ThreadSafeObserverAdapter<Command>(
-                                new ActiveConnectionObserverAdapter<Command>(onMessageReceived_ON_CHANNEL_THREAD))));
+                                new ActiveConnectionObserverAdapter<Command>(onMessageReceived))));
 
         this.signalConnection.getPingEventReceivedEvent().addObserver(
                 new DifferentExecutorObserverAdapter<PingEvent>(executor,
@@ -138,7 +134,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         getNewClientIdReceivedEvent().addObserver(updateStateOnNewClientIdReceived);
     }
 
-    private final Observer<Command> onMessageReceived_ON_CHANNEL_THREAD = new Observer<Command>() {
+    private final Observer<Command> onMessageReceived = new Observer<Command>() {
 
         /**
          * The NettySignalConnection will call this method when there's an
@@ -213,7 +209,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
         @Override
         public String toString() {
-            return "onMessageReceived_ON_CHANNEL_THREAD";
+            return "onMessageReceived";
         }
     };
 
@@ -801,6 +797,9 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         @Override
         public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
             final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
+            if (connectFuture == null) {
+                return;
+            }
 
             synchronized (connectFuture) {
                 if (future == connectFuture) {
@@ -864,61 +863,6 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         signalConnection.ping();
     }
 
-    @Override
-    public Observable<List<Signal>> getSignalReceivedEvent() {
-        return signalReceivedEvent;
-    }
-
-    @Override
-    public Observable<List<SignalCommand>> getSignalCommandReceivedEvent() {
-        return signalCommandReceivedEvent;
-    }
-
-    @Override
-    public Observable<Boolean> getConnectionChangedEvent() {
-        return connectionChangedEvent;
-    }
-
-    @Override
-    public Observable<String> getNewClientIdReceivedEvent() {
-        return newClientIdReceivedEvent;
-    }
-
-    @Override
-    public Observable<SubscriptionCompleteCommand> getSubscriptionCompleteReceivedEvent() {
-        return subscriptionCompleteReceivedEvent;
-    }
-
-    @Override
-    public Observable<Boolean> getPhonePresenceReceivedEvent() {
-        return presenceReceivedEvent;
-    }
-
-    @Override
-    public Observable<Void> getSignalVerificationReceivedEvent() {
-        return signalVerificationReceivedEvent;
-    }
-
-    @Override
-    public Observable<VersionMapEntry> getVersionChangedEvent() {
-        return newVersionEvent;
-    }
-
-    @Override
-    public Observable<PingEvent> getPingReceivedEvent() {
-        return pingReceivedEvent;
-    }
-
-    @Override
-    public Observable<String> getExceptionEvent() {
-        return exceptionEvent;
-    }
-
-    @Override
-    public Observable<Command> getCommandReceivedEvent() {
-        return commandReceivedEvent;
-    }
-
     private void handleConnectCommand(SignalProviderConnectionHandle connectionHandle, ConnectCommand command) {
         // we are in the "Channel" thread.
         // We already have the SignalConnection and CONNECTION_BEING_CHANGED locks right now.
@@ -927,7 +871,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         synchronized (connectionHandle) {
 
             if (LOGGER.isDebugEnabled())
-                LOGGER.debug("Handling ConnectCommand " + command.isSuccessful());
+                LOGGER.debug(String.format("handleConnectCommand(%s, %s)", connectionHandle, command));
 
             boolean newClientId = false;
 
@@ -1135,7 +1079,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         @Override
         public void notify(Object sender, SlidingWindow.HoleRange hole) {
             LOGGER.debug("Signal hole detected, requesting backfill for  " + hole.toString());
-            signalConnection.send(new BackfillCommand(hole.getRange(), hole.key));
+            signalConnection.send(new BackfillCommand(hole.getRange(), hole.getKey()));
         }
     };
 
@@ -1144,7 +1088,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         public void notify(Object sender, List<Command> commands) {
             LOGGER.warn(commands.size() + " packets released due to timeout, leaving a hole.");
             // TODO: how do we know this is the right connection???
-            handleCommands((SignalProviderConnectionHandle) getCurrentConnectionHandle(), commands);
+            handleCommands(getCurrentConnectionHandle(), commands);
         }
     };
 
@@ -1322,11 +1266,11 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 return;
             }
 
-            ConnectCommand connectCommand = future.getResult();
+//            ConnectCommand connectCommand = future.getResult();
 
             finalConnectionHandle.finishedActionConnect = true;
 
-            handleConnectCommand(finalConnectionHandle, connectCommand);
+//            handleConnectCommand(finalConnectionHandle, connectCommand);
         }
     }
 

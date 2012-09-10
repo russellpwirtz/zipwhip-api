@@ -125,17 +125,6 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
         return disconnect(false);
     }
 
-    @Override
-    public ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork) {
-
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public ObservableFuture<ConnectionHandle> resetDisconnectAndConnect() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
     protected void accessConnectionHandle() {
         ensureLock(SignalProviderBase.this);
         ensureLock(CONNECTION_HANDLE_LOCK);

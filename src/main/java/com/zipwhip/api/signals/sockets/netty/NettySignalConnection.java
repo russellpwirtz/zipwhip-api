@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
@@ -17,10 +18,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 
 /**
  * Connects to the SignalServer via Netty over a raw socket
@@ -106,7 +104,7 @@ public class NettySignalConnection extends SignalConnectionBase {
 
                 @Override
                 public ExecutorService create() {
-                    return Executors.newFixedThreadPool(5, factory);
+                    return Executors.newFixedThreadPool(1, factory);
                 }
             };
         }
@@ -154,6 +152,7 @@ public class NettySignalConnection extends SignalConnectionBase {
 
     protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {
         ChannelWrapperConnectionHandle con = (ChannelWrapperConnectionHandle) connectionHandle;
+        Asserts.assertTrue(!con.isDestroyed(), "Already destroyed?");
         ChannelWrapper w = con.channelWrapper;
 
         con.causedByNetwork = causedByNetwork;
@@ -182,6 +181,15 @@ public class NettySignalConnection extends SignalConnectionBase {
 
     @Override
     protected void onDestroy() {
+        ConnectionState state = getConnectionState();
+        if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
+            try {
+                executeDisconnectDestroyConnection(connectionHandle, false);
+            } catch (Exception e) {
+                LOGGER.error("Failed to disconnect!", e);
+            }
+        }
+
         if (channelFactory instanceof Destroyable) {
             ((Destroyable) channelFactory).destroy();
         } else {
