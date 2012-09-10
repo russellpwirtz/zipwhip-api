@@ -356,6 +356,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
             }
         }
 
+        LOGGER.debug("Announcing connection changed");
         // TODO: do we execute these observers while holding locks?
         connectionHandle.getDisconnectFuture().setSuccess(connectionHandle);
         connectionChangedEvent.notifyObservers(connectionHandle, Boolean.FALSE);

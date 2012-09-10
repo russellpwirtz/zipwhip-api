@@ -305,6 +305,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                                 }
                             }
 
+                            LOGGER.debug("Notifying listeners and successing future for disconnection");
                             finalDisconnectingFuture.setSuccess(connectionHandle);
                             disconnectEvent.notifyObservers(connectionHandle, connectionHandle);
                         }

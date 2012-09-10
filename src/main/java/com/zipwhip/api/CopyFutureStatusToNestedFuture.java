@@ -7,13 +7,13 @@ import org.apache.log4j.Logger;
 /**
  * When the future finishes, if it's the current "connectFuture" clean up the references.
  */
-class CopyFutureStatusToNestedFuture<T> implements Observer<ObservableFuture<T>> {
+public class CopyFutureStatusToNestedFuture<T> implements Observer<ObservableFuture<T>> {
 
     private final static Logger LOGGER = Logger.getLogger(CopyFutureStatusToNestedFuture.class);
 
     final ObservableFuture<T> nestedFuture;
 
-    CopyFutureStatusToNestedFuture(ObservableFuture<T> nestedFuture) {
+    public CopyFutureStatusToNestedFuture(ObservableFuture<T> nestedFuture) {
         this.nestedFuture = nestedFuture;
     }
 
