@@ -147,11 +147,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                     ConnectionHandle connectionHandle = null;
 
-                    synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
+                    try {
+                        connectionHandle = executeConnectReturnConnection(getAddress());
 
-                        try {
-                            connectionHandle = executeConnectReturnConnection(getAddress());
-
+                        synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
                             synchronized (finalConnectFuture) {
                                 if (finalConnectFuture.isCancelled()) {
                                     LOGGER.error("While connecting they cancelled! 1");
@@ -173,7 +172,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                                 }
                             }
-                        } catch (Throwable e) {
+                        }
+                    } catch (Throwable e) {
+                        synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
                             synchronized (finalConnectFuture) {
                                 if (finalConnectFuture.isCancelled()) {
                                     // TODO: what does this do for the ReconnectStrategy? Has it been unbound?
@@ -189,8 +190,8 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                                 finalConnectFuture.setFailure(e);
                             }
-                            return;
                         }
+                        return;
                     }
 
                     synchronized (finalConnectFuture) {
@@ -211,7 +212,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     @Override
     public synchronized ObservableFuture<ConnectionHandle> disconnect(final boolean causedByNetwork) {
-        if (LOGGER.isDebugEnabled()){
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug(String.format("disconnect(%b)", causedByNetwork));
         }
 
@@ -760,15 +761,15 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     private void clearDisconnectFuture() {
-        ensureLock(CONNECTION_BEING_TOUCHED_LOCK);
-        ensureLock(disconnectFuture);
+        accessDisconnectFuture();
+        changeDisconnectFuture(disconnectFuture);
 
         disconnectFuture = null;
     }
 
     private void clearConnectFuture() {
-        ensureLock(CONNECTION_BEING_TOUCHED_LOCK);
-        ensureLock(connectFuture);
+        accessConnectFuture();
+        changeConnectFuture(connectFuture);
 
         connectFuture = null;
     }

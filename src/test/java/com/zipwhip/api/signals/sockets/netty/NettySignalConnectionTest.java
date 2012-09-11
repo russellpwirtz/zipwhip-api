@@ -109,19 +109,14 @@ public class NettySignalConnectionTest {
 
     @Test
     public void testCancelWhileConnectingFuture1() throws Exception {
-        NettySignalConnection connection = new NettySignalConnection();
-
         final CountDownLatch latch = new CountDownLatch(1);
-        connection.getConnectEvent().addObserver(new Observer<ConnectionHandle>() {
+        NettySignalConnection connection = new NettySignalConnection() {
             @Override
-            public void notify(Object sender, ConnectionHandle item) {
-                try {
-                    latch.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-                }
+            protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+                Thread.sleep(1000);
+                return super.executeConnectReturnConnection(address);
             }
-        });
+        };
 
         ObservableFuture<ConnectionHandle> future1 = connection.connect();
 
@@ -133,7 +128,7 @@ public class NettySignalConnectionTest {
 
         future1.await();
 
-        assertTrue(future1.isCancelled());
+        assertTrue("Future1 should be cancelled", future1.isCancelled());
         assertTrue(connection.getConnectionState() == ConnectionState.DISCONNECTED);
         assertTrue(connection.getConnectionHandle() == null);
         assertNull(connection.connectFuture);
