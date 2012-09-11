@@ -169,7 +169,6 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                                     clearConnectFutureIfSame(finalConnectFuture);
                                     bindReconnectStrategy();
-
                                 }
                             }
                         }
@@ -188,6 +187,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                                 clearConnectFutureIfSame(finalConnectFuture);
                                 bindReconnectStrategy();
 
+                                disconnectEvent.notifyObservers(connectionHandle, connectionHandle);
                                 finalConnectFuture.setFailure(e);
                             }
                         }
