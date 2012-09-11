@@ -33,6 +33,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
     public SignalProvider create() {
 //        NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
         NettySignalConnection connection = new NettySignalConnection(executorFactory, reconnectStrategy, channelPipelineFactory);
+        connection.setConnectTimeoutSeconds(10);
         if (address != null) {
             connection.setAddress(address);
         }

@@ -226,7 +226,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
             ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
             if (connectFuture != null) {
-                LOGGER.warn(String.format("We were currently 'connecting' and got a %s hit", this));
+                LOGGER.warn(String.format("We were currently 'connecting' and got a %s hit. Just quitting.", this));
                 return;
             } else if (socketConnectionHandle == null) {
                 throw new NullPointerException("The socketConnectionHandle can never be null!");

@@ -102,7 +102,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         try {
             LOGGER.debug(String.format("Connecting %s to %s", channel,  remoteAddress));
-            channel.getConfig().setConnectTimeoutMillis(delegate.getConnectTimeoutSeconds() * 100);
+            channel.getConfig().setConnectTimeoutMillis(delegate.getConnectTimeoutSeconds() * 1000);
             future = channel.connect(remoteAddress);
             // since we're on the IO thread, we need to block here.
             completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);

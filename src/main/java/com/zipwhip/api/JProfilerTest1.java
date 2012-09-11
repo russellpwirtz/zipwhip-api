@@ -81,8 +81,9 @@ public class JProfilerTest1 {
     public void runTest() throws Exception {
         ObservableFuture<ConnectionHandle> future = client.connect();
 
-        future.await();
+        future.await(30, TimeUnit.SECONDS);
 
+        Asserts.assertTrue(future.isDone(), "Not DONE?!?!?");
         Asserts.assertTrue(future.isSuccess(), "Not successful?");
 
         ConnectionHandle connectionHandle = future.getResult();

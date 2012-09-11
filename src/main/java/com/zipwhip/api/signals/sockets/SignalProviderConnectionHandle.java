@@ -1,8 +1,11 @@
 package com.zipwhip.api.signals.sockets;
 
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.Writable;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observer;
 import com.zipwhip.util.Asserts;
+import org.apache.log4j.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -13,6 +16,8 @@ import com.zipwhip.util.Asserts;
  *
  */
 public class SignalProviderConnectionHandle extends ConnectionHandleBase implements Writable {
+
+    private static final Logger LOGGER = Logger.getLogger(SignalProviderConnectionHandle.class);
 
     private final SignalProviderBase signalProvider;
     public boolean finishedActionConnect = false;
@@ -47,7 +52,18 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
 
     @Override
     public ObservableFuture<ConnectionHandle> reconnect() {
-        throw new RuntimeException("Not implemented");
+        final NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(this);
+
+        this.disconnect().addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+                future.setNestedFuture(signalProvider.connect());
+            }
+        });
+
+        LOGGER.error("You are very lazy and very very bad. You should feel shameful that this is not thread safe.");
+
+        return future;
     }
 
     public ConnectionHandle getConnectionHandle() {
