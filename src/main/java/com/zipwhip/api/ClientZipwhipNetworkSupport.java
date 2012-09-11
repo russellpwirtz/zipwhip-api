@@ -114,7 +114,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     requestFuture.addObserver(
                             new OnlyRunIfNotSuccessfulObserverAdapter<ConnectionHandle>(
                                     new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                            new TearDownConnectionObserver<ConnectionHandle>(false))));
+                                            new TearDownConnectionObserver<ConnectionHandle>(true))));
 
                     requestFuture.addObserver(
                             new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(

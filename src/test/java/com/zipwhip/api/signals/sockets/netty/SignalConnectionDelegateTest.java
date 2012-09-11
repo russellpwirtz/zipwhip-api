@@ -180,9 +180,13 @@ public class SignalConnectionDelegateTest {
         }
 
         @Override
-        protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
-            isConnected = true;
+        protected ConnectionHandle createConnectionHandle() {
             return new MockSignalConnectionConnectionHandle();
+        }
+
+        @Override
+        protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
+            isConnected = true;
         }
 
         @Override

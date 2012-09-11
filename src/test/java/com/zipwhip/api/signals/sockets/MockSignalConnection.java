@@ -76,8 +76,13 @@ public class MockSignalConnection extends SignalConnectionBase {
     }
 
     @Override
-    protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+    protected ConnectionHandle createConnectionHandle() {
         return new MockConnectionHandle();
+    }
+
+    @Override
+    protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
+
     }
 
     @Override

@@ -130,12 +130,19 @@ public class NettySignalConnection extends SignalConnectionBase {
         this.link(channelWrapperFactory);
     }
 
-    protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+    @Override
+    protected ConnectionHandle createConnectionHandle() {
         ChannelWrapper channelWrapper = channelWrapperFactory.create();
 
         // this can never crash.
         ConnectionHandle connectionHandle = channelWrapper.getConnection();
 
+        return connectionHandle;
+    }
+
+    @Override
+    protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
+        ChannelWrapper channelWrapper = ((ChannelWrapperConnectionHandle)connectionHandle).channelWrapper;
         try {
             // this can crash, so be sure we clean up if it does then rethrow
             channelWrapper.connect(address);
@@ -146,8 +153,6 @@ public class NettySignalConnection extends SignalConnectionBase {
 
             throw throwable;
         }
-
-        return connectionHandle;
     }
 
     protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {

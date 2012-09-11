@@ -7,8 +7,6 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipelineFactory;
-import com.zipwhip.concurrent.AssertDisconnectedStateFutureObserver;
-import com.zipwhip.concurrent.AssertDisconnectedStateObserver;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
@@ -20,7 +18,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.management.relation.RelationSupport;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
@@ -84,10 +81,10 @@ public class NettySignalConnectionTest {
 
         connection = new NettySignalConnection() {
             @Override
-            protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+            protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
                 future[0].cancel();
 
-                return super.executeConnectReturnConnection(address);
+                super.executeConnect(connectionHandle, address);
             }
 
             @Override
@@ -112,9 +109,9 @@ public class NettySignalConnectionTest {
         final CountDownLatch latch = new CountDownLatch(1);
         NettySignalConnection connection = new NettySignalConnection() {
             @Override
-            protected ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable {
+            protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
                 Thread.sleep(1000);
-                return super.executeConnectReturnConnection(address);
+                super.executeConnect(connectionHandle, address);
             }
         };
 

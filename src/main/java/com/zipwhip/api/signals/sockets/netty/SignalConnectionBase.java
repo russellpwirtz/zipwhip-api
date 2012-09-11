@@ -145,10 +145,10 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                         }
                     }
 
-                    ConnectionHandle connectionHandle = null;
+                    ConnectionHandle connectionHandle = createConnectionHandle();
 
                     try {
-                        connectionHandle = executeConnectReturnConnection(getAddress());
+                        executeConnect(connectionHandle, getAddress());
 
                         synchronized (CONNECTION_BEING_TOUCHED_LOCK) {
                             synchronized (finalConnectFuture) {
@@ -401,8 +401,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     protected abstract void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork);
 
+    protected abstract ConnectionHandle createConnectionHandle();
 
-    protected abstract ConnectionHandle executeConnectReturnConnection(SocketAddress address) throws Throwable;
+    protected abstract void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable;
 
 
     /**
