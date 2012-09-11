@@ -51,10 +51,11 @@ public class TearDownConnectionObserver<T> implements Observer<ObservableFuture<
 
             // NOTE we can be sure that it's the right "connection" that we're killing since
             // our connectionHandle was created special for this request.
-            LOGGER.error("Called connectionHandle.disconnect(true)");
             if (reconnect) {
+                LOGGER.error("Called connectionHandle.reconnect()");
                 connectionHandle.reconnect();
             } else {
+                LOGGER.error("Called connectionHandle.disconnect(false)");
                 connectionHandle.disconnect();
             }
         }

@@ -114,7 +114,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     requestFuture.addObserver(
                             new OnlyRunIfNotSuccessfulObserverAdapter<ConnectionHandle>(
                                     new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                            new TearDownConnectionObserver<ConnectionHandle>(true))));
+                                            new TearDownConnectionObserver<ConnectionHandle>(false))));
 
                     requestFuture.addObserver(
                             new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
@@ -271,7 +271,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                                                 future.addObserver(
                                                         new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
-                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(true)));
+                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(false)));
                                             }
                                         }
                                     }
@@ -1070,8 +1070,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
         @Override
         public void notify(Object sender, T item) {
-            synchronized (signalProvider) {
-                super.notify(sender, item);
+            synchronized (ClientZipwhipNetworkSupport.this) {
+                synchronized (signalProvider) {
+                    super.notify(sender, item);
+                }
             }
         }
     }

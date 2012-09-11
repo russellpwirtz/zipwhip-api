@@ -113,16 +113,16 @@ public class DefaultZipwhipClientTest {
             public void run() {
                 try {
                     System.out.println("Connecting at iteration " + iteration);
-                    ObservableFuture<ConnectionHandle> connectFuture = client.connect();
-                    connectFuture.await();
+                    ObservableFuture<ConnectionHandle> future = client.connect();
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;
                 }
                 try {
                     System.out.println("Disconnecting at iteration " + iteration);
-                    ObservableFuture<ConnectionHandle> disconnectFuture = client.disconnect();
-                    disconnectFuture.await();
+                    ObservableFuture<ConnectionHandle> future = client.disconnect();
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;
@@ -139,7 +139,7 @@ public class DefaultZipwhipClientTest {
         }
 
 
-        assertTrue("All finished", latch.await(5, TimeUnit.SECONDS));
+        assertTrue("All finished", latch.await(10, TimeUnit.SECONDS));
 
         assertFalse("Has errors", hasErrors[0]);
 
@@ -201,7 +201,7 @@ public class DefaultZipwhipClientTest {
 
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
-        assertFalse(connectionChangedObserver.connected);
+        assertFalse("Should not be connected", connectionChangedObserver.connected);
     }
 
     @Test
@@ -415,9 +415,9 @@ public class DefaultZipwhipClientTest {
         assertTrue("Latch finished?", latch.await(10, TimeUnit.SECONDS));
 
         // it reconnected succesfully?
-        assertTrue("SignalProvider connection should be brought back up", client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
-        assertEquals(3, connectionChangedObserver.connectionChangedEvents);
-        assertTrue(connectionChangedObserver.connected);
+        assertTrue("SignalProvider connection should NOT be brought back up", client.getSignalProvider().getConnectionState() == ConnectionState.DISCONNECTED);
+        assertEquals(2, connectionChangedObserver.connectionChangedEvents);
+        assertFalse(connectionChangedObserver.connected);
     }
 
     @Test

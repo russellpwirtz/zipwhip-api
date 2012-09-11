@@ -113,11 +113,12 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                 }
             }
 
+            boolean shouldRebindReconnectStrategy;
             final ObservableFuture<ConnectionHandle> finalConnectFuture = createSelfHealingConnectingFuture();
             synchronized (finalConnectFuture) {
                 setConnectFuture(finalConnectFuture);
 
-                cancelAndUbindReconnectStrategy();
+                shouldRebindReconnectStrategy = cancelAndUbindReconnectStrategy();
 
 //                finalConnectFuture.addObserver(new Observer<ObservableFuture<ConnectionHandle>>() {
 //                    @Override
@@ -135,6 +136,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 //                });
             }
 
+            final boolean finalShouldRebindReconnectStrategy = shouldRebindReconnectStrategy;
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -185,7 +187,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                                 clearConnectionHandle(connectionHandle);
 
                                 clearConnectFutureIfSame(finalConnectFuture);
-                                bindReconnectStrategy();
+                                if (finalShouldRebindReconnectStrategy) {
+                                    bindReconnectStrategy();
+                                }
 
                                 disconnectEvent.notifyObservers(connectionHandle, connectionHandle);
                                 finalConnectFuture.setFailure(e);
@@ -237,6 +241,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                             // it's possible that we're already disconnected (haven't gotten to the
                             // connect part yet). We have to synchronize around the future because then our
                             // cancellation will take effect.
+                            // TODO: is this a bug?
+                            // TODO: fire the disconnectEvent?
+                            // TODO: return the disconnectFuture?
                             return new FakeObservableFuture<ConnectionHandle>(null, null);
                         }
                     }
@@ -302,7 +309,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
                                     clearDisconnectFutureIfSame(finalDisconnectingFuture);
 
-                                    bindReconnectStrategy();
+                                    if (causedByNetwork) {
+                                        bindReconnectStrategy();
+                                    }
                                 }
                             }
 
@@ -527,12 +536,21 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         }
     }
 
-    protected synchronized void cancelAndUbindReconnectStrategy() {
+    /**
+     * Returns if it was bound (ie: you unbound it)
+     *
+     * @return
+     */
+    protected synchronized boolean cancelAndUbindReconnectStrategy() {
         ensureLock(CONNECTION_BEING_TOUCHED_LOCK);
 
         if (reconnectStrategy != null) {
+            boolean result = reconnectStrategy.isStarted();
             reconnectStrategy.stop();
+            return result;
         }
+
+        return false;
     }
 
     protected void validateConnected() {
