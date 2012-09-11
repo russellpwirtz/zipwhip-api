@@ -12,7 +12,6 @@ import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionHandleAware;
 import com.zipwhip.api.signals.sockets.ConnectionState;
-import com.zipwhip.api.signals.sockets.SignalProviderConnectionHandle;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.DebuggingExecutor;
@@ -105,18 +104,18 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     ObservableFuture<ConnectionHandle> requestFuture = executeConnectWithFailureDetection(clientId, sessionKey, presence, versions, expectingSubscriptionCompleteCommand);
 
                     requestFuture.addObserver(
-                                    // make sure this is still the active connectionHandle.
-                                    new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                            new ActiveConnectionHandleTaskFilter<ObservableFuture<ConnectionHandle>>(
-                                                new UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver(this))));
+                            // make sure this is still the active connectionHandle.
+                            new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
+                                    new ActiveConnectionHandleFilter<ObservableFuture<ConnectionHandle>>(
+                                            new UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver(this))));
 
                     requestFuture.addObserver(
-                                    new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                            new TearDownConnectionIfFailureObserver<ConnectionHandle>()));
+                            new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
+                                    new TearDownConnectionIfFailureObserver<ConnectionHandle>(false)));
 
                     requestFuture.addObserver(
-                                    new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                            new ClearConnectFutureOnCompleteObserver(future)));
+                            new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
+                                    new ClearConnectFutureOnCompleteObserver(future)));
 
 
                     // need to only alert success from the executor thread.
@@ -230,22 +229,46 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                                                 return;
                                             }
 
-                                            ConnectionHandle connectionHandle = (ConnectionHandle) sender;
+                                            final ConnectionHandle connectionHandle = (ConnectionHandle) sender;
 
                                             String sessionKey = settingsStore.get(SettingsStore.Keys.SESSION_KEY);
                                             String lastSuccessfulClientId = settingsStore.get(SettingsStore.Keys.LAST_SUBSCRIBED_CLIENT_ID);
-                                            String currentClientId = signalProvider.getClientId();
+                                            final String currentClientId = signalProvider.getClientId();
 
                                             LOGGER.warn(String.format("SignalProvider.onConnectionChanged: lastSuccessfulClientId: %s; currentClientId: %s", lastSuccessfulClientId, currentClientId));
 
                                             if (!StringUtil.equals(lastSuccessfulClientId, currentClientId)) {
                                                 LOGGER.warn("We should ask for a SubscriptionComplete now!");
 
-                                                ObservableFuture<SubscriptionCompleteCommand> future = executeSignalsConnect(connectionHandle, currentClientId, sessionKey);
+                                                final ObservableFuture<SubscriptionCompleteCommand> future = executeSignalsConnect(connectionHandle, currentClientId, sessionKey);
 
                                                 future.addObserver(
                                                         new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
-                                                            new TearDownConnectionIfFailureObserver<SubscriptionCompleteCommand>()));
+                                                                new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
+                                                                    @Override
+                                                                    public void notify(Object sender, ObservableFuture<SubscriptionCompleteCommand> future) {
+                                                                        synchronized (future) {
+                                                                            if (!future.isSuccess()) {
+                                                                                LOGGER.error("UpdateLocalStoreObserver: The future was cancelled or errored. Quitting: " + connectionHandle);
+                                                                                return; // this covers isCancelled.
+                                                                            }
+                                                                        }
+
+                                                                        synchronized (connectionHandle) {
+                                                                            if (connectionHandle.isDestroyed()) {
+                                                                                LOGGER.error("UpdateLocalStoreObserver: The connectionHandle wasn't active anymore. This must have been for a previous connection. Quitting: " + connectionHandle);
+                                                                                return;
+                                                                            }
+
+                                                                            LOGGER.debug("UpdateLocalStoreObserver: saving data " + currentClientId);
+                                                                            onSubscriptionComplete(currentClientId);
+                                                                        }
+                                                                    }
+                                                                }));
+
+                                                future.addObserver(
+                                                        new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
+                                                                new TearDownConnectionIfFailureObserver<SubscriptionCompleteCommand>(true)));
                                             }
                                         }
                                     }
@@ -747,19 +770,15 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         }
 
         protected ConnectionHandle getConnectionHandle(Object sender, T item) {
-            return (ConnectionHandle) sender;
-        }
-    }
-
-    private static class ActiveConnectionHandleTaskFilter<T> extends ActiveConnectionHandleFilter<T> {
-
-        private ActiveConnectionHandleTaskFilter(Observer<T> observer) {
-            super(observer);
-        }
-
-        @Override
-        protected ConnectionHandle getConnectionHandle(Object sender, T item) {
-            return ((ConnectViaSignalProviderTask) sender).getConnectionHandle();
+            if (sender instanceof ConnectionHandle) {
+                return (ConnectionHandle) sender;
+            } else if (sender instanceof ConnectionHandleAware) {
+                return ((ConnectionHandleAware) sender).getConnectionHandle();
+            } else if (item instanceof ConnectionHandle) {
+                return (ConnectionHandle) item;
+            } else {
+                throw new IllegalArgumentException("Cannot find connectionHandle on sender");
+            }
         }
     }
 
@@ -1017,6 +1036,12 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
         private static final Logger LOGGER = Logger.getLogger(TearDownConnectionIfFailureObserver.class);
 
+        private final boolean reconnect;
+
+        private TearDownConnectionIfFailureObserver(boolean reconnect) {
+            this.reconnect = reconnect;
+        }
+
         @Override
         public void notify(Object sender, ObservableFuture<T> signalsConnectFuture) {
             ConnectionHandleAware task = (ConnectionHandleAware) sender;
@@ -1057,7 +1082,11 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                         // NOTE we can be sure that it's the right "connection" that we're killing since
                         // our connectionHandle was created special for this request.
                         LOGGER.error("Called connectionHandle.disconnect(true)");
-                        connectionHandle.reconnect();
+                        if (reconnect) {
+                            connectionHandle.reconnect();
+                        } else {
+                            connectionHandle.disconnect();
+                        }
                     }
                 }
             }
