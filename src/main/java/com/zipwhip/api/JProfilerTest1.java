@@ -51,18 +51,18 @@ public class JProfilerTest1 {
     }
 
     public void setUp() throws Exception {
-        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
-        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
+//        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
+//        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
 
         ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance();
 //                .sessionKey(sessionKey);
 
-//        connectionFactory.setUsername("9139802972");
-//        connectionFactory.setPassword("asdfasdf");
+        connectionFactory.setUsername("9139802972");
+        connectionFactory.setPassword("asdfasdf");
 
         // staging
-        connectionFactory.setPassword("pistons456");
-        connectionFactory.setUsername("2062513225");
+//        connectionFactory.setPassword("pistons456");
+//        connectionFactory.setUsername("2062513225");
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                 .reconnectStrategy(new ExponentialBackoffReconnectStrategy())

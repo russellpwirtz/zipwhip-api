@@ -1,0 +1,67 @@
+package com.zipwhip.api.signals;
+
+import com.zipwhip.api.ClientZipwhipNetworkSupport;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionHandleAware;
+import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observer;
+import org.apache.log4j.Logger;
+
+/**
+* Created with IntelliJ IDEA.
+* User: Michael
+* Date: 9/10/12
+* Time: 6:20 PM
+* To change this template use File | Settings | File Templates.
+*/
+public class TearDownConnectionObserver<T> implements Observer<ObservableFuture<T>> {
+
+    private static final Logger LOGGER = Logger.getLogger(TearDownConnectionObserver.class);
+
+    private final boolean reconnect;
+
+    public TearDownConnectionObserver(boolean reconnect) {
+        this.reconnect = reconnect;
+    }
+
+    @Override
+    public void notify(Object sender, ObservableFuture<T> signalsConnectFuture) {
+        ConnectionHandleAware task = (ConnectionHandleAware) sender;
+        ConnectionHandle connectionHandle = task.getConnectionHandle();
+
+        LOGGER.error("SignalsConnectFuture failed to receive a SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
+        // we are in the Timer thread (pub sub if Timer is Intent based).
+        // hashwheel otherwise.
+
+        // we've decided to clear the clientId when the signals/connect doesn't work
+        // this connection object lets us be certain that the current connection is reconnected.
+
+        if (connectionHandle == null) {
+            LOGGER.error("Cannot tearDown connection because the connectionHandle was null!!!");
+            return;
+        }
+
+        synchronized (connectionHandle) {
+            if (connectionHandle.isDestroyed()) {
+                LOGGER.error("The connectionHandle we started with (%s) has been destroyed. We are stale! Quitting");
+                return;
+            }
+
+            // This should be sufficient to start the whole cycle over again.
+
+            // NOTE we can be sure that it's the right "connection" that we're killing since
+            // our connectionHandle was created special for this request.
+            LOGGER.error("Called connectionHandle.disconnect(true)");
+            if (reconnect) {
+                connectionHandle.reconnect();
+            } else {
+                connectionHandle.disconnect();
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "TearDownConnectionObserver";
+    }
+}

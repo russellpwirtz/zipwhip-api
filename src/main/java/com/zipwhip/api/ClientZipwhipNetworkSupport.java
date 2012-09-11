@@ -7,6 +7,7 @@ import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.settings.SettingsVersionStore;
 import com.zipwhip.api.settings.VersionStore;
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.TearDownConnectionObserver;
 import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
@@ -104,14 +105,16 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     ObservableFuture<ConnectionHandle> requestFuture = executeConnectWithFailureDetection(clientId, sessionKey, presence, versions, expectingSubscriptionCompleteCommand);
 
                     requestFuture.addObserver(
-                            // make sure this is still the active connectionHandle.
-                            new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                    new ActiveConnectionHandleFilter<ObservableFuture<ConnectionHandle>>(
-                                            new UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver(this))));
+                            new OnlyRunIfSuccessfulObserverAdapter<ConnectionHandle>(
+                                    new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
+                                            // make sure this is still the active connectionHandle.
+                                            new ConnectionHandleStillActiveObserverAdapter<ObservableFuture<ConnectionHandle>>(
+                                                    new UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver(this)))));
 
                     requestFuture.addObserver(
-                            new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
-                                    new TearDownConnectionIfFailureObserver<ConnectionHandle>(false)));
+                            new OnlyRunIfNotSuccessfulObserverAdapter<ConnectionHandle>(
+                                    new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
+                                            new TearDownConnectionObserver<ConnectionHandle>(false))));
 
                     requestFuture.addObserver(
                             new ThreadSafeObserver<ObservableFuture<ConnectionHandle>>(
@@ -194,7 +197,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         signalProvider.getVersionChangedEvent().addObserver(
                 new DifferentExecutorObserverAdapter<VersionMapEntry>(executor,
                         new ThreadSafeObserver<VersionMapEntry>(
-                                new ActiveConnectionHandleFilter<VersionMapEntry>(
+                                new ConnectionHandleStillActiveObserverAdapter<VersionMapEntry>(
                                         updateVersionsStoreOnVersionChanged))));
 
         // We don't need to do this because we do our own checking in the ConnectionChangedEvent.
@@ -268,7 +271,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                                                 future.addObserver(
                                                         new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
-                                                                new TearDownConnectionIfFailureObserver<SubscriptionCompleteCommand>(true)));
+                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(true)));
                                             }
                                         }
                                     }
@@ -479,7 +482,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             unbindGlobalEventsOnComplete(resultFuture);
 
             bindGlobalEvents();
-
             ObservableFuture<ConnectionHandle> requestFuture;
             try {
                 started = true;
@@ -745,9 +747,9 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 //    }
 
 
-    private static class ActiveConnectionHandleFilter<T> extends ObserverAdapter<T> {
+    private static class ConnectionHandleStillActiveObserverAdapter<T> extends ObserverAdapter<T> {
 
-        private ActiveConnectionHandleFilter(Observer<T> observer) {
+        private ConnectionHandleStillActiveObserverAdapter(Observer<T> observer) {
             super(observer);
         }
 
@@ -1032,72 +1034,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         }
     }
 
-    private static class TearDownConnectionIfFailureObserver<T> implements Observer<ObservableFuture<T>> {
-
-        private static final Logger LOGGER = Logger.getLogger(TearDownConnectionIfFailureObserver.class);
-
-        private final boolean reconnect;
-
-        private TearDownConnectionIfFailureObserver(boolean reconnect) {
-            this.reconnect = reconnect;
-        }
-
-        @Override
-        public void notify(Object sender, ObservableFuture<T> signalsConnectFuture) {
-            ConnectionHandleAware task = (ConnectionHandleAware) sender;
-            ConnectionHandle connectionHandle = task.getConnectionHandle();
-
-            synchronized (signalsConnectFuture) {
-                if (signalsConnectFuture.isCancelled()) {
-                    LOGGER.error("The signalsConnectFuture was cancelled. Quitting");
-                    return;
-                }
-
-                if (signalsConnectFuture.isSuccess()) {
-                    LOGGER.debug("Future completed the server! " + signalsConnectFuture.getResult());
-                    return;
-                }
-
-                if (signalsConnectFuture.isFailed()) {
-                    LOGGER.error("SignalsConnectFuture failed to receive a SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
-                    // we are in the Timer thread (pub sub if Timer is Intent based).
-                    // hashwheel otherwise.
-
-                    // we've decided to clear the clientId when the signals/connect doesn't work
-                    // this connection object lets us be certain that the current connection is reconnected.
-
-                    if (connectionHandle == null) {
-                        LOGGER.error("Cannot tearDown connection because the connectionHandle was null!!!");
-                        return;
-                    }
-
-                    synchronized (connectionHandle) {
-                        if (connectionHandle.isDestroyed()) {
-                            LOGGER.error("The connectionHandle we started with (%s) has been destroyed. We are stale! Quitting");
-                            return;
-                        }
-
-                        // This should be sufficient to start the whole cycle over again.
-
-                        // NOTE we can be sure that it's the right "connection" that we're killing since
-                        // our connectionHandle was created special for this request.
-                        LOGGER.error("Called connectionHandle.disconnect(true)");
-                        if (reconnect) {
-                            connectionHandle.reconnect();
-                        } else {
-                            connectionHandle.disconnect();
-                        }
-                    }
-                }
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "TearDownConnectionIfFailureObserver";
-        }
-    }
-
     /**
      * This observer fires in the thread that the future completes in. This future can either complete in the
      * Timer thread (HashWheelTimer or pubsub via intent/AlarmManager) OR it can
@@ -1123,28 +1059,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     }
                 }
             }
-        }
-    }
-
-    private static class ObserverAdapter<T> implements Observer<T> {
-
-        private final Observer<T> observer;
-
-        private ObserverAdapter(Observer<T> observer) {
-            this.observer = observer;
-
-            if (this.observer == null) {
-                throw new IllegalArgumentException("Observer cannot be null!");
-            }
-        }
-
-        @Override
-        public void notify(Object sender, T item) {
-            observer.notify(sender, item);
-        }
-
-        public Observer<T> getObserver() {
-            return observer;
         }
     }
 
