@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.ConfiguredFactory;
@@ -22,7 +23,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy = null;
     private ChannelPipelineFactory channelPipelineFactory = null;
-    private ConfiguredFactory<String, ExecutorService> executorFactory = null;
+    private CommonExecutorFactory executorFactory = null;
     private SocketAddress address;
     private Timer timer;
 
@@ -46,7 +47,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
         Executor executor = null;
         if (executorFactory != null){
-            executor = executorFactory.create("SocketSignalProvider");
+            executor = executorFactory.create(CommonExecutorTypes.EVENTS, "SignalProvider");
         }
 
         SocketSignalProvider signalProvider = new SocketSignalProvider(connection, executor, timer);
@@ -79,7 +80,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         return this;
     }
 
-    public SocketSignalProviderFactory executorFactory(ConfiguredFactory<String, ExecutorService> executorFactory) {
+    public SocketSignalProviderFactory executorFactory(CommonExecutorFactory executorFactory) {
         this.executorFactory = executorFactory;
         return this;
     }

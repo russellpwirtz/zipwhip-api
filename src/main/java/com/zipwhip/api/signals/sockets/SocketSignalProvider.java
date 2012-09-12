@@ -7,8 +7,10 @@ import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
+import com.zipwhip.important.SchedulerTimer;
 import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -79,13 +81,11 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         }
 
         this.scheduler = new TimerScheduler(this.timer);
-        this.link((Destroyable) scheduler);
-
         this.importantTaskExecutor = new ImportantTaskExecutor(this.scheduler);
         this.link(importantTaskExecutor);
 
         // TODO: we need to double check that the connection state hasn't changed while waiting.
-        scheduler.onScheduleComplete(this.onScheduleComplete);
+        this.scheduler.onScheduleComplete(this.onScheduleComplete);
 
         if (connection == null) {
             this.signalConnection = new NettySignalConnection();
@@ -866,6 +866,10 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     @Override
     public void ping() {
         signalConnection.ping();
+    }
+
+    public SignalConnection getSignalConnection() {
+        return signalConnection;
     }
 
     private void handleConnectCommand(SignalProviderConnectionHandle connectionHandle, ConnectCommand command) {

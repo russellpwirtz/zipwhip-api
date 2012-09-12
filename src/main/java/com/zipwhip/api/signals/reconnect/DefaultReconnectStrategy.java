@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.reconnect;
 
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;

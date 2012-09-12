@@ -3,7 +3,7 @@ package com.zipwhip.api;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ExecutorFactory;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.SignTool;

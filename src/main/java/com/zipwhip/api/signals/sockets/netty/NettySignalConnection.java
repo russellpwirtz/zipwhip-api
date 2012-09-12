@@ -1,22 +1,22 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.CommonExecutorFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ConfiguredFactory;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
-import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;
 import java.util.concurrent.*;
@@ -72,8 +72,11 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param reconnectStrategy      The reconnect strategy to use in the case of socket disconnects.
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
-    public NettySignalConnection(ConfiguredFactory<String, ExecutorService> executorFactory, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
-        super(executorFactory != null ? executorFactory.create("SignalConnection") : null);
+    public NettySignalConnection(CommonExecutorFactory executorFactory,
+                                 ReconnectStrategy reconnectStrategy,
+                                 ChannelPipelineFactory channelPipelineFactory) {
+
+        super(executorFactory != null ? executorFactory.create(CommonExecutorTypes.EVENTS, "NettySignalConnection") : null);
 
         if (executorFactory != null){
             // We created the executor that our parent is using. We need to destroy it.
@@ -100,15 +103,26 @@ public class NettySignalConnection extends SignalConnectionBase {
         }
 
         if (executorFactory == null){
-            executorFactory = new ConfiguredFactory<String, ExecutorService>() {
+
+            executorFactory = new CommonExecutorFactory() {
                 @Override
-                public ExecutorService create(String threadName) {
-                    return Executors.newFixedThreadPool(1, new NamedThreadFactory("SignalConnection-"));
+                public ExecutorService create(CommonExecutorTypes type, String name) {
+                    switch (type) {
+                        case BOSS:
+                            return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-boss"));
+                        case WORKER:
+                            return java.util.concurrent.Executors.newFixedThreadPool(2, new NamedThreadFactory(name + "-worker"));
+                        case EVENTS:
+                            return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-events"));
+                    }
+
+                    throw new IllegalStateException("Not sure! " + type);
                 }
             };
         }
 
-        channelFactory = new OioClientSocketChannelFactory(executorFactory.create("OioClientSocketChannelWorker"));
+        channelFactory = new NioClientSocketChannelFactory(executorFactory.create(CommonExecutorTypes.BOSS, "nio"), executorFactory.create(CommonExecutorTypes.WORKER, "nio"));
+//        channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
         this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this, executorFactory);
         this.link(channelWrapperFactory);

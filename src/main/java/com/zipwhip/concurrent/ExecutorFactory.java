@@ -1,6 +1,7 @@
 package com.zipwhip.concurrent;
 
 import com.zipwhip.executors.DebuggingExecutor;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.util.Factory;
 
 import java.util.concurrent.Executor;

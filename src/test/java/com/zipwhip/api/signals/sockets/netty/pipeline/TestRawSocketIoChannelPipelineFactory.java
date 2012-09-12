@@ -3,7 +3,7 @@ package com.zipwhip.api.signals.sockets.netty.pipeline;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
 import org.jboss.netty.channel.*;

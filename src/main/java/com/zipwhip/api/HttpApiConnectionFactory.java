@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.signals.CommonExecutorFactory;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 
@@ -15,18 +17,17 @@ import java.util.concurrent.ExecutorService;
 */
 public class HttpApiConnectionFactory extends ApiConnectionFactory {
 
-    private ConfiguredFactory<String, ExecutorService> bossExecutorFactory;
-    private ConfiguredFactory<String, ExecutorService> workerExecutorFactory;
+    private CommonExecutorFactory executorFactory;
 
     @Override
     protected ApiConnection createInstance() {
         Executor bossExecutor = null;
-        if (bossExecutorFactory != null) {
-            bossExecutor = bossExecutorFactory.create("ApiConnection-boss");
+        if (executorFactory != null) {
+            bossExecutor = executorFactory.create(CommonExecutorTypes.BOSS, "ApiConnection");
         }
         Executor workerExecutor = null;
-        if (workerExecutorFactory != null) {
-            workerExecutor = workerExecutorFactory.create("ApiConnection-worker");
+        if (executorFactory != null) {
+            workerExecutor = executorFactory.create(CommonExecutorTypes.WORKER, "ApiConnection");
         }
 
         HttpConnection connection = new HttpConnection(bossExecutor, workerExecutor);
@@ -54,19 +55,11 @@ public class HttpApiConnectionFactory extends ApiConnectionFactory {
         return connection;
     }
 
-    public ConfiguredFactory<String, ExecutorService> getBossExecutorFactory() {
-        return bossExecutorFactory;
+    public CommonExecutorFactory getExecutorFactory() {
+        return executorFactory;
     }
 
-    public void setBossExecutorFactory(ConfiguredFactory<String, ExecutorService> bossExecutorFactory) {
-        this.bossExecutorFactory = bossExecutorFactory;
-    }
-
-    public ConfiguredFactory<String, ExecutorService> getWorkerExecutorFactory() {
-        return workerExecutorFactory;
-    }
-
-    public void setWorkerExecutorFactory(ConfiguredFactory<String, ExecutorService> workerExecutorFactory) {
-        this.workerExecutorFactory = workerExecutorFactory;
+    public void setExecutorFactory(CommonExecutorFactory executorFactory) {
+        this.executorFactory = executorFactory;
     }
 }

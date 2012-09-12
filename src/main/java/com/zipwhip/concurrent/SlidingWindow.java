@@ -1,6 +1,6 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.events.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;

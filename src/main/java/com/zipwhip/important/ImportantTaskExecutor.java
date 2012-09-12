@@ -8,6 +8,7 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.FutureDateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.util.Timer;
@@ -42,8 +43,9 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
     public ImportantTaskExecutor(Scheduler scheduler) {
         if (scheduler == null){
-            this.setScheduler(new TimerScheduler((String)null));
-            this.link((TimerScheduler) getScheduler());
+            TimerScheduler scheduler1 = new TimerScheduler((String)null);
+            this.setScheduler(scheduler1);
+            this.link(scheduler1);
         } else {
             this.setScheduler(scheduler);
         }
@@ -234,7 +236,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             this.scheduler.removeOnScheduleComplete(onTimerScheduleComplete);
         }
 
-        this.scheduler = scheduler;
+        this.scheduler = new ScopedScheduler(scheduler);
 
         if (this.scheduler != null) {
             this.scheduler.onScheduleComplete(onTimerScheduleComplete);

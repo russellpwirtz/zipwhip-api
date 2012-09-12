@@ -49,8 +49,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     protected long signalsConnectTimeoutInSeconds = 10;
 
     protected SignalProvider signalProvider;
-    protected SettingsStore settingsStore = new PreferencesSettingsStore();
-    protected VersionStore versionsStore = new SettingsVersionStore(settingsStore);
+    protected SettingsStore settingsStore;
+    protected VersionStore versionsStore;
 
     // this is so we can block until SubscriptionCompleteCommand comes in.
     // do we have a current SubscriptionCompleteCommand to use.
@@ -77,6 +77,11 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             this.link(importantTaskExecutor);
         }
         this.importantTaskExecutor = importantTaskExecutor;
+
+        if (settingsStore == null) {
+            settingsStore = new PreferencesSettingsStore();
+            versionsStore = new SettingsVersionStore(settingsStore);
+        }
 
         // Start listening to provider events that interest us
         initSignalProviderEvents();

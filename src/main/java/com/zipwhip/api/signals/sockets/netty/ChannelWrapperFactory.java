@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
+import com.zipwhip.api.signals.CommonExecutorFactory;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
@@ -27,16 +28,17 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
 
+    private int connectTimeoutSeconds = 15;
     private ChannelPipelineFactory channelPipelineFactory;
     private ChannelFactory channelFactory;
     private SignalConnectionBase signalConnection;
-    private ConfiguredFactory<String, ExecutorService> executorFactory;
+    private CommonExecutorFactory executorFactory;
 
     public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection) {
         this(channelPipelineFactory, channelFactory, signalConnection, null);
     }
 
-    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, ConfiguredFactory<String, ExecutorService> executorFactory) {
+    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, CommonExecutorFactory executorFactory) {
         this.channelPipelineFactory = channelPipelineFactory;
         this.channelFactory = channelFactory;
         this.signalConnection = signalConnection;
@@ -57,12 +59,20 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         // create the channel
         Channel channel = channelFactory.newChannel(pipeline);
 
+        channel.getConfig().setConnectTimeoutMillis(getConnectTimeoutSeconds() * 1000);
+        channel.getConfig().setOption("receiveBufferSize", 50);
+        channel.getConfig().setOption("sendBufferSize", 50);
+        channel.getConfig().setOption("keepAlive", true);
+        channel.getConfig().setOption("tcpNoDelay", true);
+        channel.getConfig().setOption("reuseAddress", true);
+        channel.getConfig().setOption("trafficClass", 0x04); // RELIABILITY
+
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
         // This needs to be here for WakeLockAwareExecutors to be passed in for Android.
         ExecutorService executor = null;
         if (executorFactory != null) {
-            executor = executorFactory.create("ChannelWrapper");
+            executor = executorFactory.create(CommonExecutorTypes.EVENTS, "ChannelWrapper");
         }
 
         ChannelWrapper channelWrapper = new ChannelWrapper(id.incrementAndGet(), channel, signalConnection, executor);
@@ -78,6 +88,14 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         }
 
         return channelWrapper;
+    }
+
+    public int getConnectTimeoutSeconds() {
+        return connectTimeoutSeconds;
+    }
+
+    public void setConnectTimeoutSeconds(int connectTimeoutSeconds) {
+        this.connectTimeoutSeconds = connectTimeoutSeconds;
     }
 
     @Override

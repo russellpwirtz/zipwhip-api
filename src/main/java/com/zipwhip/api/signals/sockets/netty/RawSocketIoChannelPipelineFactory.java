@@ -3,7 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIdleStateHandler;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandEncoder;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandDecoder;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;

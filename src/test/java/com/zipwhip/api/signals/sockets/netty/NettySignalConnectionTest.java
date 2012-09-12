@@ -1,8 +1,10 @@
 package com.zipwhip.api.signals.sockets.netty;
 
+import com.zipwhip.api.signals.CommonExecutorFactory;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
@@ -373,9 +375,9 @@ public class NettySignalConnectionTest {
     @Test
     public void testPongTimeoutCausesReconnect2() throws Exception{
         connection.destroy();
-        connection = new NettySignalConnection(new ConfiguredFactory<String, ExecutorService>() {
+        connection = new NettySignalConnection(new CommonExecutorFactory() {
             @Override
-            public ExecutorService create(String name) {
+            public ExecutorService create(CommonExecutorTypes type, String name) {
                 return SimpleExecutor.getInstance();
             }
         }, null, null);

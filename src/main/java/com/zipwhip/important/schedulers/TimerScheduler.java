@@ -1,9 +1,10 @@
 package com.zipwhip.important.schedulers;
 
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.important.Scheduler;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * Date: 8/29/12
  * Time: 12:37 PM
  */
-public class TimerScheduler extends DestroyableBase implements Scheduler {
+public class TimerScheduler extends CascadingDestroyableBase implements Scheduler {
 
     private final Timer timer;
     private final ObservableHelper<String> observableHelper = new ObservableHelper<String>();
@@ -36,8 +37,18 @@ public class TimerScheduler extends DestroyableBase implements Scheduler {
         this.timer = timer;
     }
 
-    protected TimerScheduler(Timer timer, String name) {
+    protected TimerScheduler(final Timer timer, String name) {
         this(timer == null ? new HashedWheelTimer(new NamedThreadFactory("HashedWheelScheduler-" + name), 1, TimeUnit.SECONDS) : timer);
+
+        // since we created it, destroy it when we get destroyed.
+        if (timer == null){
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    TimerScheduler.this.timer.stop();
+                }
+            });
+        }
     }
 
     @Override
@@ -62,6 +73,6 @@ public class TimerScheduler extends DestroyableBase implements Scheduler {
 
     @Override
     protected void onDestroy() {
-        timer.stop();
+
     }
 }

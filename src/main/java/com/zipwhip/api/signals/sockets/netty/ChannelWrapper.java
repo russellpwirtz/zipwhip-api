@@ -5,7 +5,7 @@ import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import com.zipwhip.concurrent.FutureUtil;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -101,17 +101,14 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         Asserts.assertTrue(delegate == null, "Did this class get used twice?");
         // do the connect async.
         ChannelFuture future = null;
-        boolean completed;
 
         try {
             LOGGER.debug(String.format("Connecting %s to %s", channel,  remoteAddress));
-            channel.getConfig().setConnectTimeoutMillis(signalConnectionBase.getConnectTimeoutSeconds() * 1000);
+
             future = channel.connect(remoteAddress);
 
             // since we're on the IO thread, we need to block here.
-            completed = future.await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
-
-
+            future.await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
         } catch (Exception e) {
             if (future == null){
                 // oh shit! it crashed!
@@ -127,23 +124,19 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             throw e;
         }
 
-        if (!completed) {
+        if (future.isSuccess() && future.getChannel().isConnected()) {
+            setupConnectedChannel(channel);
+
+            stateManager.transitionOrThrow(ConnectionState.CONNECTED);
+        } else {
             LOGGER.debug("Oh shit, it's not completed. We're going to cancel/close everything.");
             // cancel it.
             future.cancel();
             // Subsequent calls to close have no effect
             future.getChannel().close();
-        } else {
-            setupConnectedChannel(channel);
-        }
 
-        if (future.isSuccess()) {
-            stateManager.transitionOrThrow(ConnectionState.CONNECTED);
-        } else {
             stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
-        }
 
-        if (!future.isSuccess()) {
             if (future.getCause() != null) {
                 throw future.getCause();
             } else {
@@ -248,8 +241,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         // forcibly kill it.
         this.delegate = null;
-
-        executor.shutdownNow();
 
         // dont null out the "connection" object because it would cause null pointers. It's linked so it will auto destroy.
     }

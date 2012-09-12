@@ -1,7 +1,7 @@
 package com.zipwhip.executors;
 
 import com.zipwhip.concurrent.ConfiguredFactory;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
 
@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadFactory;
  * Date: 8/31/12
  * Time: 2:19 PM
  */
-public class DebuggingExecutor extends SimpleExecutor {
+public class DebuggingExecutor extends ExecutorAdapterBase {
 
     public final static ConfiguredFactory<String, ExecutorService> NAMED_FACTORY = new ConfiguredFactory<String, ExecutorService>() {
         @Override
@@ -30,11 +30,10 @@ public class DebuggingExecutor extends SimpleExecutor {
 
     private final static Logger LOGGER = Logger.getLogger(DebuggingExecutor.class);
 
-    private final Executor executor;
     protected final List<Runnable> runnableSet = Collections.synchronizedList(new LinkedList<Runnable>());
 
     public DebuggingExecutor(Executor executor) {
-        this.executor = executor;
+        super(executor);
     }
 
     @Override
@@ -46,7 +45,7 @@ public class DebuggingExecutor extends SimpleExecutor {
         }
         runnableSet.add(command);
 
-        executor.execute(new Runnable() {
+        super.execute(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -64,15 +63,6 @@ public class DebuggingExecutor extends SimpleExecutor {
                 }
             }
         });
-    }
-
-    public Executor getExecutor() {
-        return executor;
-    }
-
-    @Override
-    public String toString() {
-        return executor.toString();
     }
 
 }

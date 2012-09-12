@@ -137,7 +137,7 @@ public class SignalConnectionDelegate extends DestroyableBase {
 
     @Override
     protected synchronized void onDestroy() {
-        LOGGER.error(String.format("Destroying %s / %s", this, Thread.currentThread().toString()));
+        LOGGER.debug(String.format("Destroying %s / %s", this, Thread.currentThread().toString()));
     }
 
     public synchronized void pause() {
