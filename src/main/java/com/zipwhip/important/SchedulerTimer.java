@@ -44,8 +44,6 @@ public class SchedulerTimer implements Timer {
 
         SchedulerTimeout timeout = new SchedulerTimeout(task, requestId, exitDate);
 
-        LOGGER.debug(String.format("Scheduling requestId: %s for task: %s in %s", requestId, task, exitDate));
-
         map.put(requestId, timeout);
 
         scheduler.schedule(requestId, exitDate);
@@ -56,7 +54,7 @@ public class SchedulerTimer implements Timer {
     @Override
     public synchronized Set<Timeout> stop() {
 
-        LOGGER.error("SchedulerTimer stop()");
+        LOGGER.debug("SchedulerTimer stop()");
 
         Set set = new TreeSet<Timeout>(HashCodeComparator.getInstance());
         set.addAll(map.values());
@@ -73,31 +71,30 @@ public class SchedulerTimer implements Timer {
         public void notify(Object sender, String requestId) {
 
             if (map == null) {
-                LOGGER.warn("SchedulerTimer map was null!");
+                LOGGER.error("SchedulerTimer map was null!");
                 return;
             }
 
             synchronized (this) {
                 Timeout timeout = map.get(requestId);
-
                 if (timeout == null) {
-                    LOGGER.warn(String.format("timeout was null for requestId: %s", requestId));
-                } else {
-                    try {
-                        TimerTask task = timeout.getTask();
-                        if (task == null) {
-                            LOGGER.warn("TimeoutTask was null!");
-                        } else {
-                            LOGGER.debug(String.format("Running requestId: %s task: %s!", requestId, task));
-                            task.run(timeout);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.error("Could not run task! ", e);
-                    }
+                    LOGGER.warn(String.format("Timeout was null for requestId: %s", requestId));
+                    return;
                 }
 
                 try {
-                    LOGGER.debug(String.format("Done, removing requestId: %s! ", requestId));
+                    TimerTask task = timeout.getTask();
+                    if (task == null) {
+                        LOGGER.error("TimeoutTask was null!");
+                    } else {
+                        LOGGER.debug(String.format("Running requestId: %s task: %s!", requestId, task));
+                        task.run(timeout);
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Could not run task! ", e);
+                }
+
+                try {
                     map.remove(requestId);
                 } catch (Exception e) {
                     LOGGER.error("Exception removing timeout from scheduler map! ", e);
