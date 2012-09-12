@@ -29,7 +29,10 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
      */
     public static AsyncVendorClient createViaApiKey(String apiKey, String secret) throws Exception {
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncHttpsInstance().apiKey(apiKey).secret(secret).apiVersion(API_VERSION);
+        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncHttpsInstance()
+                .apiKey(apiKey)
+                .secret(secret)
+                .apiVersion(API_VERSION);
 
         AsyncVendorClientFactory asyncVendorClientFactory = new AsyncVendorClientFactory(connectionFactory);
 

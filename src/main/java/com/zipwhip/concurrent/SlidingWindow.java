@@ -6,6 +6,7 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.FlexibleTimedEvictionMap;
 import org.jboss.netty.util.*;
+import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 import java.util.*;
@@ -41,7 +42,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     private final ObservableHelper<List<P>> packetsReleasedEvent = new ObservableHelper<List<P>>();
 
     // This timer schedules our hole timeout waits
-    private final HashedWheelTimer timer = new HashedWheelTimer(new NamedThreadFactory("SlidingWindow-"));
+    private final Timer timer;
 
     // The last known sequence that was released from the window
     private long indexSequence = 0L;
@@ -58,8 +59,8 @@ public class SlidingWindow<P> extends DestroyableBase {
     /**
      * Construct a SlidingWindow with a default window size and eviction time.
      */
-    public SlidingWindow(String key) {
-        this(key, DEFAULT_WINDOW_SIZE, DEFAULT_MINIMUM_EVICTION_AGE);
+    public SlidingWindow(Timer timer, String key) {
+        this(timer, key, DEFAULT_WINDOW_SIZE, DEFAULT_MINIMUM_EVICTION_AGE);
     }
 
     /**
@@ -68,7 +69,11 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @param idealSize                 The ideal size of the sliding window.
      * @param minimumEvictionTimeMillis The time in milliseconds that a packet will be kept in the window.
      */
-    public SlidingWindow(String key, int idealSize, long minimumEvictionTimeMillis) {
+    public SlidingWindow(Timer timer, String key, int idealSize, long minimumEvictionTimeMillis) {
+        if (timer == null){
+            timer = new HashedWheelTimer(new NamedThreadFactory("SlidingWindow-"));
+        }
+        this.timer = timer;
         this.key = key;
         this.window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionTimeMillis);
     }

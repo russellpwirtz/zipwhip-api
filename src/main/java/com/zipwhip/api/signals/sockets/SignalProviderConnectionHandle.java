@@ -94,7 +94,7 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
 
     @Override
     public String toString() {
-        return String.format("SignalProviderConnectionHandle[%s]", connectionHandle);
+        return String.format("[SignalProviderConnectionHandle: %s]", connectionHandle);
     }
 
     @Override

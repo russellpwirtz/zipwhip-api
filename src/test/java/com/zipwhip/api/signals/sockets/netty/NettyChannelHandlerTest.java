@@ -6,6 +6,7 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import junit.framework.Assert;
 import org.jboss.netty.channel.*;
@@ -209,8 +210,12 @@ public class NettyChannelHandlerTest {
         Command receiveEventCommand;
         String exceptionString;
 
+        public MockSignalConnectionDelegate(ConnectionHandle connectionHandle) {
+            super(null, connectionHandle);
+        }
+
         public MockSignalConnectionDelegate() {
-            super(null);
+            super(null, null);
         }
 
         @Override

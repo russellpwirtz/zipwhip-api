@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
@@ -55,10 +56,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     // do we have a current SubscriptionCompleteCommand to use.
     protected ObservableFuture connectFuture;
 
-    private Executor executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("ZipwhipClient-")));
-
-    public ClientZipwhipNetworkSupport(ApiConnection connection, SignalProvider signalProvider) {
-        super(connection);
+    public ClientZipwhipNetworkSupport(Executor executor, ApiConnection connection, SignalProvider signalProvider) {
+        super(executor, connection);
 
         if (signalProvider != null) {
             setSignalProvider(signalProvider);
@@ -132,7 +131,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
     private ObservableFuture<ConnectionHandle> executeConnectWithFailureDetection(String clientId, String sessionKey, Presence presence, Map<String, Long> versions, boolean expectingSubscriptionCompleteCommand) {
         ObservableFuture<ConnectionHandle> requestFuture = importantTaskExecutor.enqueue(
-                executor,
+                callbackExecutor,
                 new ConnectViaSignalProviderTask(this, signalProvider, clientId, sessionKey, presence, versions, expectingSubscriptionCompleteCommand),
                 getSignalsConnectTimeoutInSeconds() * 2);
 
@@ -195,7 +194,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
     protected void initSignalProviderEvents() {
         signalProvider.getVersionChangedEvent().addObserver(
-                new DifferentExecutorObserverAdapter<VersionMapEntry>(executor,
+                new DifferentExecutorObserverAdapter<VersionMapEntry>(callbackExecutor,
                         new ThreadSafeObserver<VersionMapEntry>(
                                 new ConnectionHandleStillActiveObserverAdapter<VersionMapEntry>(
                                         updateVersionsStoreOnVersionChanged))));
@@ -220,7 +219,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 //                                        }))));
 
         signalProvider.getConnectionChangedEvent().addObserver(
-                new DifferentExecutorObserverAdapter<Boolean>(executor,
+                new DifferentExecutorObserverAdapter<Boolean>(callbackExecutor,
                         new ThreadSafeObserver<Boolean>(
                                 new Observer<Boolean>() {
                                     @Override
@@ -800,7 +799,8 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
          * to run the scheduling.
          */
         final ObservableFuture<SubscriptionCompleteCommand> signalsConnectFuture =
-                importantTaskExecutor.enqueue(executor, new SignalsConnectTask(connectionHandle, sessionKey, clientId), signalsConnectTimeoutInSeconds);
+                importantTaskExecutor.enqueue(callbackExecutor,
+                        new SignalsConnectTask(connectionHandle, sessionKey, clientId), signalsConnectTimeoutInSeconds);
 
         signalsConnectFuture.addObserver(new DebugObserver<SubscriptionCompleteCommand>());
         signalsConnectFuture.addObserver(new Observer<ObservableFuture<SubscriptionCompleteCommand>>() {
@@ -947,7 +947,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                         signalProvider.getConnectionChangedEvent().removeObserver(onConnectionChangedObserver[0]);
                         signalProvider.getSubscriptionCompleteReceivedEvent().removeObserver(onSubscriptionCompleteObserver);
 
-                        LOGGER.debug("Failing (disconnected)");
+                        LOGGER.debug("Failing the resultFuture since (connected == false)");
                         resultFuture.setFailure(new Exception("Disconnected while waiting for SubscriptionCompleteCommand to come in! " + connected));
                     }
                 }

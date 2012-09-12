@@ -7,6 +7,7 @@ import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 import java.util.Date;
@@ -18,21 +19,25 @@ import java.util.concurrent.TimeUnit;
  * Date: 8/29/12
  * Time: 12:37 PM
  */
-public class HashedWheelScheduler extends DestroyableBase implements Scheduler {
+public class TimerScheduler extends DestroyableBase implements Scheduler {
 
-    final HashedWheelTimer timer;
-    ObservableHelper<String> observableHelper = new ObservableHelper<String>();
+    private final Timer timer;
+    private final ObservableHelper<String> observableHelper = new ObservableHelper<String>();
 
-    public HashedWheelScheduler() {
-        this(null);
+    public TimerScheduler() {
+        this(null, "TimerScheduler");
     }
 
-    public HashedWheelScheduler(String name) {
-        if (name == null) {
-            timer = new HashedWheelTimer(new NamedThreadFactory("TimerManager-"), 1, TimeUnit.SECONDS);
-        } else {
-            timer = new HashedWheelTimer(new NamedThreadFactory("TimerManager-" + name + "-"), 1, TimeUnit.SECONDS);
-        }
+    public TimerScheduler(String name) {
+        this(null, name);
+    }
+
+    public TimerScheduler(Timer timer) {
+        this.timer = timer;
+    }
+
+    protected TimerScheduler(Timer timer, String name) {
+        this(timer == null ? new HashedWheelTimer(new NamedThreadFactory("HashedWheelScheduler-" + name), 1, TimeUnit.SECONDS) : timer);
     }
 
     @Override
@@ -40,7 +45,7 @@ public class HashedWheelScheduler extends DestroyableBase implements Scheduler {
         timer.newTimeout(new TimerTask() {
             @Override
             public void run(Timeout timeout) throws Exception {
-                observableHelper.notifyObservers(HashedWheelScheduler.this, requestId);
+                observableHelper.notifyObservers(TimerScheduler.this, requestId);
             }
         }, exitTime.getTime() - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }

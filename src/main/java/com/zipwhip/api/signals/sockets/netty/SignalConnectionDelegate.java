@@ -32,11 +32,12 @@ public class SignalConnectionDelegate extends DestroyableBase {
     private static final Logger LOGGER = Logger.getLogger(SignalConnectionDelegate.class);
 
     protected final SignalConnectionBase signalConnectionBase;
-    protected ConnectionHandle connectionHandle;
+    protected final ConnectionHandle connectionHandle;
     private boolean paused = false;
 
-    public SignalConnectionDelegate(SignalConnectionBase signalConnectionBase) {
+    public SignalConnectionDelegate(SignalConnectionBase signalConnectionBase, ConnectionHandle connectionHandle) {
         this.signalConnectionBase = signalConnectionBase;
+        this.connectionHandle = connectionHandle;
     }
 
     /**
@@ -52,10 +53,6 @@ public class SignalConnectionDelegate extends DestroyableBase {
                 connectionHandle.disconnect(network);
             }
         });
-    }
-
-    public int getConnectTimeoutSeconds() {
-        return signalConnectionBase.getConnectTimeoutSeconds();
     }
 
     public synchronized void sendAsyncIfActive(final SerializingCommand command) {
@@ -138,16 +135,9 @@ public class SignalConnectionDelegate extends DestroyableBase {
         return connectionHandle;
     }
 
-    public void setConnectionHandle(ConnectionHandle connectionHandle) {
-        this.connectionHandle = connectionHandle;
-
-        Asserts.assertTrue(connectionHandle != null, "The connectionHandle cannot be null!");
-    }
-
     @Override
     protected synchronized void onDestroy() {
         LOGGER.error(String.format("Destroying %s / %s", this, Thread.currentThread().toString()));
-        connectionHandle = null;
     }
 
     public synchronized void pause() {

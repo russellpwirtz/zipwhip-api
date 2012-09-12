@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
+import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
@@ -29,13 +30,13 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
     private ChannelPipelineFactory channelPipelineFactory;
     private ChannelFactory channelFactory;
     private SignalConnectionBase signalConnection;
-    private Factory<ExecutorService> executorFactory;
+    private ConfiguredFactory<String, ExecutorService> executorFactory;
 
     public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection) {
         this(channelPipelineFactory, channelFactory, signalConnection, null);
     }
 
-    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, Factory<ExecutorService> executorFactory) {
+    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, ConfiguredFactory<String, ExecutorService> executorFactory) {
         this.channelPipelineFactory = channelPipelineFactory;
         this.channelFactory = channelFactory;
         this.signalConnection = signalConnection;
@@ -53,12 +54,6 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
             throw new RuntimeException(e);
         }
 
-        // the delegate lets the ChannelHandlers talk to the connection (such as pong-received)
-        SignalConnectionDelegate delegate = new SignalConnectionDelegate(signalConnection);
-
-        // add the 'business logic' ChannelHandler to the pipeline
-        pipeline.addLast("nettyChannelHandler", new SignalsChannelHandler(delegate));
-
         // create the channel
         Channel channel = channelFactory.newChannel(pipeline);
 
@@ -67,14 +62,10 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         // This needs to be here for WakeLockAwareExecutors to be passed in for Android.
         ExecutorService executor = null;
         if (executorFactory != null) {
-            executor = executorFactory.create();
+            executor = executorFactory.create("ChannelWrapper-");
         }
 
-        ChannelWrapper channelWrapper = new ChannelWrapper(id.incrementAndGet(), channel, delegate, executor);
-        channelWrapper.link(delegate);
-        delegate.setConnectionHandle(channelWrapper.getConnection());
-
-        return channelWrapper;
+        return new ChannelWrapper(id.incrementAndGet(), channel, signalConnection, executor);
     }
 
     @Override

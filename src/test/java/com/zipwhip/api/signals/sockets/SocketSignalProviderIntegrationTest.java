@@ -4,12 +4,13 @@ import com.zipwhip.api.*;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
-import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
+import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import com.zipwhip.util.DownloadURL;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -57,7 +58,7 @@ public class SocketSignalProviderIntegrationTest {
         connectionFactory.setUsername("2062513225");
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
-                .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
+                .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(0, 1000, 2.0)))
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -158,8 +159,6 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
 
-
-
     @Test
     public void testBasicConnect2() throws Exception {
 
@@ -229,6 +228,11 @@ public class SocketSignalProviderIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
+        if (client != null)
+            client.destroy();
+        if (signalProvider != null){
+            signalProvider.destroy();
+        }
         ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HTTPS_HOST;
         ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
     }

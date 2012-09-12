@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.sockets.netty;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import com.zipwhip.concurrent.FutureUtil;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -59,15 +60,16 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     protected final StateManager<ConnectionState> stateManager;
     protected final ExecutorService executor;
 
+    protected final SignalConnectionBase signalConnectionBase;
+
     /**
      * For keeping absolute care over the thread safe state
      */
-    public ChannelWrapper(long id, Channel channel, SignalConnectionDelegate delegate, ExecutorService executor) {
+    public ChannelWrapper(long id, Channel channel, SignalConnectionBase signalConnectionBase, ExecutorService executor) {
         this.channel = channel;
-        this.delegate = delegate;
         this.stateManager = ConnectionStateManagerFactory.newStateManager();
         this.link(stateManager);
-        this.connection = new ChannelWrapperConnectionHandle(id, delegate.signalConnectionBase, this);
+        this.connection = new ChannelWrapperConnectionHandle(id, signalConnectionBase, this);
         this.connection.link(this);
         if (executor == null){
             this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
@@ -80,6 +82,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         } else {
             this.executor = executor;
         }
+        this.signalConnectionBase = signalConnectionBase;
     }
 
     /**
@@ -95,17 +98,19 @@ public class ChannelWrapper extends CascadingDestroyableBase {
 
         stateManager.transitionOrThrow(ConnectionState.CONNECTING);
 
-        delegate.pause();
+        Asserts.assertTrue(delegate == null, "Did this class get used twice?");
         // do the connect async.
         ChannelFuture future = null;
         boolean completed;
 
         try {
             LOGGER.debug(String.format("Connecting %s to %s", channel,  remoteAddress));
-            channel.getConfig().setConnectTimeoutMillis(delegate.getConnectTimeoutSeconds() * 1000);
+            channel.getConfig().setConnectTimeoutMillis(signalConnectionBase.getConnectTimeoutSeconds() * 1000);
             future = channel.connect(remoteAddress);
+
             // since we're on the IO thread, we need to block here.
-            completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+            completed = future.await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+
 
         } catch (Exception e) {
             if (future == null){
@@ -129,7 +134,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             // Subsequent calls to close have no effect
             future.getChannel().close();
         } else {
-            delegate.resume();
+            setupConnectedChannel(channel);
         }
 
         if (future.isSuccess()) {
@@ -145,6 +150,16 @@ public class ChannelWrapper extends CascadingDestroyableBase {
                 throw new IllegalStateException("The future was not successful " + future);
             }
         }
+    }
+
+    private void setupConnectedChannel(Channel channel) {
+        // the delegate lets the ChannelHandlers talk to the connection (such as pong-received)
+        this.delegate = new SignalConnectionDelegate(this.signalConnectionBase, this.connection);
+
+        // add the 'business logic' ChannelHandler to the pipeline
+        channel.getPipeline().addLast("nettyChannelHandler", new SignalsChannelHandler(this.delegate));
+
+        this.link(this.delegate);
     }
 
     /**
@@ -171,12 +186,13 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         this.channel = null;
 
         // before we actually close the channel, we need to tear down the link.
-        this.delegate.destroy();
+        if (this.delegate != null)
+            this.delegate.pause();
 
         try {
             try {
                 // wait synchronously for it to close?
-                if (!channel.close().await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
+                if (!channel.close().await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
                     // not completed in that time!
                     // what do we do?!?!
                     LOGGER.warn(String.format("The channel %s failed to close in the time limit! We are going to just destroy ourselves anyway.", channel));
@@ -231,9 +247,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         this.channel = null;
 
         // forcibly kill it.
-        if (!delegate.isDestroyed()){
-            delegate.destroy();
-        }
+        this.delegate = null;
 
         executor.shutdownNow();
 

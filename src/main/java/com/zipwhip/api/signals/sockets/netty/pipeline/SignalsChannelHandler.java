@@ -140,7 +140,7 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
             return;
         }
 
-        if (delegate.isDestroyed()) {
+        if (delegate.isDestroyed() || delegate.isPaused()) {
             // caught an exception but who cares..
             LOGGER.debug("Delegate was destroyed so i'm just going to sit here nicely.");
             return;

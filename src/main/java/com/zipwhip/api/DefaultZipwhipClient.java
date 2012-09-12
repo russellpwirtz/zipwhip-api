@@ -15,6 +15,7 @@ import com.zipwhip.util.StringUtil;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.Executor;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
@@ -32,7 +33,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      * @param connection The connection to Zipwhip API
      */
     public DefaultZipwhipClient(ApiConnection connection) {
-        this(connection, null);
+        this(null, connection, null);
     }
 
     /**
@@ -40,9 +41,10 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
+     * @param executor The executor that's used for aynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
      */
-    public DefaultZipwhipClient(ApiConnection connection, SignalProvider signalProvider) {
-        super(connection, signalProvider);
+    public DefaultZipwhipClient(Executor executor, ApiConnection connection, SignalProvider signalProvider) {
+        super(executor, connection, signalProvider);
     }
 
     @Override

@@ -2,9 +2,11 @@ package com.zipwhip.api;
 
 import com.zipwhip.api.response.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ExecutorFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
@@ -116,7 +118,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
      * This importantTaskExecutor really matters. This is the importantTaskExecutor that runs client code. I mean, the guys that call us.
      * They are observing our web calls via this importantTaskExecutor. If it's too small, and they are too slow, it'll backlog.
      */
-    private Executor callbackExecutor = Executors.newSingleThreadExecutor();
+    protected final Executor callbackExecutor;
 
     protected ApiConnection connection;
     protected ResponseParser responseParser;
@@ -125,14 +127,29 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
      * Create a new default {@code ZipwhipNetworkSupport}
      */
     public ZipwhipNetworkSupport() {
-        this(new HttpConnection());
+        this(null);
     }
 
     public ZipwhipNetworkSupport(ApiConnection connection) {
+        this(null, connection);
+    }
+
+    public ZipwhipNetworkSupport(Executor callbackExecutor, ApiConnection connection) {
 
         if (connection == null) {
-            throw new IllegalArgumentException("Connection must not be null");
+            connection = new HttpConnection();
         }
+
+        if (callbackExecutor == null){
+            callbackExecutor = ExecutorFactory.create("ZipwhipNetworkSupport-callbacks");
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ((ExecutorService)ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
+                }
+            });
+        }
+        this.callbackExecutor = callbackExecutor;
 
         setConnection(connection);
         link(connection);

@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
+import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
@@ -71,8 +72,8 @@ public class NettySignalConnection extends SignalConnectionBase {
      * @param reconnectStrategy      The reconnect strategy to use in the case of socket disconnects.
      * @param channelPipelineFactory The Factory to create a Netty pipeline.
      */
-    public NettySignalConnection(Factory<ExecutorService> executorFactory, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
-        super(executorFactory != null ? executorFactory.create() : null);
+    public NettySignalConnection(ConfiguredFactory<String, ExecutorService> executorFactory, ReconnectStrategy reconnectStrategy, ChannelPipelineFactory channelPipelineFactory) {
+        super(executorFactory != null ? executorFactory.create("SignalConnection") : null);
 
         if (executorFactory != null){
             // We created the executor that our parent is using. We need to destroy it.
@@ -99,32 +100,15 @@ public class NettySignalConnection extends SignalConnectionBase {
         }
 
         if (executorFactory == null){
-            executorFactory = new Factory<ExecutorService>() {
-                ThreadFactory factory = new NamedThreadFactory("SignalConnection-");
-
+            executorFactory = new ConfiguredFactory<String, ExecutorService>() {
                 @Override
-                public ExecutorService create() {
-                    return Executors.newFixedThreadPool(1, factory);
+                public ExecutorService create(String threadName) {
+                    return Executors.newFixedThreadPool(1, new NamedThreadFactory("SignalConnection-"));
                 }
             };
         }
 
-        final Executor bossExecutor = executorFactory.create();
-        final Executor workerExecutor = executorFactory.create();
-
-        this.link(new DestroyableBase() {
-            @Override
-            protected void onDestroy() {
-                if (executor instanceof ExecutorService) {
-                    ((ExecutorService) workerExecutor).shutdownNow();
-                    ((ExecutorService) bossExecutor).shutdownNow();
-                }
-            }
-        });
-
-        channelFactory = new OioClientSocketChannelFactory(bossExecutor);
-
-//        channelFactory = new NioClientSocketChannelFactory(bossExecutor, workerExecutor);
+        channelFactory = new OioClientSocketChannelFactory(executorFactory.create("OioClientSocketChannelWorker"));
 
         this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this, executorFactory);
         this.link(channelWrapperFactory);

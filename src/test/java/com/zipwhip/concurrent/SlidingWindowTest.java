@@ -27,7 +27,7 @@ public class SlidingWindowTest {
 
     @Before
     public void setUp() throws Exception {
-        window = new SlidingWindow<Long>(key, DEFAULT_WINDOW_SIZE, DEFAULT_MIN_EXPIRATION);
+        window = new SlidingWindow<Long>(null, key, DEFAULT_WINDOW_SIZE, DEFAULT_MIN_EXPIRATION);
     }
 
     @Test

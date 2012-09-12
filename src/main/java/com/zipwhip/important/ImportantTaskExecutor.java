@@ -6,10 +6,11 @@ import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.important.schedulers.HashedWheelScheduler;
+import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.FutureDateUtil;
 import org.apache.log4j.Logger;
+import org.jboss.netty.util.Timer;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -40,12 +41,11 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     }
 
     public ImportantTaskExecutor(Scheduler scheduler) {
-        if (scheduler != null) {
-            this.setScheduler(scheduler);
+        if (scheduler == null){
+            this.setScheduler(new TimerScheduler(""));
+            this.link((TimerScheduler) getScheduler());
         } else {
-            scheduler = new HashedWheelScheduler();
             this.setScheduler(scheduler);
-            this.link((HashedWheelScheduler) scheduler);
         }
     }
 

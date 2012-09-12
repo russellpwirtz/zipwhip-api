@@ -8,6 +8,7 @@ import com.zipwhip.api.signals.sockets.MockSignalConnection;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -24,16 +25,17 @@ import static org.junit.Assert.assertTrue;
  */
 public class ExponentialBackoffReconnectStrategyTest {
 
-	private ExponentialBackoffReconnectStrategy strategy;
+    private ExponentialBackoffRetryStrategy retryStrategy;
+//	private DefaultReconnectStrategy strategy;
 
     /**
 	 * @throws java.lang.Exception
 	 */
 	@Before
 	public void setUp() throws Exception {
-		strategy = new ExponentialBackoffReconnectStrategy();
-		strategy.setSignalConnection(new CannotConnectSignalConnection());
-		strategy.setDelayUnits(TimeUnit.MILLISECONDS);
+        retryStrategy = new ExponentialBackoffRetryStrategy(100, 1000, 2.0);
+//        strategy = new DefaultReconnectStrategy(null, retryStrategy);
+//		strategy.setSignalConnection(new CannotConnectSignalConnection());
 		Logger.getRootLogger().setLevel(Level.DEBUG);
 	}
 
@@ -42,28 +44,27 @@ public class ExponentialBackoffReconnectStrategyTest {
 
 		long backoff = -1;
 		for (int i = 1; i < 20; i++) {
-			strategy.setConsecutiveReconnectAttempts(i);
-			long delay = strategy.calculateBackoff();
+			long delay = retryStrategy.getNextRetryInterval(i);
 			assertTrue("On iteration " + i + " " + delay + " < " + backoff, delay >= backoff);
 			backoff = delay;
 		}
 
 
 	}
-
-	private class CannotConnectSignalConnection extends MockSignalConnection {
-
-        public CannotConnectSignalConnection(Factory<ExecutorService> executorFactory) {
-            super(executorFactory.create());
-        }
-
-        public CannotConnectSignalConnection() {
-            super(SimpleExecutor.getInstance());
-        }
-
-        @Override
-		public synchronized ObservableFuture<ConnectionHandle> connect() {
-            return new FakeFailingObservableFuture<ConnectionHandle>(this, new Exception());
-		}
-	}
+//
+//    private class CannotConnectSignalConnection extends MockSignalConnection {
+//
+//        public CannotConnectSignalConnection(Factory<ExecutorService> executorFactory) {
+//            super(executorFactory.create());
+//        }
+//
+//        public CannotConnectSignalConnection() {
+//            super(SimpleExecutor.getInstance());
+//        }
+//
+//        @Override
+//        public synchronized ObservableFuture<ConnectionHandle> connect() {
+//            return new FakeFailingObservableFuture<ConnectionHandle>(this, new Exception());
+//        }
+//    }
 }

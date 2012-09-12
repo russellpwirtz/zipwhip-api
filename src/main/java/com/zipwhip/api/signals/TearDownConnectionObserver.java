@@ -29,7 +29,14 @@ public class TearDownConnectionObserver<T> implements Observer<ObservableFuture<
         ConnectionHandleAware task = (ConnectionHandleAware) sender;
         ConnectionHandle connectionHandle = task.getConnectionHandle();
 
-        LOGGER.error("SignalsConnectFuture failed to receive a SubscriptionCompleteCommand from the server. We're going to tear down the connection and let the ReconnectStrategy take it from there. (If you dont see a disconnect it was because it already reconnected)");
+        if (reconnect) {
+            LOGGER.error("SignalsConnectFuture was not successful. (failed to receive a SubscriptionCompleteCommand?) " +
+                    "We're going to reconnect.");
+        } else {
+            LOGGER.error("SignalsConnectFuture was not successful. (failed to receive a SubscriptionCompleteCommand?) " +
+                    "We're going to disconnect.");
+        }
+
         // we are in the Timer thread (pub sub if Timer is Intent based).
         // hashwheel otherwise.
 
@@ -37,13 +44,13 @@ public class TearDownConnectionObserver<T> implements Observer<ObservableFuture<
         // this connection object lets us be certain that the current connection is reconnected.
 
         if (connectionHandle == null) {
-            LOGGER.error("Cannot tearDown connection because the connectionHandle was null!!!");
+            LOGGER.error("Cannot tearDown connection because the connectionHandle was null! (Maybe the SignalConnection crashed during its phase?) We should be already disconnected?");
             return;
         }
 
         synchronized (connectionHandle) {
             if (connectionHandle.isDestroyed()) {
-                LOGGER.error("The connectionHandle we started with (%s) has been destroyed. We are stale! Quitting");
+                LOGGER.error(String.format("The connectionHandle we started with (%s) has been destroyed. We are stale! Quitting", connectionHandle));
                 return;
             }
 

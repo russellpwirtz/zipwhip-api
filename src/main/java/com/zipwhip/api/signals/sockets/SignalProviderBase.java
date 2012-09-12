@@ -160,7 +160,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
      */
     protected void changeConnectionHandle(ConnectionHandle connectionHandle) {
         accessConnectionHandle();
-        ConnectionHandle c = getCurrentConnectionHandle();
+        ConnectionHandle c = getUnchangingConnectionHandle();
         if (c != null) {
             Asserts.assertTrue(connectionHandle == c, String.format("Caught a bug with check? %s/%s", connectionHandle, c));
         }
@@ -170,7 +170,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
 
     protected SignalProviderConnectionHandle getUnchangingConnectionHandle() {
         accessConnectionHandle();
-        return getCurrentConnectionHandle();
+        return connectionHandle;
     }
 
     protected void clearConnectionHandle(final ConnectionHandle finalConnectionHandle) {
@@ -223,7 +223,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
     protected boolean ensureCorrectConnectionHandle(ConnectionHandle connectionHandle) {
         accessConnectionHandle();
 
-        return (connectionHandle == this.connectionHandle);
+        return (connectionHandle == this.getUnchangingConnectionHandle());
     }
 
     protected void setConnectionHandle(SignalProviderConnectionHandle connectionHandle) {
@@ -233,7 +233,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
 
         accessConnectionHandle();
 
-        if (getCurrentConnectionHandle() != null) {
+        if (getUnchangingConnectionHandle() != null) {
             throw new IllegalAccessError("The current connectionHandle is not null! Use clear first.");
         }
 
@@ -249,10 +249,6 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
      */
     protected SignalProviderConnectionHandle newConnectionHandle(ConnectionHandle connectionHandle) {
         return new SignalProviderConnectionHandle(CONNECTION_HANDLE_ID_FACTORY.create(), this, null);
-    }
-
-    protected SignalProviderConnectionHandle getCurrentConnectionHandle() {
-        return connectionHandle;
     }
 
     @Override
@@ -362,5 +358,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
         future.cancel();
     }
 
-
+    protected SignalProviderConnectionHandle getCurrentConnectionHandle() {
+        return connectionHandle;
+    }
 }

@@ -1,6 +1,7 @@
 package com.zipwhip.important;
 
 import com.zipwhip.events.Observer;
+import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.HashCodeComparator;
 import org.apache.log4j.Logger;
@@ -21,8 +22,19 @@ public class SchedulerTimer implements Timer {
 
     private static final Logger LOGGER = Logger.getLogger(SchedulerTimer.class);
 
-    private Scheduler scheduler;
     private Map<String, Timeout> map = Collections.synchronizedMap(new TreeMap<String, Timeout>(HashCodeComparator.getInstance()));
+
+    private final Scheduler scheduler;
+
+    public SchedulerTimer(Scheduler scheduler) {
+        if (scheduler == null){
+            this.scheduler = new TimerScheduler("SchedulerTimer");
+        } else {
+            this.scheduler = scheduler;
+        }
+
+        this.scheduler.onScheduleComplete(this.onTimeoutComplete);
+    }
 
     @Override
     public Timeout newTimeout(final TimerTask task, long delay, TimeUnit unit) {
@@ -96,18 +108,6 @@ public class SchedulerTimer implements Timer {
 
     public Scheduler getScheduler() {
         return scheduler;
-    }
-
-    public void setScheduler(Scheduler scheduler) {
-
-        if (this.scheduler != null) {
-            throw new RuntimeException("We didn't handle this case.");
-        }
-        this.scheduler = scheduler;
-
-        if (this.scheduler != null) {
-            this.scheduler.onScheduleComplete(this.onTimeoutComplete);
-        }
     }
 
     private class SchedulerTimeout implements Timeout {

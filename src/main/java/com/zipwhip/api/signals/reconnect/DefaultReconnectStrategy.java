@@ -3,7 +3,16 @@ package com.zipwhip.api.signals.reconnect;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observer;
+import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
+import com.zipwhip.reliable.retry.RetryStrategy;
+import com.zipwhip.util.Asserts;
+import com.zipwhip.util.FutureDateUtil;
 import org.apache.log4j.Logger;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 
 import java.util.concurrent.*;
 
@@ -19,55 +28,109 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultReconnectStrategy.class);
 
-    private static final long RECONNECT_DELAY = 5000;
+    private ObservableFuture<ConnectionHandle> connectFuture;
+    private Timeout timeout;
+    private RetryStrategy strategy;
+    private final Timer timer;
+    private int failCount;
 
-    private ObservableFuture<ConnectionHandle> reconnectTask;
-    private ScheduledExecutorService scheduler;
+    public DefaultReconnectStrategy() {
+        this(null);
+    }
+
+    public DefaultReconnectStrategy(Timer timer) {
+        this(timer, null);
+    }
+
+    public DefaultReconnectStrategy(Timer timer, RetryStrategy strategy) {
+        super();
+
+        if (timer == null) {
+            timer = new HashedWheelTimer(new NamedThreadFactory(this.toString()), 1, TimeUnit.SECONDS);
+        }
+        this.timer = timer;
+
+        if (strategy == null) {
+            strategy = new ExponentialBackoffRetryStrategy(0, 1, 2.0);
+        }
+        this.strategy = strategy;
+    }
 
     @Override
-    public void stop() {
-
-        // If we have scheduled a reconnect cancel it
-        if (reconnectTask != null && !reconnectTask.isDone()) {
-
-            boolean cancelled = reconnectTask.cancel(true);
-
-            LOGGER.debug("Cancelling reconnect task success: " + cancelled);
-        }
-
-        // Cleanup any scheduled reconnects
-        if (scheduler != null) {
-
-            LOGGER.debug("stop() called, Shutting down scheduled execution");
-
-            scheduler.shutdownNow();
-            scheduler = null;
-        }
+    public synchronized void stop() {
+        cleanup();
 
         // Stop listening to SignalConnection events
         super.stop();
     }
 
     @Override
-    protected void doStrategyWithoutBlocking() {
+    protected synchronized void doStrategyWithoutBlocking() {
+        long delay = getReconnectDelay();
+        LOGGER.debug(String.format("Scheduling a reconnect attempt to occur on %s", FutureDateUtil.inFuture(delay, TimeUnit.MILLISECONDS)));
+        timeout = timer.newTimeout(reconnectTimerTask, delay, TimeUnit.MILLISECONDS);
+    }
 
-        LOGGER.debug("Scheduling a reconnect attempt in 5 seconds...");
+    private long getReconnectDelay() {
+        return strategy.getNextRetryInterval(failCount);
+    }
 
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReconnectStrategy-"));
-        }
-
-        scheduler.schedule(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    LOGGER.debug("Attempting a reconnect...");
-                    reconnectTask = signalConnection.connect();
-                } catch (Exception e) {
-                    LOGGER.error("Error reconnecting", e);
+    private final Observer<ObservableFuture<ConnectionHandle>> incrementFailCountOnCompleteObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> future) {
+            synchronized (DefaultReconnectStrategy.this) {
+                if (future.isSuccess()) {
+                    failCount = 0;
+                } else {
+                    failCount++;
                 }
             }
-        }, RECONNECT_DELAY, TimeUnit.MILLISECONDS);
+        }
+    };
+
+    private TimerTask reconnectTimerTask = new TimerTask() {
+        @Override
+        public void run(Timeout timeout) throws Exception {
+            if (timeout.isCancelled()) {
+                return; //WARNING: is this the right thing to do?
+            }
+
+            synchronized (DefaultReconnectStrategy.this) {
+                cancelExistingConnectFuture();
+
+                connectFuture = signalConnection.connect();
+                connectFuture.addObserver(incrementFailCountOnCompleteObserver);
+            }
+        }
+    };
+
+    protected synchronized void cleanup() {
+        cancelExistingConnectFuture();
+        cancelExistingTimeout();
+    }
+
+    private synchronized void cancelExistingConnectFuture() {
+        if (connectFuture == null) {
+            return;
+        }
+
+        // If we have scheduled a reconnect cancel it
+        if (!connectFuture.isDone()) {
+            boolean cancelled = connectFuture.cancel(true);
+            LOGGER.debug("Cancelling reconnect task success: " + cancelled);
+        }
+
+        connectFuture = null;
+    }
+
+    private synchronized void cancelExistingTimeout() {
+        if (timeout == null) {
+            return;
+        }
+
+        LOGGER.debug("stop() called, Shutting down scheduled execution");
+        timeout.cancel();
+        timeout = null;
     }
 
     @Override
@@ -75,4 +138,12 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         stop();
     }
 
+    @Override
+    public String toString() {
+        return "DefaultReconnectStrategy";
+    }
+
+    public void setFailCount(int failCount) {
+        this.failCount = failCount;
+    }
 }

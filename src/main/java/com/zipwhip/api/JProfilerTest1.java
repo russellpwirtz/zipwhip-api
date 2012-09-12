@@ -3,22 +3,15 @@ package com.zipwhip.api;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
-import com.zipwhip.api.signals.reconnect.ExponentialBackoffReconnectStrategy;
+import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
-import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observer;
 import com.zipwhip.util.Asserts;
-import com.zipwhip.util.DownloadURL;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static com.zipwhip.util.Asserts.assertTrue;
@@ -65,7 +58,7 @@ public class JProfilerTest1 {
 //        connectionFactory.setUsername("2062513225");
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
-                .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
+                .reconnectStrategy(new DefaultReconnectStrategy())
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

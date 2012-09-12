@@ -4,6 +4,8 @@ import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
+import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.concurrent.ExecutorFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.Factory;
@@ -12,6 +14,8 @@ import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Creates a Connection with the specified parameters.
@@ -22,6 +26,9 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
     private ResponseParser responseParser = new JsonResponseParser();
 
+    private ConfiguredFactory<String, ExecutorService> bossExecutorFactory;
+    private ConfiguredFactory<String, ExecutorService> workerExecutorFactory;
+
     private String host = ApiConnectionConfiguration.API_HOST;
     private String apiVersion = ApiConnection.DEFAULT_API_VERSION;
     private String username;
@@ -30,30 +37,32 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     private String secret;
     private String sessionKey;
 
-    private ApiConnection connection;
+    private Factory<ApiConnection> factory;
 
-    protected ApiConnectionFactory() {
-
-    }
-
-    public ApiConnectionFactory(ApiConnection connection) {
-        this.connection = connection;
+    protected ApiConnectionFactory(Factory<ApiConnection> factory) {
+        this.factory = factory;
     }
 
     public static ApiConnectionFactory newInstance() {
-        return new ApiConnectionFactory(new HttpConnection());
+        return new ApiConnectionFactory();
     }
 
     public static ApiConnectionFactory newAsyncInstance() {
-        return new ApiConnectionFactory(new NingHttpConnection());
+        return new ApiConnectionFactory() {
+            @Override
+            protected ApiConnection createInstance(Executor bossExecutor, Executor workerExecutor) {
+                return new NingHttpConnection(bossExecutor, workerExecutor);
+            }
+        };
+//        return new ApiConnectionFactory(NingHttpConnection.class);
     }
 
     public static ApiConnectionFactory newAsyncHttpsInstance() {
+        ApiConnectionFactory connectionFactory = newAsyncInstance();
 
-        ApiConnection connection = new NingHttpConnection();
-        connection.setHost(ApiConnection.DEFAULT_HTTPS_HOST);
+        connectionFactory.setHost(ApiConnection.DEFAULT_HTTPS_HOST);
 
-        return new ApiConnectionFactory(connection);
+        return connectionFactory;
     }
 
     /**
@@ -65,9 +74,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public ApiConnection create() {
 
         try {
-            if (connection == null) {
-                connection = new HttpConnection();
-            }
+            ApiConnection connection = createInstance();
 
             connection.setSessionKey(sessionKey);
             connection.setApiVersion(apiVersion);
@@ -111,6 +118,14 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
             return null;
         }
+    }
+
+    protected ApiConnection createInstance() {
+
+    }
+
+    protected ApiConnection createInstance(Executor bossExecutor, Executor workerExecutor) {
+        return new HttpConnection(bossExecutor, workerExecutor);
     }
 
     public ApiConnectionFactory responseParser(ResponseParser responseParser) {
@@ -223,6 +238,35 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
 
     public void setConnection(ApiConnection connection) {
         this.connection = connection;
+    }
+
+    public static class NingConnectionFactory implements Factory<ApiConnection> {
+        return
+    }
+
+    public static class HttpConnectionFactory implements Factory<ApiConnection> {
+
+        private final ConfiguredFactory<String, ExecutorService> bossExecutorFactory;
+        private final ConfiguredFactory<String, ExecutorService> workerExecutorFactory;
+
+        public HttpConnectionFactory(ConfiguredFactory<String, ExecutorService> workerExecutorFactory, ConfiguredFactory<String, ExecutorService> bossExecutorFactory) {
+            this.workerExecutorFactory = workerExecutorFactory;
+            this.bossExecutorFactory = bossExecutorFactory;
+        }
+
+        @Override
+        public ApiConnection create() {
+            Executor bossExecutor = null;
+            if (bossExecutorFactory != null) {
+                bossExecutor = bossExecutorFactory.create("ApiConnection-boss");
+            }
+            Executor workerExecutor = null;
+            if (workerExecutorFactory != null) {
+                workerExecutor = workerExecutorFactory.create("ApiConnection-worker");
+            }
+
+            return new HttpConnection(bossExecutor,  workerExecutor);
+        }
     }
 
 }

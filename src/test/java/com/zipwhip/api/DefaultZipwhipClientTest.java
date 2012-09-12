@@ -4,6 +4,7 @@ import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.MockSignalProvider;
+import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
 import com.zipwhip.api.signals.sockets.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
@@ -41,6 +42,7 @@ public class DefaultZipwhipClientTest {
     private static final Logger LOGGER = Logger.getLogger(DefaultZipwhipClientTest.class);
 
     ZipwhipClient client;
+    SignalProvider signalProvider;
     ApiConnection apiConnection;
 
     public final static String MOBILE_NUMBER = "2069797502";
@@ -48,7 +50,8 @@ public class DefaultZipwhipClientTest {
     @Before
     public void setUp() throws Exception {
         apiConnection = new MockApiConnection();
-        client = new DefaultZipwhipClient(apiConnection, new MockSignalProvider());
+        signalProvider = new MockSignalProvider();
+        client = new DefaultZipwhipClient(null, apiConnection, signalProvider);
         ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 5;
         ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
         client.setSettingsStore(new MemorySettingStore());
@@ -268,12 +271,11 @@ public class DefaultZipwhipClientTest {
 
     @Test
     public void testConnectBlocksOnSubscriptionComplete() throws Exception {
-        apiConnection = new MockApiConnection();
-        final MockSignalProvider sp = new MockSignalProvider();
-        client = new DefaultZipwhipClient(apiConnection, sp) {
+        client.destroy();
+        client = new DefaultZipwhipClient(null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
-                sp.sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
+                ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
                 return new StringServerResponse("{success:true}", true, "{success:true}", null);
             }
         };
@@ -300,9 +302,7 @@ public class DefaultZipwhipClientTest {
 
     @Test
     public void testConnectBlocksOnSubscriptionCompleteWithDelay() throws Exception {
-        apiConnection = new MockApiConnection();
-        final MockSignalProvider sp = new MockSignalProvider();
-        client = new DefaultZipwhipClient(apiConnection, sp) {
+        client = new DefaultZipwhipClient(null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
                 Executors.newSingleThreadExecutor().execute(new Runnable() {
@@ -310,7 +310,7 @@ public class DefaultZipwhipClientTest {
                     public void run() {
                         try {
                             Thread.sleep(2000);
-                            sp.sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
+                            ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
                         } catch (InterruptedException e) {
                             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                         }

@@ -7,6 +7,7 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipelineFactory;
+import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
@@ -372,9 +373,9 @@ public class NettySignalConnectionTest {
     @Test
     public void testPongTimeoutCausesReconnect2() throws Exception{
         connection.destroy();
-        connection = new NettySignalConnection(new Factory<ExecutorService>() {
+        connection = new NettySignalConnection(new ConfiguredFactory<String, ExecutorService>() {
             @Override
-            public ExecutorService create() {
+            public ExecutorService create(String name) {
                 return SimpleExecutor.getInstance();
             }
         }, null, null);

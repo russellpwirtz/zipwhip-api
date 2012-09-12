@@ -10,10 +10,7 @@ import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
-import com.zipwhip.concurrent.DefaultObservableFuture;
-import com.zipwhip.concurrent.FakeFailingObservableFuture;
-import com.zipwhip.concurrent.NamedThreadFactory;
-import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
@@ -40,11 +37,36 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
 
     public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 10;
 
-    protected final ObservableHelper<PingEvent> pingEvent = new ObservableHelper<PingEvent>();
-    protected final ObservableHelper<Command> receiveEvent = new ObservableHelper<Command>();
-    protected final ObservableHelper<String> exceptionEvent = new ObservableHelper<String>();
-    protected final ObservableHelper<ConnectionHandle> connectEvent = new ObservableHelper<ConnectionHandle>();
-    protected final ObservableHelper<ConnectionHandle> disconnectEvent = new ObservableHelper<ConnectionHandle>();
+    protected final ObservableHelper<PingEvent> pingEvent = new DebugObservableHelper<PingEvent>(new ObservableHelper<PingEvent>()) {
+        @Override
+        public String toString() {
+            return "pingEvent";
+        }
+    };
+    protected final ObservableHelper<Command> receiveEvent = new DebugObservableHelper<Command>(new ObservableHelper<Command>()) {
+        @Override
+        public String toString() {
+            return "receiveEvent";
+        }
+    };
+    protected final ObservableHelper<String> exceptionEvent = new DebugObservableHelper<String>(new ObservableHelper<String>()) {
+        @Override
+        public String toString() {
+            return "exceptionEvent";
+        }
+    };
+    protected final ObservableHelper<ConnectionHandle> connectEvent = new DebugObservableHelper<ConnectionHandle>(new ObservableHelper<ConnectionHandle>()) {
+        @Override
+        public String toString() {
+            return "connectEvent";
+        }
+    };
+    protected final ObservableHelper<ConnectionHandle> disconnectEvent = new DebugObservableHelper<ConnectionHandle>(new ObservableHelper<ConnectionHandle>()) {
+        @Override
+        public String toString() {
+            return "disconnectEvent";
+        }
+    };
 
     protected final Executor executor;
     protected final Object CONNECTION_BEING_TOUCHED_LOCK = new Object() {

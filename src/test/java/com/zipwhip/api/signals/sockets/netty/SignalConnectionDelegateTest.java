@@ -44,7 +44,7 @@ public class SignalConnectionDelegateTest {
 //            }
 //        };
         signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
-        delegate = new SignalConnectionDelegate(signalConnection);
+        delegate = new SignalConnectionDelegate(signalConnection, signalConnection.connect().get());
         disconnectLatch = new CountDownLatch(1);
     }
 
@@ -69,10 +69,8 @@ public class SignalConnectionDelegateTest {
 
         assertFalse(delegate.isDestroyed());
 
-        ConnectionHandle connectionHandle = signalConnection.connect().get();
         assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
-        delegate.setConnectionHandle(connectionHandle);
 
         // Network
         delegate.disconnectAsyncIfActive(true);
@@ -86,7 +84,6 @@ public class SignalConnectionDelegateTest {
 
         assertFalse(delegate.isDestroyed());
 
-        delegate.setConnectionHandle(signalConnection.connect().get());
         assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         // Non-network
@@ -99,7 +96,6 @@ public class SignalConnectionDelegateTest {
     @Test
     public void testIsConnected() throws Exception {
 
-        delegate.setConnectionHandle(signalConnection.connect().get());
 
         assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
         assertFalse(delegate.isDestroyed());
@@ -113,7 +109,6 @@ public class SignalConnectionDelegateTest {
     @Test
     public void testSend() throws Exception {
 
-        delegate.setConnectionHandle(signalConnection.connect().get());
 
         assertFalse(delegate.isDestroyed());
         delegate.sendAsyncIfActive(PingPongCommand.getShortformInstance());
@@ -126,7 +121,6 @@ public class SignalConnectionDelegateTest {
     @Test
     public void testReceivePong() throws Exception {
 
-        delegate.setConnectionHandle(signalConnection.connect().get());
 
         assertFalse(delegate.isDestroyed());
         delegate.receivePong(PingPongCommand.getShortformInstance());

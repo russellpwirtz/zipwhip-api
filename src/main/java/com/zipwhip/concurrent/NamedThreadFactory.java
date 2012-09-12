@@ -24,9 +24,7 @@ public class NamedThreadFactory implements ThreadFactory {
                               poolNumber.getAndIncrement() +
                              "-thread-";
             } else {
-                this.namePrefix = namePrefix +
-                        poolNumber.getAndIncrement() +
-                        "-thread-";
+                this.namePrefix = String.format("%s-", namePrefix);
             }
         }
 

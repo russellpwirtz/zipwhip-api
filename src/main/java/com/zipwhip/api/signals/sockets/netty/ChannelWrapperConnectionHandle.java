@@ -35,4 +35,13 @@ public class ChannelWrapperConnectionHandle extends SignalConnectionBaseConnecti
 
         channelWrapper = null;
     }
+
+    @Override
+    public String toString() {
+        if (channelWrapper == null){
+            return "[ChannelWrapperConnectionHandle: null]";
+        } else {
+            return String.format("[ChannelWrapperConnectionHandle: %s]", channelWrapper.channel);
+        }
+    }
 }

@@ -3,8 +3,10 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
+import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.util.Factory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.util.Timer;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -18,8 +20,9 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     private ReconnectStrategy reconnectStrategy = null;
     private ChannelPipelineFactory channelPipelineFactory = null;
-    private Factory<ExecutorService> executorFactory = null;
+    private ConfiguredFactory<String, ExecutorService> executorFactory = null;
     private SocketAddress address;
+    private Timer timer;
 
     public SocketSignalProviderFactory() {
 
@@ -31,14 +34,18 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
 
     @Override
     public SignalProvider create() {
-//        NettySignalConnection connection = new NettySignalConnection(reconnectStrategy, channelPipelineFactory);
         NettySignalConnection connection = new NettySignalConnection(executorFactory, reconnectStrategy, channelPipelineFactory);
         connection.setConnectTimeoutSeconds(10);
         if (address != null) {
             connection.setAddress(address);
         }
 
-        return new SocketSignalProvider(connection);
+        return new SocketSignalProvider(connection, executorFactory.create("SocketSignalProvider-"), timer);
+    }
+
+    public SocketSignalProviderFactory timer(Timer timer) {
+        this.timer = timer;
+        return this;
     }
 
     public SocketSignalProviderFactory reconnectStrategy(ReconnectStrategy reconnectStrategy) {
@@ -51,7 +58,7 @@ public class SocketSignalProviderFactory implements Factory<SignalProvider> {
         return this;
     }
 
-    public SocketSignalProviderFactory executorFactory(Factory<ExecutorService> executorFactory) {
+    public SocketSignalProviderFactory executorFactory(ConfiguredFactory<String, ExecutorService> executorFactory) {
         this.executorFactory = executorFactory;
         return this;
     }
