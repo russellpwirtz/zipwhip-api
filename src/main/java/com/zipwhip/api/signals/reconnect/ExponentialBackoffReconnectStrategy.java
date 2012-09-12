@@ -18,7 +18,7 @@ public class ExponentialBackoffReconnectStrategy extends DefaultReconnectStrateg
     }
 
     public ExponentialBackoffReconnectStrategy(Timer timer) {
-        super(timer, new ExponentialBackoffRetryStrategy(Integer.MAX_VALUE, 1000, 2.0));
+        super(timer, new ExponentialBackoffRetryStrategy(1000, 2.0));
     }
 
 }

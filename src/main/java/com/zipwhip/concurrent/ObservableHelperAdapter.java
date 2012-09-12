@@ -13,10 +13,11 @@ import com.zipwhip.events.Observer;
  */
 public class ObservableHelperAdapter<T> extends ObservableHelper<T> {
 
-    final ObservableHelper<T> observableHelper;
+    private final ObservableHelper<T> observableHelper;
 
     public ObservableHelperAdapter(ObservableHelper<T> observableHelper) {
         this.observableHelper = observableHelper;
+        this.link(observableHelper);
     }
 
     @Override
@@ -46,17 +47,7 @@ public class ObservableHelperAdapter<T> extends ObservableHelper<T> {
 
     @Override
     public String toString() {
-        return observableHelper.toString();
-    }
-
-    @Override
-    public synchronized void destroy() {
-        this.destroy();
-    }
-
-    @Override
-    protected void onDestroy() {
-        observableHelper.destroy();
+        return String.format("[a: %s]", observableHelper.toString());
     }
 
     @Override

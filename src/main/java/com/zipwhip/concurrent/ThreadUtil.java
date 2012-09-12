@@ -1,5 +1,7 @@
 package com.zipwhip.concurrent;
 
+import com.zipwhip.util.Asserts;
+
 /**
  * Created with IntelliJ IDEA.
  * User: Michael
@@ -15,7 +17,7 @@ public class ThreadUtil {
         }
 
         if (!Thread.holdsLock(lock)) {
-            throw new IllegalStateException("Do not hold lock that is required: " + lock);
+            Asserts.assertTrue(Thread.holdsLock(lock), "Do not hold lock that is required: " + lock);
         }
     }
 

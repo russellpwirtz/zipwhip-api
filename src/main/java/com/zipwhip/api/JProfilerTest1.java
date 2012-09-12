@@ -47,7 +47,7 @@ public class JProfilerTest1 {
 //        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
 //        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
 //                .sessionKey(sessionKey);
 
         connectionFactory.setUsername("9139802972");

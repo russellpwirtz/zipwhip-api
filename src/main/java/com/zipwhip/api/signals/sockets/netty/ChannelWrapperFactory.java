@@ -62,10 +62,22 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         // This needs to be here for WakeLockAwareExecutors to be passed in for Android.
         ExecutorService executor = null;
         if (executorFactory != null) {
-            executor = executorFactory.create("ChannelWrapper-");
+            executor = executorFactory.create("ChannelWrapper");
         }
 
-        return new ChannelWrapper(id.incrementAndGet(), channel, signalConnection, executor);
+        ChannelWrapper channelWrapper = new ChannelWrapper(id.incrementAndGet(), channel, signalConnection, executor);
+
+        if (executor != null){
+            final ExecutorService finalExecutor = executor;
+            channelWrapper.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    finalExecutor.shutdownNow();
+                }
+            });
+        }
+
+        return channelWrapper;
     }
 
     @Override

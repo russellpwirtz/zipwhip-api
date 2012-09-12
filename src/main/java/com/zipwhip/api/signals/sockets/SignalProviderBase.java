@@ -39,10 +39,10 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
     private static final Logger LOGGER = Logger.getLogger(SignalProviderBase.class);
 
     protected static Factory<Long> CONNECTION_HANDLE_ID_FACTORY = IncrementingLongFactory.getInstance();
-    protected final Object CONNECTION_HANDLE_LOCK = new Object() {
+    protected final Object PROVIDER_CONNECTION_HANDLE_LOCK = new Object() {
         @Override
         public String toString() {
-            return "CONNECTION_HANDLE_LOCK";
+            return "PROVIDER_CONNECTION_HANDLE_LOCK";
         }
     };
 
@@ -72,7 +72,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
     public SignalProviderBase(Executor executor) {
 
         if (executor == null) {
-            executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalProvider-events-")));
+            executor = new DebuggingExecutor(Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalProvider-events(newSingleThreadExecutor)-")));
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {
@@ -130,7 +130,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
             throw new NullPointerException("Connection cannot be null");
         }
 
-        synchronized (CONNECTION_HANDLE_LOCK) {
+        synchronized (PROVIDER_CONNECTION_HANDLE_LOCK) {
             synchronized (connectionHandle) {
                 ConnectionHandle finalConnectionHandle = getUnchangingConnectionHandle();
                 if (finalConnectionHandle == null || finalConnectionHandle.isDestroyed()) {
@@ -150,7 +150,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
 
     protected void accessConnectionHandle() {
         ensureLock(SignalProviderBase.this);
-        ensureLock(CONNECTION_HANDLE_LOCK);
+        ensureLock(PROVIDER_CONNECTION_HANDLE_LOCK);
     }
 
     /**

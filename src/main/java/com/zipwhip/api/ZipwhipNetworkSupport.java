@@ -141,7 +141,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         }
 
         if (callbackExecutor == null){
-            callbackExecutor = ExecutorFactory.create("ZipwhipNetworkSupport-callbacks");
+            callbackExecutor = ExecutorFactory.newInstance("ZipwhipNetworkSupport-callbacks");
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {

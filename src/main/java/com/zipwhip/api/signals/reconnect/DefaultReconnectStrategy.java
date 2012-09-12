@@ -51,7 +51,7 @@ public class DefaultReconnectStrategy extends ReconnectStrategy {
         this.timer = timer;
 
         if (strategy == null) {
-            strategy = new ExponentialBackoffRetryStrategy(0, 1, 2.0);
+            strategy = new ExponentialBackoffRetryStrategy(1, 2.0);
         }
         this.strategy = strategy;
     }

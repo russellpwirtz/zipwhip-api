@@ -94,7 +94,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         if (executor != null) {
             this.executor = executor;
         } else {
-            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection-"));
+            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("SignalConnection(newSingleThreadExecutor)-"));
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {

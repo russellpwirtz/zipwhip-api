@@ -72,7 +72,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         this.connection = new ChannelWrapperConnectionHandle(id, signalConnectionBase, this);
         this.connection.link(this);
         if (executor == null){
-            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
+            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper(newSingleThreadExecutor)-"));
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {

@@ -65,9 +65,10 @@ public class DefaultZipwhipClientIntegrationTest {
         public ZipwhipClient create() {
 
             try {
-                ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance()
-                        .host(host)
-                        .sessionKey(sessionKey);
+                ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
+                connectionFactory.setHost(host);
+                connectionFactory.setSessionKey(sessionKey);
+
                 SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                         .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
                         .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))

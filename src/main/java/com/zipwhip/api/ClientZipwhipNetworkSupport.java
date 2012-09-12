@@ -45,7 +45,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
     protected static final Logger LOGGER = Logger.getLogger(ClientZipwhipNetworkSupport.class);
 
-    protected ImportantTaskExecutor importantTaskExecutor;
+    protected final ImportantTaskExecutor importantTaskExecutor;
     protected long signalsConnectTimeoutInSeconds = 10;
 
     protected SignalProvider signalProvider;
@@ -56,13 +56,27 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
     // do we have a current SubscriptionCompleteCommand to use.
     protected ObservableFuture connectFuture;
 
-    public ClientZipwhipNetworkSupport(Executor executor, ApiConnection connection, SignalProvider signalProvider) {
+    /**
+     *
+     *
+     * @param executor The Executor that's used for processing callbacks, futures, and SignalProvider events.
+     * @param importantTaskExecutor This class gives us the ability to expire and cancel futures (SubscriptionCompleteCommand never comes back).
+     * @param connection For talking with Zipwhip (message/send)
+     * @param signalProvider For signal i/o
+     */
+    public ClientZipwhipNetworkSupport(Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
         super(executor, connection);
 
         if (signalProvider != null) {
             setSignalProvider(signalProvider);
             link(signalProvider);
         }
+
+        if (importantTaskExecutor == null){
+            importantTaskExecutor = new ImportantTaskExecutor();
+            this.link(importantTaskExecutor);
+        }
+        this.importantTaskExecutor = importantTaskExecutor;
 
         // Start listening to provider events that interest us
         initSignalProviderEvents();
@@ -256,14 +270,16 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                                                                             }
                                                                         }
 
-                                                                        synchronized (connectionHandle) {
-                                                                            if (connectionHandle.isDestroyed()) {
-                                                                                LOGGER.error("UpdateLocalStoreObserver: The connectionHandle wasn't active anymore. This must have been for a previous connection. Quitting: " + connectionHandle);
-                                                                                return;
-                                                                            }
+                                                                        synchronized (settingsStore) {
+                                                                            synchronized (connectionHandle) {
+                                                                                if (connectionHandle.isDestroyed()) {
+                                                                                    LOGGER.error("UpdateLocalStoreObserver: The connectionHandle wasn't active anymore. This must have been for a previous connection. Quitting: " + connectionHandle);
+                                                                                    return;
+                                                                                }
 
-                                                                            LOGGER.debug("UpdateLocalStoreObserver: saving data " + currentClientId);
-                                                                            onSubscriptionComplete(currentClientId);
+                                                                                LOGGER.debug("UpdateLocalStoreObserver: saving data " + currentClientId);
+                                                                                onSubscriptionComplete(currentClientId);
+                                                                            }
                                                                         }
                                                                     }
                                                                 }));
@@ -402,14 +418,6 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
     public void setSignalProvider(SignalProvider signalProvider) {
         this.signalProvider = signalProvider;
-    }
-
-    public ImportantTaskExecutor getImportantTaskExecutor() {
-        return importantTaskExecutor;
-    }
-
-    public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
-        this.importantTaskExecutor = importantTaskExecutor;
     }
 
     public long getSignalsConnectTimeoutInSeconds() {

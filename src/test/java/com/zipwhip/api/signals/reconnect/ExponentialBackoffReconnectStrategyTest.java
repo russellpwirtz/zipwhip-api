@@ -33,7 +33,7 @@ public class ExponentialBackoffReconnectStrategyTest {
 	 */
 	@Before
 	public void setUp() throws Exception {
-        retryStrategy = new ExponentialBackoffRetryStrategy(100, 1000, 2.0);
+        retryStrategy = new ExponentialBackoffRetryStrategy(1000, 2.0);
 //        strategy = new DefaultReconnectStrategy(null, retryStrategy);
 //		strategy.setSignalConnection(new CannotConnectSignalConnection());
 		Logger.getRootLogger().setLevel(Level.DEBUG);

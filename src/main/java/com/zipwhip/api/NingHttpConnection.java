@@ -6,6 +6,7 @@ import com.ning.http.multipart.FilePart;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -29,7 +30,7 @@ import java.util.concurrent.*;
  * <p/>
  * This class is thread safe.
  */
-public class NingHttpConnection extends DestroyableBase implements ApiConnection {
+public class NingHttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
     private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
 

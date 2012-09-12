@@ -102,9 +102,9 @@ public class NestedObservableFuture<T> extends DefaultObservableFuture<T> {
     @Override
     public String toString() {
         if (nestedFuture != null) {
-            return "Nested/" + nestedFuture.toString();
+            return String.format("[n: %s]", nestedFuture.toString());
         } else {
-            return "NestedObservableFuture";
+            return "[n: null]";
         }
     }
 

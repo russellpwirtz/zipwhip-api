@@ -41,8 +41,10 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createViaUsername(String username, String password) throws Exception {
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
+        connectionFactory.setUsername(username);
+        connectionFactory.setPassword(password);
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance().username(username).password(password);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -61,8 +63,10 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaUsername(String username, String password) throws Exception {
+        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        connectionFactory.setUsername(username);
+        connectionFactory.setPassword(password);
 
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncInstance().username(username).password(password);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -79,8 +83,8 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createViaSessionKey(String sessionKey) throws Exception {
-
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newInstance().sessionKey(sessionKey);
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
+        connectionFactory.setSessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -98,8 +102,8 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaSessionKey(String sessionKey) throws Exception {
-
-        ApiConnectionFactory connectionFactory = ApiConnectionFactory.newAsyncInstance().sessionKey(sessionKey);
+        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        connectionFactory.setSessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
         ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);
@@ -114,10 +118,8 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() {
-        DefaultZipwhipClient client = new DefaultZipwhipClient(null, connectionFactory.create(), signalProviderFactory.create());
+        DefaultZipwhipClient client = new DefaultZipwhipClient(null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory.create());
 
-        // this guy will do our /signals/connect calls with cancellation and timeout support.
-        client.setImportantTaskExecutor(importantTaskExecutor);
 
         return client;
     }
