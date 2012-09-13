@@ -29,8 +29,14 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
         this.delegate = delegate;
     }
 
+    private void debug(String name, ChannelHandlerContext ctx, MessageEvent e) {
+        LOGGER.debug(String.format("signalsChannelHandler.%s(%s, %s) [paused:%s, destroyed:%s]",
+                name, ctx == null ? null : ctx.getChannel(), e, delegate == null ? null : delegate.isPaused(), delegate == null ? null : delegate.isDestroyed()));
+    }
+
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        debug("writeRequested", ctx, e);
         Object object = e.getMessage();
 
         if (object instanceof PingPongCommand) {
@@ -45,13 +51,14 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        debug("writeRequested", ctx, e);
         if (delegate.isPaused()) {
             LOGGER.error("Paused so ignoring messageReceived?!?!");
             return;
         }
 
-        Object msg = event.getMessage();
+        Object msg = e.getMessage();
 
         if (!(msg instanceof Command)) {
             LOGGER.warn("Received a message that was not a command!");

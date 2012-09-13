@@ -17,8 +17,11 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -105,15 +108,24 @@ public class NettySignalConnection extends SignalConnectionBase {
         if (executorFactory == null){
 
             executorFactory = new CommonExecutorFactory() {
+                private Map<String, NamedThreadFactory> factories = new HashMap<String, NamedThreadFactory>();
+                private NamedThreadFactory getOrCreate(String name) {
+                    if (factories.containsKey(name)) {
+                        return factories.get(name);
+                    }
+                    factories.put(name, new NamedThreadFactory(name));
+                    return factories.get(name);
+                }
+
                 @Override
                 public ExecutorService create(CommonExecutorTypes type, String name) {
                     switch (type) {
                         case BOSS:
-                            return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-boss"));
+                            return java.util.concurrent.Executors.newFixedThreadPool(1, getOrCreate(name + "-boss"));
                         case WORKER:
-                            return java.util.concurrent.Executors.newFixedThreadPool(10, new NamedThreadFactory(name + "-worker"));
+                            return java.util.concurrent.Executors.newFixedThreadPool(10, getOrCreate(name + "-worker"));
                         case EVENTS:
-                            return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-events"));
+                            return java.util.concurrent.Executors.newFixedThreadPool(1, getOrCreate(name + "-events"));
                     }
 
                     throw new IllegalStateException("Not sure! " + type);
@@ -121,10 +133,10 @@ public class NettySignalConnection extends SignalConnectionBase {
             };
         }
 
-        channelFactory = new NioClientSocketChannelFactory(
-                executorFactory.create(CommonExecutorTypes.BOSS, "nio"),
-                executorFactory.create(CommonExecutorTypes.WORKER, "nio"), 1, 1);
-//        channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
+//        channelFactory = new NioClientSocketChannelFactory(
+//                executorFactory.create(CommonExecutorTypes.BOSS, "nio"),
+//                executorFactory.create(CommonExecutorTypes.WORKER, "nio"), 1, 1);
+        channelFactory = new OioClientSocketChannelFactory(executorFactory.create(CommonExecutorTypes.BOSS, "Netty OIO"));
 
         this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this, executorFactory);
         this.link(channelWrapperFactory);

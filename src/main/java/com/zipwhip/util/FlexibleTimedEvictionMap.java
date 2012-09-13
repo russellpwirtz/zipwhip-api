@@ -10,7 +10,16 @@ import java.util.TreeMap;
  * Date: 6/29/12
  * Time: 4:18 PM
  *
- * This
+ * This class will hold items that match a certain criteria. First, it can be considered a Queue that holds
+ * up to MAX items in it. It will discard the oldest items when the MAX has been reached. Additionally it has
+ * an age requirement. It will only evict tokens that are older than AGE.
+ *
+ * The edit conditions can be written as:
+ *
+ *    - It will only evict a token that matches BOTH conditions:
+ *
+ *        - Older than MIN_AGE
+ *        - More than MAX_COUNT in the map and OLDEST.
  */
 public class FlexibleTimedEvictionMap<K, V> extends TreeMap<K, V> {
 
