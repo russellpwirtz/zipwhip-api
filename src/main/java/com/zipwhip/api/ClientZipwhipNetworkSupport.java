@@ -113,6 +113,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                 String sessionKey = settingsStore.get(SettingsStore.Keys.SESSION_KEY);
                 Map<String, Long> versions = versionsStore.get();
 
+                if (isConnected()) {
+                    return new FakeObservableFuture<ConnectionHandle>(this, signalProvider.getConnectionHandle());
+                }
+
                 // this future updates itself (clearing out this.connectFuture)
                 final NestedObservableFuture<ConnectionHandle> future = new NestedObservableFuture<ConnectionHandle>(this);
                 synchronized (future) {
@@ -120,7 +124,12 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     // set it FIRST in case the below line finishes too early! (aka: synchronously!)
                     setConnectFuture(future);
 
-                    ObservableFuture<ConnectionHandle> requestFuture = executeConnectWithFailureDetection(clientId, sessionKey, presence, versions, expectingSubscriptionCompleteCommand);
+                    ObservableFuture<ConnectionHandle> requestFuture = executeConnectWithFailureDetection(
+                                                                            clientId,
+                                                                            sessionKey,
+                                                                            presence,
+                                                                            versions,
+                                                                            expectingSubscriptionCompleteCommand);
 
                     requestFuture.addObserver(
                             new OnlyRunIfSuccessfulObserverAdapter<ConnectionHandle>(
@@ -140,7 +149,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
 
                     // need to only alert success from the executor thread.
-                    requestFuture.addObserver(new CopyFutureStatusToNestedFuture<ConnectionHandle>(future));
+//                    requestFuture.addObserver(new CopyFutureStatusToNestedFuture<ConnectionHandle>(future));
+
+                    // let the cancellation cascade down.
+                    future.setNestedFuture(requestFuture);
 
                     return future;
                 }
@@ -594,7 +606,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                     synchronized (requestFuture) {
                         if (!requestFuture.isSuccess()) { // this also covers isCancelled()
-                            LOGGER.error("onSignalProviderConnectCompleteObserver: The requestFuture was cancelled or failed.");
+                            LOGGER.error("onSignalProviderConnectCompleteObserver: The requestFuture was cancelled or failed. Cascading the value to our resultFuture: " + resultFuture);
                             NestedObservableFuture.syncState(requestFuture, resultFuture, null);
                             return;
                         }

@@ -99,6 +99,6 @@ public class SignalProviderConnectionHandle extends ConnectionHandleBase impleme
 
     @Override
     protected void onDestroy() {
-        // we were destroyed!
+        LOGGER.debug("SignalProviderConnectionHandle destroyed: ");
     }
 }

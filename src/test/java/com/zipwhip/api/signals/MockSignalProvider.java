@@ -85,6 +85,11 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
+    public ConnectionHandle getConnectionHandle() {
+        return connectionHandle;
+    }
+
+    @Override
     public ObservableFuture<ConnectionHandle> connect() {
         return connect(null);
     }

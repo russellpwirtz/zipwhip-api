@@ -168,6 +168,11 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
         ensureLock(connectionHandle);
     }
 
+    @Override
+    public ConnectionHandle getConnectionHandle() {
+        return connectionHandle;
+    }
+
     protected SignalProviderConnectionHandle getUnchangingConnectionHandle() {
         accessConnectionHandle();
         return connectionHandle;
@@ -176,6 +181,11 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
     protected void clearConnectionHandle(final ConnectionHandle finalConnectionHandle) {
         changeConnectionHandle(finalConnectionHandle);
 
+        if (connectionHandle != null){
+            Asserts.assertTrue(finalConnectionHandle == connectionHandle, String.format("The connectionHandle clear was messed up: %s != %s", connectionHandle, finalConnectionHandle));
+        }
+
+        LOGGER.warn(String.format("The connectionHandle was cleared by %s", Thread.currentThread().getName()));
         connectionHandle = null;
     }
 

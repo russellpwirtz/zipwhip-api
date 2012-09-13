@@ -111,7 +111,7 @@ public class NettySignalConnection extends SignalConnectionBase {
                         case BOSS:
                             return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-boss"));
                         case WORKER:
-                            return java.util.concurrent.Executors.newFixedThreadPool(2, new NamedThreadFactory(name + "-worker"));
+                            return java.util.concurrent.Executors.newFixedThreadPool(10, new NamedThreadFactory(name + "-worker"));
                         case EVENTS:
                             return java.util.concurrent.Executors.newFixedThreadPool(1, new NamedThreadFactory(name + "-events"));
                     }
@@ -121,7 +121,9 @@ public class NettySignalConnection extends SignalConnectionBase {
             };
         }
 
-        channelFactory = new NioClientSocketChannelFactory(executorFactory.create(CommonExecutorTypes.BOSS, "nio"), executorFactory.create(CommonExecutorTypes.WORKER, "nio"));
+        channelFactory = new NioClientSocketChannelFactory(
+                executorFactory.create(CommonExecutorTypes.BOSS, "nio"),
+                executorFactory.create(CommonExecutorTypes.WORKER, "nio"), 1, 1);
 //        channelFactory = new OioClientSocketChannelFactory(Executors.newSingleThreadExecutor());
 
         this.channelWrapperFactory = new ChannelWrapperFactory(channelPipelineFactory, channelFactory, this, executorFactory);

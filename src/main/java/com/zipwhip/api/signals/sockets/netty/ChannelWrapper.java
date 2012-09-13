@@ -140,7 +140,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             if (future.getCause() != null) {
                 throw future.getCause();
             } else {
-                throw new IllegalStateException("The future was not successful " + future);
+                throw new IllegalStateException(String.format("The future was not successful %s/%s/%s/%s", future.isDone(), future.isSuccess(), future.getCause(), future.getChannel()));
             }
         }
     }

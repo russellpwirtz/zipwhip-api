@@ -464,6 +464,12 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
         @Override
         public void notify(Object sender, ConnectionHandle socketConnectionHandle) {
+            ObservableFuture<ConnectionHandle> connectionFuture = getUnchangingConnectFuture();
+            if (connectionFuture != null && !connectionFuture.isDone()) {
+                LOGGER.debug("executeDisconnectStateObserver: Currently in the connecting phase, ignoring notify()");
+                return;
+            }
+
             synchronized (PROVIDER_CONNECTION_HANDLE_LOCK) {
                 accessConnectionHandle();
 
@@ -487,27 +493,25 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     };
 
     private void executeDisconnect(ConnectionHandle connectionHandle) {
-        synchronized (signalConnection) {
-            accessConnectionHandle();
+        LOGGER.debug("SignalConnection said disconnected, we're going to update our local state.");
 
-            final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = this.getUnchangingConnectionHandle();
+        final SignalProviderConnectionHandle finalSignalProviderConnectionHandle = this.getUnchangingConnectionHandle();
 
-            if (finalSignalProviderConnectionHandle == null) {
-                LOGGER.error("Does not seem to be an active ConnectionHandle. Quitting executeDisconnect()");
-                return;
-            } else if (finalSignalProviderConnectionHandle != connectionHandle) {
-                LOGGER.error("The connectionHandles didnt agree, so not executing the disconnect events");
-                return;
-            }
-
-            synchronized (finalSignalProviderConnectionHandle) {
-                // We have the SignalConnection lock so we're allowed to set this.
-                clearConnectionHandle(connectionHandle);
-                ((SignalProviderConnectionHandle) connectionHandle).destroy();
-            }
+        if (finalSignalProviderConnectionHandle == null) {
+            LOGGER.error("Does not seem to be an active ConnectionHandle. Quitting executeDisconnect()");
+            return;
+        } else if (finalSignalProviderConnectionHandle != connectionHandle) {
+            LOGGER.error("The connectionHandles didnt agree, so not executing the disconnect events");
+            return;
         }
 
-        LOGGER.debug("Announcing connection changed");
+        synchronized (finalSignalProviderConnectionHandle) {
+            // We have the SignalConnection lock so we're allowed to set this.
+            finalSignalProviderConnectionHandle.destroy();
+            clearConnectionHandle(finalSignalProviderConnectionHandle);
+        }
+
+        LOGGER.debug("Announcing connection changed (successing the 'disconnectFuture')");
         // TODO: do we execute these observers while holding locks?
         connectionHandle.getDisconnectFuture().setSuccess(connectionHandle);
         connectionChangedEvent.notifyObservers(connectionHandle, Boolean.FALSE);
@@ -682,6 +686,9 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 clearConnectFuture(connectFuture);
             }
         }
+
+        // announce we destroyed it.
+        connectionHandle.getDisconnectFuture().setSuccess(connectionHandle);
     }
 
     private void sendConnectCommand(final ObservableFuture<ConnectionHandle> finalConnectFuture, final SignalProviderConnectionHandle connectionHandle, final String clientId, Map<String, Long> versions) {
@@ -867,6 +874,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     public void ping() {
         signalConnection.ping();
     }
+
 
     public SignalConnection getSignalConnection() {
         return signalConnection;
@@ -1192,6 +1200,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 synchronized (finalConnectFuture) {
                     if (finalConnectFuture.isCancelled()) {
                         synchronized (finalSignalProviderConnectionHandle) {
+                            LOGGER.warn("Our connection was cancelled. " + finalConnectFuture);
                             tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
                             // oh shit the returned future was cancelled!
                             Asserts.assertTrue(getConnectFuture() != finalConnectFuture, "The futures shouldn't be the same!");
@@ -1203,13 +1212,13 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                     synchronized (finalSignalProviderConnectionHandle) {
                         synchronized (c) {
                             if (signalConnectionFuture.isCancelled()) {
-                                tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
                                 LOGGER.warn("Our connection was cancelled. " + signalConnectionFuture);
+                                tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
                                 finalConnectFuture.setFailure(new Exception(String.format("The connectionHandles didn't match up. Was %s expected %s", c, finalSignalProviderConnectionHandle)));
                                 return;
                             } else if (signalConnectionFuture.isFailed()) {
-                                tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
                                 LOGGER.warn("Our connection was failed. " + signalConnectionFuture);
+                                tearDownConnection(finalSignalProviderConnectionHandle, finalConnectFuture);
                                 finalConnectFuture.setFailure(signalConnectionFuture.getCause());
                                 return;
                             } else if (finalSignalProviderConnectionHandle != c) {

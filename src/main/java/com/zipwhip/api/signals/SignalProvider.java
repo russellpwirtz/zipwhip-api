@@ -217,5 +217,11 @@ public interface SignalProvider extends Destroyable {
      */
     void setVersions(Map<String, Long> versions);
 
+    /**
+     * Gets the currently connected ConnectionHandle
+     *
+     * @return
+     */
+    ConnectionHandle getConnectionHandle();
 
 }

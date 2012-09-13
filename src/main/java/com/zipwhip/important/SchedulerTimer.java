@@ -30,7 +30,7 @@ public class SchedulerTimer implements Timer {
         if (scheduler == null){
             this.scheduler = new TimerScheduler("SchedulerTimer");
         } else {
-            this.scheduler = scheduler;
+            this.scheduler = new ScopedScheduler(scheduler);
         }
 
         this.scheduler.onScheduleComplete(this.onTimeoutComplete);

@@ -473,7 +473,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
         } else if (runnable == null) {
             throw new NullPointerException("The runnable can never be null.");
         } else if (connectionHandle != c) {
-            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, c));
+            LOGGER.error(String.format("runIfActive: The original connectionHandle %s was not the same as the current connectionHandle %s. Quitting.", connectionHandle, c));
             return;
         }
 
@@ -486,7 +486,7 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
                         if (w != connectionHandle) {
                             // they are not the same instance, they are not active.
                             // Kick them out.
-                            LOGGER.error(String.format("The connectionHandle %s was not the same as %s. Quitting.", connectionHandle, getConnectionHandle()));
+                            LOGGER.error(String.format("runIfActive: The original connectionHandle %s was not the same as the current connectionHandle %s. Quitting.", connectionHandle, w));
                             return;
                         } else if (w.isDestroyed()) {
                             // the wrapper is currently in the state of terminating.
