@@ -222,9 +222,11 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                         // we'll be interrupting the signalConnection, but that's ok.
                     case CONNECTED:
                         final ObservableFuture<ConnectionHandle> connectFuture = getUnchangingConnectFuture();
-                        synchronized (connectFuture) {
-                            // we're interrupting our tasks
-                            cancelConnectFuture();
+                        if (connectFuture != null){
+                            synchronized (connectFuture) {
+                                // we're interrupting our tasks
+                                cancelConnectFuture();
+                            }
                         }
                         break;
                     case AUTHENTICATED:
@@ -636,7 +638,6 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
             ConnectionState signalConnectionState = signalConnection.getConnectionState();
             synchronized (PROVIDER_CONNECTION_HANDLE_LOCK) {
                 final SignalProviderConnectionHandle connectionHandle = getUnchangingConnectionHandle();
-
                 if (connectionHandle == null) {
                     return ConnectionState.DISCONNECTED;
                 }

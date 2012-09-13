@@ -32,21 +32,10 @@ public abstract class SignalConnectionBaseConnectionHandleBase extends Connectio
         signalConnection.executor.execute(new Runnable() {
             @Override
             public void run() {
-
-                synchronized (SignalConnectionBaseConnectionHandleBase.this) {
-                    if (isDestroyed()) {
-                        // how did this happen??
-                        if (!disconnectFuture.isDone()) {
-                            throw new IllegalStateException("The future is not done, but the connection is destroyed??");
-                        }
-                    }
-
-                    // the disconnectFuture that it returns will be the exact same future we already have
-                    Asserts.assertTrue(
-                            getDisconnectFuture() == disconnectFuture &&
-                                    disconnectFuture == signalConnection.disconnect(SignalConnectionBaseConnectionHandleBase.this, causedByNetwork), "The disconnectFutures must match!");
-
-                }
+                // the disconnectFuture that it returns will be the exact same future we already have
+                Asserts.assertTrue(
+                        getDisconnectFuture() == disconnectFuture &&
+                                disconnectFuture == signalConnection.disconnect(SignalConnectionBaseConnectionHandleBase.this, causedByNetwork), "The disconnectFutures must match!");
             }
         });
     }
