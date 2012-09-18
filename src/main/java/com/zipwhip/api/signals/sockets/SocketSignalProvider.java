@@ -6,13 +6,11 @@ import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
-import com.zipwhip.important.SchedulerTimer;
 import com.zipwhip.important.schedulers.TimerScheduler;
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
@@ -872,8 +870,12 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     }
 
     @Override
-    public void ping() {
-        signalConnection.ping();
+    public ObservableFuture<Boolean> ping() {
+        if (signalConnection.getConnectionState() == ConnectionState.CONNECTED) {
+            return signalConnection.ping();
+        } else {
+            return new FakeFailingObservableFuture<Boolean>(this, new Exception("Not connected"));
+        }
     }
 
 

@@ -1,13 +1,8 @@
 package com.zipwhip.important;
 
-import com.zipwhip.api.signals.SignalConnection;
-import com.zipwhip.api.signals.commands.ConnectCommand;
-import com.zipwhip.api.signals.commands.SerializingCommand;
-import com.zipwhip.api.signals.sockets.ConnectCommandTask;
-import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.util.FutureDateUtil;
 import org.junit.Before;
 import org.junit.Test;

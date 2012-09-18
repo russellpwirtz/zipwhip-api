@@ -26,6 +26,11 @@ public class ChannelWrapperConnectionHandle extends SignalConnectionBaseConnecti
 
     @Override
     public ObservableFuture<Boolean> write(Object object) {
+        if (isDestroyed()){
+            throw new IllegalAccessError("The connection is destroyed and you tried to 'write'");
+        } else if (channelWrapper == null) {
+            throw new IllegalAccessError("The channelWrapper is null and you tried to 'write'!");
+        }
         return channelWrapper.write(object);
     }
 

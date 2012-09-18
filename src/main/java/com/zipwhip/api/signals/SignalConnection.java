@@ -63,7 +63,7 @@ public interface SignalConnection extends Destroyable {
     /**
      * Cancel any pending network keepalives and fire one immediately.
      */
-    void ping();
+    ObservableFuture<Boolean> ping();
 
     /**
      * Send something to the SignalServer

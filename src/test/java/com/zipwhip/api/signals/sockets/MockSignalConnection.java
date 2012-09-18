@@ -7,7 +7,7 @@ import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBaseConnectionHandleBase;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.DebuggingExecutor;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
 import org.apache.log4j.Logger;
 

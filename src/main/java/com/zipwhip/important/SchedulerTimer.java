@@ -4,10 +4,11 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.HashCodeComparator;
-import org.apache.log4j.Logger;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SchedulerTimer implements Timer {
 
-    private static final Logger LOGGER = Logger.getLogger(SchedulerTimer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerTimer.class);
 
     private Map<String, Timeout> map = Collections.synchronizedMap(new TreeMap<String, Timeout>(HashCodeComparator.getInstance()));
 
@@ -30,7 +31,12 @@ public class SchedulerTimer implements Timer {
         if (scheduler == null){
             this.scheduler = new TimerScheduler("SchedulerTimer");
         } else {
-            this.scheduler = new ScopedScheduler(scheduler);
+            this.scheduler = new ScopedScheduler(scheduler) {
+                @Override
+                public String toString() {
+                    return String.format("[SchedulerTimer: %s]", SchedulerTimer.this.toString());
+                }
+            };
         }
 
         this.scheduler.onScheduleComplete(this.onTimeoutComplete);

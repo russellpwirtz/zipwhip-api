@@ -30,8 +30,8 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
     }
 
     private void debug(String name, ChannelHandlerContext ctx, MessageEvent e) {
-        LOGGER.debug(String.format("signalsChannelHandler.%s(%s, %s) [paused:%s, destroyed:%s]",
-                name, ctx == null ? null : ctx.getChannel(), e, delegate == null ? null : delegate.isPaused(), delegate == null ? null : delegate.isDestroyed()));
+        LOGGER.debug(String.format("signalsChannelHandler(%s).%s(%s, %s) [paused:%s, destroyed:%s]",
+                this.hashCode(), name, ctx == null ? null : ctx.getChannel(), e, delegate == null ? null : delegate.isPaused(), delegate == null ? null : delegate.isDestroyed()));
     }
 
     @Override

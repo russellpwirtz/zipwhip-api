@@ -7,7 +7,7 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
 import org.junit.Before;
 import org.junit.Test;

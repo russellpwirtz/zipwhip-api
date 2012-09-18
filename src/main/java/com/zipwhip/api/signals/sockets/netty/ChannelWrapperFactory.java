@@ -62,7 +62,7 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
         channel.getConfig().setConnectTimeoutMillis(getConnectTimeoutSeconds() * 1000);
         channel.getConfig().setOption("receiveBufferSize", 1024);
         channel.getConfig().setOption("sendBufferSize", 1024);
-        channel.getConfig().setOption("keepAlive", true);
+//        channel.getConfig().setOption("keepAlive", true);
 //        channel.getConfig().setOption("tcpNoDelay", false);   // assuming default?
 //        channel.getConfig().setOption("reuseAddress", false); // assuming default?
 //        channel.getConfig().setOption("trafficClass", 0x04);    // RELIABILITY

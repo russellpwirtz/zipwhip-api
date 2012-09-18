@@ -14,7 +14,7 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StateManager;
 
@@ -219,8 +219,9 @@ public class MockSignalProvider implements SignalProvider {
     }
 
     @Override
-    public void ping() {
+    public ObservableFuture<Boolean> ping() {
         //To change body of implemented methods use File | Settings | File Templates.
+        return new FakeObservableFuture<Boolean>(this, true);
     }
 
     @Override

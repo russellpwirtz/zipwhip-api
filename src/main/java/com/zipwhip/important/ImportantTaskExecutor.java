@@ -236,7 +236,12 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             this.scheduler.removeOnScheduleComplete(onTimerScheduleComplete);
         }
 
-        this.scheduler = new ScopedScheduler(scheduler);
+        this.scheduler = new ScopedScheduler(scheduler) {
+            @Override
+            public String toString() {
+                return String.format("[ImportantTaskScheduler: %s]", ImportantTaskExecutor.this.toString());
+            }
+        };
 
         if (this.scheduler != null) {
             this.scheduler.onScheduleComplete(onTimerScheduleComplete);
@@ -294,5 +299,10 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         public String getRequestId() {
             return requestId;
         }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[ImportantTaskExecutor: %s", hashCode());
     }
 }

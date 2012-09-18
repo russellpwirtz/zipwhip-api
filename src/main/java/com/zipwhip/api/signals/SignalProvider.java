@@ -117,7 +117,7 @@ public interface SignalProvider extends Destroyable {
      * <p/>
      * Calling {@code ping} will cancel any pending network keepalives and fire one immediately.
      */
-    void ping();
+    ObservableFuture<Boolean> ping();
 
     /**
      * You can Observe this event to capture signals that come in.

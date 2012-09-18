@@ -14,7 +14,7 @@ import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeObservableFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
@@ -398,9 +398,9 @@ public abstract class SignalConnectionBase extends CascadingDestroyableBase impl
     }
 
     @Override
-    public void ping() {
+    public ObservableFuture<Boolean> ping() {
         LOGGER.debug("Keepalive requested");
-        send(PingPongCommand.getShortformInstance());
+        return send(PingPongCommand.getShortformInstance());
     }
 
     @Override

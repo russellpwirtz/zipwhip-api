@@ -6,6 +6,8 @@ import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.UUID;
@@ -19,6 +21,8 @@ import java.util.UUID;
  * Does not cascade destruction to the underlying scheduler
  */
 public class ScopedScheduler extends CascadingDestroyableBase implements Scheduler, Observer<String> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopedScheduler.class);
 
     private final Scheduler scheduler;
     private final String name;
@@ -55,10 +59,16 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
         String key = item.replace(name, "");
         if (StringUtil.equalsIgnoreCase(key, item)) {
             // no change? return, not for us.
+            LOGGER.debug(String.format("(%s) Ignoring %s because it was not our scope.", this, item));
             return;
         }
 
         observableHelper.notifyObservers(sender, key);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[ScopedScheduler: %s]", name);
     }
 
     @Override
