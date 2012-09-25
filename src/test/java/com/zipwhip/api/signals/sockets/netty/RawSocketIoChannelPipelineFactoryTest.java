@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandDecoder;
-import com.zipwhip.api.signals.sockets.netty.pipeline.handler.SocketIoCommandEncoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandDecoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandEncoder;
 import junit.framework.Assert;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;

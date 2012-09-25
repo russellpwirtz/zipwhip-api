@@ -2,9 +2,11 @@ package com.zipwhip.api;
 
 import com.zipwhip.api.response.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ExecutorFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.InputRunnable;
 import org.apache.log4j.Logger;
@@ -116,7 +118,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
      * This importantTaskExecutor really matters. This is the importantTaskExecutor that runs client code. I mean, the guys that call us.
      * They are observing our web calls via this importantTaskExecutor. If it's too small, and they are too slow, it'll backlog.
      */
-    private Executor callbackExecutor = Executors.newSingleThreadExecutor();
+    protected final Executor callbackExecutor;
 
     protected ApiConnection connection;
     protected ResponseParser responseParser;
@@ -125,14 +127,29 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
      * Create a new default {@code ZipwhipNetworkSupport}
      */
     public ZipwhipNetworkSupport() {
-        this(new HttpConnection());
+        this(null);
     }
 
     public ZipwhipNetworkSupport(ApiConnection connection) {
+        this(null, connection);
+    }
+
+    public ZipwhipNetworkSupport(Executor callbackExecutor, ApiConnection connection) {
 
         if (connection == null) {
-            throw new IllegalArgumentException("Connection must not be null");
+            connection = new HttpConnection();
         }
+
+        if (callbackExecutor == null){
+            callbackExecutor = ExecutorFactory.newInstance("ZipwhipNetworkSupport-callbacks");
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ((ExecutorService)ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
+                }
+            });
+        }
+        this.callbackExecutor = callbackExecutor;
 
         setConnection(connection);
         link(connection);
@@ -174,6 +191,10 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     protected ServerResponse executeSync(final String method, final Map<String, Object> params, List<File> files, boolean requiresAuthentication) throws Exception {
         return get(executeAsync(method, params, files, requiresAuthentication, FORWARD_RUNNABLE));
+    }
+
+    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params) throws Exception {
+        return executeAsync(method, params, true, null);
     }
 
     protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
@@ -245,7 +266,11 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                 }
 
                 try {
-                    businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
+                    if (businessLogic != null){
+                        businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
+                    } else {
+                        result.setSuccess(null);
+                    }
                 } catch (Exception e) {
                     LOGGER.fatal("Problem with running the business logic conversion", e);
                     // this will execute in the "callbackExecutor"

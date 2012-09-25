@@ -1,7 +1,7 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
-import com.zipwhip.api.signals.PresenceUtil;
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;

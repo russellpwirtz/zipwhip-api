@@ -2,14 +2,16 @@ package com.zipwhip.api;
 
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
+import com.zipwhip.concurrent.ExecutorFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.DownloadURL;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
 import org.apache.log4j.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.File;
 import java.io.InputStream;
@@ -26,7 +28,7 @@ import java.util.concurrent.*;
  * <p/>
  * This class is thread safe.
  */
-public class HttpConnection extends DestroyableBase implements ApiConnection {
+public class HttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
     private static final Logger LOGGER = Logger.getLogger(HttpConnection.class);
 
@@ -35,20 +37,50 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     private String sessionKey;
     private SignTool authenticator;
-    private ExecutorService bossExecutor = Executors.newSingleThreadExecutor();
-    private ExecutorService workerExecutor = Executors.newFixedThreadPool(10);
+    private final Executor bossExecutor;
+    private final Executor workerExecutor;
 
     public HttpConnection() {
-        super();
+        this((ExecutorService)null, null);
     }
 
     public HttpConnection(String apiKey, String secret) throws Exception {
-        this(new SignTool(apiKey, secret));
+        this(null, null, new SignTool(apiKey, secret));
     }
 
-    public HttpConnection(SignTool authenticator) {
-        this();
+    public HttpConnection(Executor bossExecutor, Executor workerExecutor, String apiKey, String secret) throws Exception {
+        this(bossExecutor, workerExecutor, new SignTool(apiKey, secret));
+    }
+
+    public HttpConnection(Executor bossExecutor, Executor workerExecutor, SignTool authenticator) {
+        this(bossExecutor, workerExecutor);
         this.setAuthenticator(authenticator);
+    }
+
+    public HttpConnection(Executor bossExecutor, Executor workerExecutor) {
+        super();
+
+        if (bossExecutor == null){
+            bossExecutor = ExecutorFactory.newInstance("HttpConnection-boss");
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ((ExecutorService)HttpConnection.this.bossExecutor).shutdownNow();
+                }
+            });
+        }
+        this.bossExecutor = bossExecutor;
+
+        if (workerExecutor == null){
+            workerExecutor = Executors.newFixedThreadPool(10, new NamedThreadFactory("HttpConnection-worker-"));
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ((ExecutorService)HttpConnection.this.workerExecutor).shutdownNow();
+                }
+            });
+        }
+        this.workerExecutor = workerExecutor;
     }
 
     @Override
@@ -145,21 +177,17 @@ public class HttpConnection extends DestroyableBase implements ApiConnection {
 
     @Override
     public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
     public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
     protected void onDestroy() {
-
         LOGGER.debug("Destroying HttpConnection");
-
-        bossExecutor.shutdownNow();
-        workerExecutor.shutdownNow();
     }
 
 }

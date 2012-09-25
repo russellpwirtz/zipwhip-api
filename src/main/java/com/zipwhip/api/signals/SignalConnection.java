@@ -3,11 +3,12 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observer;
+import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
-
-import java.util.concurrent.Future;
+import java.net.SocketAddress;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/2/11 Time: 11:48 AM
@@ -19,6 +20,10 @@ import java.util.concurrent.Future;
  */
 public interface SignalConnection extends Destroyable {
 
+    ConnectionHandle getConnectionHandle();
+
+    ConnectionState getConnectionState();
+
     /**
      * Initiate a raw TCP connection to the signal server ASYNCHRONOUSLY. This
      * is just a raw connection, not an authenticated/initialized one.
@@ -26,15 +31,23 @@ public interface SignalConnection extends Destroyable {
      * @return The future will tell you when the connection is complete.
      * @throws Exception if there is is an error connecting
      */
-    Future<Boolean> connect() throws Exception;
+    ObservableFuture<ConnectionHandle> connect();
+
+    /**
+     * Kills the current connection and reconnects to a new connection within one safe operation/transaction. Will not allow other
+     * operations to occur between those two actions.
+     *
+     * @return
+     */
+    ObservableFuture<ConnectionHandle> reconnect();
 
     /**
      * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY
      *
-     * @return The future will tell you when the connection is terminated,
+     * @return The future will tell you when the connection is terminated, (Connection that was disconnected)
      * @throws Exception if there is is an error disconnecting
      */
-    Future<Void> disconnect() throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect();
 
     /**
      * Kill the TCP connection to the SignalServer ASYNCHRONOUSLY. Pass true if the disconnect
@@ -42,15 +55,15 @@ public interface SignalConnection extends Destroyable {
      * disconnect.
      *
      * @param network True if the disconnect results from a problem on the network.
-     * @return The future will tell you when the connection is terminated,
+     * @return The future will tell you when the connection is terminated, (Connection that was disconnected)
      * @throws Exception if there is is an error disconnecting
      */
-    Future<Void> disconnect(boolean network) throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect(boolean network);
 
     /**
      * Cancel any pending network keepalives and fire one immediately.
      */
-    void keepalive();
+    ObservableFuture<Boolean> ping();
 
     /**
      * Send something to the SignalServer
@@ -61,99 +74,41 @@ public interface SignalConnection extends Destroyable {
     ObservableFuture<Boolean> send(SerializingCommand command);
 
     /**
-     * Determines if the socket is currently connected
-     *
-     * @return returns true if connected, false if not connected.
-     */
-    boolean isConnected();
-
-    /**
-     * Allows you to listen for things that are received by the API.
-     *
-     * @param observer An observer to receive callbacks on when this event fires
-     */
-    void onMessageReceived(Observer<Command> observer);
-
-    /**
      * Allows you to observe the connection trying to connect.
      * The observer will return True if the connection was successful, False otherwise.
-     *
-     * @param observer An observer to receive callbacks on when this event fires
      */
-    void onConnect(Observer<Boolean> observer);
+    Observable<ConnectionHandle> getConnectEvent();
 
     /**
      * Allows you to observe the connection disconnecting.
      * The observer will return True if a reconnect is requested, False otherwise.
      *
-     * @param observer An observer to receive callbacks on when this event fires
+     * @return observer An observer to receive callbacks on when this event fires
      */
-    void onDisconnect(Observer<Boolean> observer);
+    Observable<ConnectionHandle> getDisconnectEvent();
 
     /**
-     * Allows you to stop observing the connection trying to connect.
-     *
-     * @param observer An observer to stop receiving callbacks on.
+     * Allows you to listen for things that are received by the API.
      */
-    void removeOnConnectObserver(Observer<Boolean> observer);
-
-    /**
-     * Allows you to stop observing the connection trying to connect.
-     *
-     * @param observer An observer to stop receiving callbacks on.
-     */
-    void removeOnMessageReceivedObserver(Observer<Command> observer);
-
-    /**
-     * Allows you to stop observing the disconnection trying to connect.
-     *
-     * @param observer An observer to stop receiving callbacks on.
-     */
-    void removeOnDisconnectObserver(Observer<Boolean> observer);
+    Observable<Command> getCommandReceivedEvent();
 
     /**
      * Observe an inactive ping event.
-     *
-     * @param observer An Observer of type PingEvent to indicate the event that happened.
      */
-    void onPingEvent(Observer<PingEvent> observer);
+    Observable<PingEvent> getPingEventReceivedEvent();
 
     /**
      * Observe a caught exception in the connection.
-     *
-     * @param observer An Observer of type String to indicating the exception that was caught.
      */
-    void onExceptionCaught(Observer<String> observer);
+    Observable<String> getExceptionEvent();
 
     /**
-     * Get the host being used to connect to Zipwhip.
+     * The address of the server to connect to.
      *
-     * @return the host being used to connect to Zipwhip.
+     * @param address
      */
-    String getHost();
-
-    /**
-     * Set the host to be used on the NEXT connection.
-     * If not set the default SignalServer host will be used.
-     *
-     * @param host the host to be used on the NEXT connection
-     */
-    void setHost(String host);
-
-    /**
-     * Get the port being used to connect to Zipwhip.
-     *
-     * @return the port being used to connect to Zipwhip.
-     */
-    int getPort();
-
-    /**
-     * Sets the port to be used on the NEXT connection.
-     * If not set the default SignalServer port will be used.
-     *
-     * @param port the port to be used on the NEXT connection
-     */
-    void setPort(int port);
+    void setAddress(SocketAddress address);
+    SocketAddress getAddress();
 
     /**
      * Get the current reconnection strategy for the connection.
@@ -183,15 +138,5 @@ public interface SignalConnection extends Destroyable {
      * @return The current setting for a connection time out in seconds.
      */
     int getConnectTimeoutSeconds();
-
-    /**
-     * Runs the specified runnable on the core connection thread. It will only run if-only-if the
-     * current channel on enqueue matches the current channel on execution. This allows you to do
-     * such things as call disconnect on the current connection ensuring with 100% certainty that
-     * you are connecting the right channel instead of a new one.
-     *
-     * @param runnable
-     */
-    public void runIfActive(Runnable runnable);
 
 }

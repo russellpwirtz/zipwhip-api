@@ -1,22 +1,22 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.commands.Command;
-import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
-import com.zipwhip.api.signals.commands.SerializingCommand;
-import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.concurrent.FutureUtil;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.FakeFuture;
+import com.zipwhip.concurrent.FakeObservableFuture;
+import com.zipwhip.executors.SimpleExecutor;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 
 import static junit.framework.Assert.*;
 
@@ -29,15 +29,22 @@ import static junit.framework.Assert.*;
 public class SignalConnectionDelegateTest {
 
     SignalConnectionDelegate delegate;
-    SignalConnectionBase connection;
+    SignalConnectionBase signalConnection;
+//    Factory<ExecutorService> executorFactory;
 
     // The delegate does disconnect async so we need this to control timing
     CountDownLatch disconnectLatch;
 
     @Before
     public void setUp() throws Exception {
-        connection = new MockSignalConnection();
-        delegate = new SignalConnectionDelegate(connection);
+//        executorFactory = new Factory<ExecutorService>() {
+//            @Override
+//            public ExecutorService create() {
+//                return SimpleExecutor.getInstance();
+//            }
+//        };
+        signalConnection = new MockSignalConnection(SimpleExecutor.getInstance());
+        delegate = new SignalConnectionDelegate(signalConnection, signalConnection.connect().get());
         disconnectLatch = new CountDownLatch(1);
     }
 
@@ -49,12 +56,12 @@ public class SignalConnectionDelegateTest {
         delegate.destroy();
         assertTrue(delegate.isDestroyed());
 
-        connection.connect().get();
-        assertTrue(connection.isConnected());
+        signalConnection.connect().get();
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         // Disconnect fails because we are destroyed
         delegate.disconnectAsyncIfActive(true);
-        assertTrue(connection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -62,14 +69,14 @@ public class SignalConnectionDelegateTest {
 
         assertFalse(delegate.isDestroyed());
 
-        connection.connect().get();
-        assertTrue(connection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
+
 
         // Network
         delegate.disconnectAsyncIfActive(true);
         disconnectLatch.await();
 
-        assertFalse(connection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
@@ -77,54 +84,56 @@ public class SignalConnectionDelegateTest {
 
         assertFalse(delegate.isDestroyed());
 
-        connection.connect().get();
-        assertTrue(connection.isConnected());
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
 
         // Non-network
         delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
-        assertFalse(connection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
     public void testIsConnected() throws Exception {
 
-        connection.connect().get();
-        assertTrue(connection.isConnected());
+
+        assertTrue(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
         assertFalse(delegate.isDestroyed());
 
         delegate.disconnectAsyncIfActive(false);
         disconnectLatch.await();
 
-        assertFalse(connection.isConnected());
+        assertFalse(signalConnection.getConnectionState() == ConnectionState.CONNECTED);
     }
 
     @Test
     public void testSend() throws Exception {
 
-        assertFalse(delegate.isDestroyed());
-        delegate.send(PingPongCommand.getShortformInstance());
-        delegate.send(PingPongCommand.getShortformInstance());
-        delegate.send(PingPongCommand.getShortformInstance());
 
-        assertEquals(3, ((MockSignalConnection)connection).getSent().size());
+        assertFalse(delegate.isDestroyed());
+        delegate.sendAsyncIfActive(PingPongCommand.getShortformInstance());
+        delegate.sendAsyncIfActive(PingPongCommand.getShortformInstance());
+        delegate.sendAsyncIfActive(PingPongCommand.getShortformInstance());
+
+        assertEquals(3, ((MockSignalConnection) signalConnection).getSent().size());
     }
 
     @Test
     public void testReceivePong() throws Exception {
 
+
         assertFalse(delegate.isDestroyed());
         delegate.receivePong(PingPongCommand.getShortformInstance());
         delegate.receivePong(PingPongCommand.getShortformInstance());
         delegate.receivePong(PingPongCommand.getShortformInstance());
 
-        assertEquals(3, ((MockSignalConnection)connection).getPongs().size());
+        assertEquals(3, ((MockSignalConnection) signalConnection).getPongs().size());
     }
 
-    private class MockSignalConnection extends SignalConnectionBase implements SignalConnection {
 
-        protected ExecutorService executor;
+    private static long id;
+
+    private class MockSignalConnection extends SignalConnectionBase implements SignalConnection {
 
         // We need these to block for testing
         protected final List<Observer<Command>> receiveEvent = new ArrayList<Observer<Command>>();
@@ -136,156 +145,15 @@ public class SignalConnectionDelegateTest {
 
         protected boolean isConnected = false;
 
+        public MockSignalConnection(Executor executor) {
+            super(executor);
+        }
+
         public MockSignalConnection() {
-            super(null);
+            super(SimpleExecutor.getInstance());
         }
 
-        @Override
-        public void runIfActive(ChannelWrapper wrapper, Runnable runnable) {
-            runnable.run();
-        }
-
-        @Override
-        public synchronized Future<Boolean> connect() throws Exception {
-
-            FutureTask<Boolean> task = new FutureTask<Boolean>(new Callable<Boolean>() {
-
-                @Override
-                public Boolean call() throws Exception {
-                    isConnected = true;
-
-                    for (Observer<Boolean> o : connectEvent) {
-                        o.notify(this, isConnected);
-                    }
-
-                    for (Observer<Command> o : receiveEvent) {
-                        o.notify(this, new ConnectCommand("1234-5678-1234-5678", null));
-                    }
-
-                    return isConnected;
-                }
-            });
-
-            if (executor == null) {
-                executor = Executors.newSingleThreadExecutor();
-            }
-            executor.execute(task);
-
-            return task;
-        }
-
-        @Override
-        public synchronized Future<Void> disconnect() {
-            return disconnect(false);
-        }
-
-        @Override
-        public Future<Void> disconnect(final boolean requestReconnect) {
-
-            FutureTask<Void> task = new FutureTask<Void>(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-
-                    isConnected = false;
-                    executor.shutdownNow();
-                    executor = null;
-
-                    for (Observer<Boolean> o : disconnectEvent) {
-                        o.notify(this, requestReconnect);
-                    }
-
-                    disconnectLatch.countDown();
-
-                    return null;
-                }
-            });
-
-            executor.execute(task);
-            return task;
-        }
-
-        @Override
-        public ObservableFuture<Boolean> send(SerializingCommand command) {
-            sent.add(command);
-            return FutureUtil.execute(null, this, new FakeFuture<Boolean>(true));
-        }
-
-        @Override
-        public void keepalive() {
-
-        }
-
-        @Override
-        public boolean isConnected() {
-            return isConnected;
-        }
-
-        @Override
-        public void onMessageReceived(Observer<Command> observer) {
-            receiveEvent.add(observer);
-        }
-
-        @Override
-        public void onConnect(Observer<Boolean> observer) {
-            connectEvent.add(observer);
-        }
-
-        @Override
-        public void onDisconnect(Observer<Boolean> observer) {
-            disconnectEvent.add(observer);
-        }
-
-        @Override
-        public void removeOnConnectObserver(Observer<Boolean> observer) {
-            connectEvent.remove(observer);
-        }
-
-        @Override
-        public void removeOnMessageReceivedObserver(Observer<Command> observer) {
-            //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public void removeOnDisconnectObserver(Observer<Boolean> observer) {
-            disconnectEvent.remove(observer);
-        }
-
-        @Override
-        public void onPingEvent(Observer<PingEvent> observer) {
-        }
-
-        @Override
-        public void onExceptionCaught(Observer<String> observer) {
-        }
-
-        @Override
-        public void setHost(String host) {
-        }
-
-        @Override
-        public void setPort(int port) {
-        }
-
-        @Override
-        public ReconnectStrategy getReconnectStrategy() {
-            return null;
-        }
-
-        @Override
-        public void setReconnectStrategy(ReconnectStrategy strategy) {
-        }
-
-        @Override
-        public void destroy() {
-        }
-
-        @Override
-        public boolean isDestroyed() {
-            return false;
-        }
-
-        @Override
-        protected void receivePong(PingPongCommand command) {
+        protected void receivePong(ConnectionHandle connectionHandle, PingPongCommand command) {
             pongs.add(command);
         }
 
@@ -295,6 +163,42 @@ public class SignalConnectionDelegateTest {
 
         public final List<PingPongCommand> getPongs() {
             return pongs;
+        }
+
+        @Override
+        protected void executeDisconnectDestroyConnection(ConnectionHandle connectionHandle, boolean causedByNetwork) {
+            isConnected = false;
+            ((MockSignalConnectionConnectionHandle) connectionHandle).causedByNetwork = causedByNetwork;
+            ((MockSignalConnectionConnectionHandle) connectionHandle).destroy();
+            disconnectLatch.countDown();
+        }
+
+        @Override
+        protected ConnectionHandle createConnectionHandle() {
+            return new MockSignalConnectionConnectionHandle();
+        }
+
+        @Override
+        protected void executeConnect(ConnectionHandle connectionHandle, SocketAddress address) throws Throwable {
+            isConnected = true;
+        }
+
+        @Override
+        protected Executor getExecutorForConnection(ConnectionHandle connectionHandle) {
+            return executor;
+        }
+
+        @Override
+        protected ObservableFuture<Boolean> executeSend(ConnectionHandle connectionHandle, Object command) {
+            sent.add((Command) command);
+            return new FakeObservableFuture<Boolean>(connectionHandle, Boolean.TRUE);
+        }
+
+        private class MockSignalConnectionConnectionHandle extends SignalConnectionBaseConnectionHandleBase {
+
+            public MockSignalConnectionConnectionHandle() {
+                super(id++, MockSignalConnection.this);
+            }
         }
 
     }

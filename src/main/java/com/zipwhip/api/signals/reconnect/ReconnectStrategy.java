@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals.reconnect;
 
 import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
 import org.apache.log4j.Logger;
@@ -18,13 +19,13 @@ public abstract class ReconnectStrategy extends DestroyableBase {
     private static final Logger LOGGER = Logger.getLogger(ReconnectStrategy.class);
 
     protected SignalConnection signalConnection;
-    protected Observer<Boolean> disconnectObserver;
+    protected Observer<ConnectionHandle> disconnectObserver;
 
     private boolean isStarted;
 
     /**
      * If your connection is "connected" it does nothing. If your connection is "alive" but not "connected" it will
-     * participate. It observes your "signalConnection" events to determine when state changes.
+     * participate. It observes your "connection" events to determine when state changes.
      *
      * @param signalConnection The connection to manage.
      */
@@ -58,7 +59,7 @@ public abstract class ReconnectStrategy extends DestroyableBase {
         LOGGER.debug("Stop reconnect strategy requested...");
 
         if (signalConnection != null && disconnectObserver != null) {
-            signalConnection.removeOnDisconnectObserver(disconnectObserver);
+            signalConnection.getDisconnectEvent().removeObserver(disconnectObserver);
             isStarted = false;
         }
     }
@@ -70,16 +71,17 @@ public abstract class ReconnectStrategy extends DestroyableBase {
      */
     public synchronized final void start() {
 
-        LOGGER.debug("Start reconnect strategy requested...");
+        LOGGER.debug("Bind reconnect strategy requested...");
 
         if (!isStarted && signalConnection != null) {
 
-            LOGGER.debug("Starting reconnect strategy...");
+            LOGGER.debug("Binding reconnect strategy to events...");
 
-            disconnectObserver = new Observer<Boolean>() {
+            disconnectObserver = new Observer<ConnectionHandle>() {
 
                 @Override
-                public void notify(Object sender, Boolean networkGenerated) {
+                public void notify(Object sender, ConnectionHandle connectionHandle) {
+                    boolean networkGenerated = connectionHandle.disconnectedViaNetwork();
 
                     // If the disconnect was generated due to a network problem we want to try a reconnect.
                     if (networkGenerated && isStarted) {
@@ -90,7 +92,8 @@ public abstract class ReconnectStrategy extends DestroyableBase {
                 }
             };
 
-            signalConnection.onDisconnect(disconnectObserver);
+            signalConnection.getDisconnectEvent().addObserver(disconnectObserver);
+//            signalConnection.onDisconnect(disconnectObserver);
             isStarted = true;
         }
     }

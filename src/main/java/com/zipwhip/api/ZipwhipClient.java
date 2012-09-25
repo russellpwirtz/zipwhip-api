@@ -4,6 +4,7 @@ import com.zipwhip.api.dto.*;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
@@ -638,15 +639,41 @@ public interface ZipwhipClient extends Destroyable {
      * @return so you can wait until login succeeds
      * @throws Exception any connection problem
      */
-    ObservableFuture<Boolean> connect(Presence presence) throws Exception;
+    ObservableFuture<ConnectionHandle> connect(Presence presence) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
      *
+     * Will connect to the SignalServer via the SignalProvider and then execute a /signals/connect
+     * webcall to Zipwhip (if needed). Will only unblock when 5 events happen (with timeout)
+     *
+     * 1. Connect to SignalsServer
+     * 2. Write a {action:connect} to SignalServer
+     * 3. Receive a {action:connect} back from SignalServer
+     * 4. POST /signals/connect to ZipwhipCloud
+     * 5. Receive a SubscriptionCompleteCommand from SignalServer
+     *
+     * This means your TCP connection is "bound" to your sessionKey.
+     *
      * @return so you can wait until login succeeds
      * @throws Exception any connection problem
      */
-    ObservableFuture<Boolean> connect() throws Exception;
+    ObservableFuture<ConnectionHandle> connect() throws Exception;
+
+    /**
+     * If connecting, returns false.
+     * If signalProvider.getConnectionState() == ConnectionState.CONNECTED, returns authenticated;
+     * If authenticated, returns true;
+     * <p/>
+     * Authenticated means that we have a SubscriptionCompleteCommand to leverage.
+     * <p/>
+     * Within the context of ZipwhipClient, we have defined the "connected" state
+     * to mean both having a TCP connection AND having a SubscriptionComplete.
+     * (ie: signalProvider.connected & signalProvider.authenticated & isSubscribed)
+     *
+     * @return
+     */
+    boolean isConnected();
 
     /**
      * Tell the SignalProvider to disconnect from the server.
@@ -654,7 +681,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<Void> disconnect() throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect();
 
     /**
      * Tell the SignalProvider to disconnect from the server.  If causedByNetwork, the reconnect strategy will
@@ -663,7 +690,7 @@ public interface ZipwhipClient extends Destroyable {
      * @return an event that tells you its complete
      * @throws Exception if an I/O happens while disconnecting
      */
-    ObservableFuture<Void> disconnect(boolean causedByNetwork) throws Exception;
+    ObservableFuture<ConnectionHandle> disconnect(boolean causedByNetwork);
 
     /**
      * Listen for signals. This is a convenience method

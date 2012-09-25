@@ -23,6 +23,10 @@ public class PreferencesSettingsStore implements SettingsStore {
 
         logger.debug("Putting " + key.toString() + " = " + value);
 
+        if (value == null) {
+            value = "";
+        }
+
         preferences.put(key.toString(), value);
     }
 

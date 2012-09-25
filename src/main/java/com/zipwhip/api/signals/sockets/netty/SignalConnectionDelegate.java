@@ -4,7 +4,10 @@ import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 
 /**
@@ -13,25 +16,28 @@ import org.apache.log4j.Logger;
  * Date: 8/14/12
  * Time: 3:36 PM
  * <p/>
- * We can't allow the connections to talk with the SignalConnection directly. The problem is that they operate on a number
- * of crazy threads and theoretically 2 ChannelHandlers will access the same state of the parent object.
+ * We can't allow the ChannelHandlers to talk with the SignalConnection directly. The problem is that they operate on
+ * a number of crazy threads and theoretically 2 ChannelHandlers will ensureAbleTo the same state of the parent object.
  * <p/>
- * To solve this problem we need a way to destroy the ChannelHandler.. But we can't since it's in a list. The other
- * suggestion is to compare the channel on-create to the channel on-event. However we can't pass it into the constructor
- * so that defeats the purpose.
+ * To solve this problem we need a way to destroy the ChannelHandler.. But we can't since it's in a list (and doesn't
+ * extend Destroyable). The other suggestion is to compare the channel on-create to the channel on-event.
+ * However we can't pass it into the constructor so that defeats the purpose.
  * <p/>
- * So we're going to use a Delegate that we can destroy. That way we can say: "Hey you're stale, kill yourself"
+ * So we're going to use a Delegate that we can destroy. That way we can say: "Hey you're stale, block ensureAbleTo"
+ *
+ * This was built for Netty but can be used for all underlying socket technology stacks.
  */
 public class SignalConnectionDelegate extends DestroyableBase {
 
     private static final Logger LOGGER = Logger.getLogger(SignalConnectionDelegate.class);
 
-    protected final SignalConnectionBase connection;
-    protected ChannelWrapper channelWrapper;
+    protected final SignalConnectionBase signalConnectionBase;
+    protected final ConnectionHandle connectionHandle;
     private boolean paused = false;
 
-    public SignalConnectionDelegate(SignalConnectionBase connection) {
-        this.connection = connection;
+    public SignalConnectionDelegate(SignalConnectionBase signalConnectionBase, ConnectionHandle connectionHandle) {
+        this.signalConnectionBase = signalConnectionBase;
+        this.connectionHandle = connectionHandle;
     }
 
     /**
@@ -39,117 +45,99 @@ public class SignalConnectionDelegate extends DestroyableBase {
      *
      * @param network
      */
-    public void disconnectAsyncIfActive(final Boolean network) {
+    public void disconnectAsyncIfActive(final boolean network) {
         runIfActive(new Runnable() {
             @Override
             public void run() {
-                if (network) {
-                    LOGGER.debug(toString() + ": Calling disconnect() blindly without checking isConnected()");
-                    connection.disconnect(true);
-                } else {
-                    if (connection.isConnected()) {
-                        LOGGER.debug(toString() + ": Calling disconnect() because connected");
-                        connection.disconnect(false);
-                    } else {
-                        LOGGER.debug(toString() + ": We didn't call disconnect because we were not connected!");
-                    }
-                }
+                // this connection wont let stale requests go through
+                connectionHandle.disconnect(network);
             }
         });
     }
 
-    private void runIfActive(Runnable runnable) {
-        if (paused) {
-            LOGGER.debug("Paused so quitting.");
+    public synchronized void sendAsyncIfActive(final SerializingCommand command) {
+        if (isDestroyed() || isPaused()) {
             return;
         }
-        // return without crashing
-        if (isDestroyed()) {
+
+        signalConnectionBase.send(connectionHandle, command);
+    }
+
+    public void receivePong(final PingPongCommand command) {
+        synchronized (this) {
+            if (isDestroyed() || isPaused()) {
+                return;
+            }
+
+            signalConnectionBase.receivePong(connectionHandle, command);
+        }
+    }
+
+    public void notifyReceiveEvent(final Command command) {
+        notifyIfActive(signalConnectionBase.receiveEvent, command);
+    }
+
+    public void notifyExceptionAndDisconnect(final String result) {
+        runIfActive(new Runnable() {
+            @Override
+            public void run() {
+                signalConnectionBase.notifyEvent(connectionHandle, signalConnectionBase.exceptionEvent, result);
+                connectionHandle.disconnect(Boolean.TRUE);
+            }
+        });
+    }
+
+    public synchronized void notifyPingEvent(final PingEvent event) {
+        notifyIfActive(signalConnectionBase.pingEvent, event);
+    }
+
+    private void runIfActive(Runnable runnable) {
+        if (isPaused()) {
+            LOGGER.debug("Paused so quitting.");
+            return;
+        } else if (isDestroyed()) {
             LOGGER.debug(toString() + ": Returning silently for runIfActive. We were destroyed.");
             return;
         }
 
         synchronized (this) {
-            if (isDestroyed()) {
-                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed!");
+            if (isDestroyed() || isPaused()) {
+                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed or paused!");
                 return;
             }
 
-            connection.runIfActive(channelWrapper, runnable);
+            Asserts.assertTrue(connectionHandle != null, "No way this can be null!");
+
+            signalConnectionBase.runIfActive(connectionHandle, runnable);
         }
     }
 
-    public int getConnectTimeoutSeconds() {
-        return connection.getConnectTimeoutSeconds();
-    }
-
-    public void send(final SerializingCommand command) {
-        // prevent destruction between these two lines via sync block
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                connection.send(command);
-            }
-        });
-    }
-
-    public void receivePong(final PingPongCommand command) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                connection.receivePong(command);
-            }
-        });
-    }
-
-    public void notifyReceiveEvent(final NettyChannelHandler handler, final Command command) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                connection.receiveEvent.notifyObservers(handler, command);
-            }
-        });
-    }
-
-    public void notifyExceptionAndDisconnect(final Object sender, final String result) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                connection.exceptionEvent.notifyObservers(sender, result);
-                connection.disconnect(Boolean.TRUE);
-            }
-        });
-    }
-
-    public synchronized void notifyPingEvent(final Object sender, final PingEvent event) {
-        runIfActive(new Runnable() {
-            @Override
-            public void run() {
-                connection.pingEvent.notify(sender, event);
-            }
-        });
-    }
-
-    /**
-     * Throw rather than return false
-     */
-    private synchronized void ensureValid() {
-        if (isDestroyed()) {
-            throw new IllegalStateException("The delegate was torn down, though later used.");
+    private <T> void notifyIfActive(ObservableHelper<T> observableHelper, T data) {
+        if (isPaused()) {
+            LOGGER.debug("Paused so quitting.");
+            return;
+        } else if (isDestroyed()) {
+            LOGGER.debug(toString() + ": Returning silently for runIfActive. We were destroyed.");
+            return;
         }
+
+        synchronized (this) {
+            if (isDestroyed() || isPaused()) {
+                LOGGER.warn(toString() + ": runIfActive failure! We were destroyed or paused!");
+                return;
+            }
+
+            signalConnectionBase.runIfActive(connectionHandle, observableHelper, data);
+        }
+    }
+
+    public ConnectionHandle getConnectionHandle() {
+        return connectionHandle;
     }
 
     @Override
     protected synchronized void onDestroy() {
-        channelWrapper = null;
-    }
-
-    public ChannelWrapper getChannelWrapper() {
-        return channelWrapper;
-    }
-
-    public void setChannelWrapper(ChannelWrapper channelWrapper) {
-        this.channelWrapper = channelWrapper;
+        LOGGER.debug(String.format("Destroying %s / %s", this, Thread.currentThread().toString()));
     }
 
     public synchronized void pause() {

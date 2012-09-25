@@ -1,5 +1,7 @@
 package com.zipwhip.concurrent;
 
+import com.zipwhip.executors.NamedThreadFactory;
+
 import java.util.concurrent.*;
 
 /**

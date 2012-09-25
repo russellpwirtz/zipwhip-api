@@ -6,6 +6,8 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import junit.framework.Assert;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.ChannelState;
@@ -25,14 +27,14 @@ import java.net.SocketAddress;
  */
 public class NettyChannelHandlerTest {
 
-    NettyChannelHandler nettyChannelHandler;
+    SignalsChannelHandler signalsChannelHandler;
     MockSignalConnectionDelegate delegate;
     MockChannel mockChannel;
 
     @Before
     public void doBefore() {
         delegate = new MockSignalConnectionDelegate();
-        nettyChannelHandler = new NettyChannelHandler(delegate);
+        signalsChannelHandler = new SignalsChannelHandler(delegate);
         mockChannel = new MockChannel();
     }
 
@@ -50,7 +52,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertNull(delegate.receiveEventCommand);
@@ -71,7 +73,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertEquals(1, delegate.pongReceivedCount);
@@ -93,7 +95,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.messageReceived(null, event);
+        signalsChannelHandler.messageReceived(null, event);
 
         Assert.assertEquals(0, delegate.pongReceivedCount);
         Assert.assertNotNull(delegate.receiveEventCommand);
@@ -112,7 +114,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         Assert.assertTrue(delegate.isNetwork);
         Assert.assertFalse(delegate.isConnected);
     }
@@ -128,7 +130,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         // SEND PING
         Assert.assertNotNull(delegate.sentCommand);
         Assert.assertTrue(delegate.sentCommand instanceof PingPongCommand);
@@ -154,7 +156,7 @@ public class NettyChannelHandlerTest {
         mockChannel.connected = false;
         Assert.assertFalse(mockChannel.isConnected());
 
-        nettyChannelHandler.channelIdle(null, event);
+        signalsChannelHandler.channelIdle(null, event);
         Assert.assertNull(delegate.sentCommand);
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertTrue(delegate.isNetwork);
@@ -172,7 +174,7 @@ public class NettyChannelHandlerTest {
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.channelClosed(null, event);
+        signalsChannelHandler.channelClosed(null, event);
         Assert.assertTrue(delegate.isNetwork);
         Assert.assertFalse(delegate.isConnected);
     }
@@ -181,19 +183,19 @@ public class NettyChannelHandlerTest {
     public void testExceptionCaught() throws Exception {
 
         ExceptionEvent event = new ExceptionEvent() {
-            public Throwable getCause() {return new Throwable("EXCEPTION");}
+            public Throwable getCause() {return new Throwable("TEST EXCEPTION");}
             public Channel getChannel() {return null;}
             public ChannelFuture getFuture() {return null;}
-            public String toString() {return "EXCEPTION";}
+            public String toString() {return "TEST EXCEPTION";}
         };
 
         Assert.assertTrue(delegate.isConnected);
-        nettyChannelHandler.exceptionCaught(null, event);
+        signalsChannelHandler.exceptionCaught(null, event);
 
         Assert.assertEquals(0, delegate.pingEventCount);
         Assert.assertNull(delegate.receiveEventCommand);
         Assert.assertEquals(1, delegate.exceptionCount);
-        Assert.assertEquals("EXCEPTION", delegate.exceptionString);
+        Assert.assertEquals("TEST EXCEPTION", delegate.exceptionString);
         Assert.assertFalse(delegate.isConnected);
     }
 
@@ -208,21 +210,25 @@ public class NettyChannelHandlerTest {
         Command receiveEventCommand;
         String exceptionString;
 
+        public MockSignalConnectionDelegate(ConnectionHandle connectionHandle) {
+            super(null, connectionHandle);
+        }
+
         public MockSignalConnectionDelegate() {
-            super(null);
+            super(null, null);
         }
 
         @Override
-        public void disconnectAsyncIfActive(Boolean network) {
+        public void disconnectAsyncIfActive(boolean network) {
             isConnected = false;
             isNetwork = network;
         }
 
         @Override
-        public synchronized void send(SerializingCommand command) {
+        public synchronized void sendAsyncIfActive(SerializingCommand command) {
             sentCommand = command;
             try {
-                nettyChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
+                signalsChannelHandler.writeRequested(null, new DownstreamMessageEvent(new MockChannel(), new DefaultChannelFuture(null, false), command, new InetSocketAddress(0)));
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
@@ -236,19 +242,19 @@ public class NettyChannelHandlerTest {
         }
 
         @Override
-        public synchronized void notifyReceiveEvent(NettyChannelHandler handler, Command command) {
+        public synchronized void notifyReceiveEvent(Command command) {
             receiveEventCommand = command;
         }
 
         @Override
-        public synchronized void notifyExceptionAndDisconnect(Object sender, String result) {
+        public synchronized void notifyExceptionAndDisconnect(String result) {
             exceptionCount++;
             exceptionString = result;
             disconnectAsyncIfActive(true);
         }
 
         @Override
-        public synchronized void notifyPingEvent(Object sender, PingEvent event) {
+        public synchronized void notifyPingEvent(PingEvent event) {
             pingEventCount++;
         }
     }

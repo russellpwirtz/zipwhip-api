@@ -8,6 +8,7 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
@@ -15,12 +16,13 @@ import com.zipwhip.util.StringUtil;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.Executor;
 
 /**
  * Date: Jul 17, 2009 Time: 7:25:37 PM
  * <p/>
- * This provides an Object Oriented way to access the Zipwhip API. It uses a
- * Connection internally for low-level Zipwhip access. This class does not
+ * This provides an Object Oriented way to ensureAbleTo the Zipwhip API. It uses a
+ * Connection internally for low-level Zipwhip ensureAbleTo. This class does not
  * manage your authentication, the Connection abstracts this away from
  * the "Zipwhip" class.
  */
@@ -32,7 +34,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      * @param connection The connection to Zipwhip API
      */
     public DefaultZipwhipClient(ApiConnection connection) {
-        this(connection, null);
+        this(null, null, connection, null);
     }
 
     /**
@@ -40,9 +42,10 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
+     * @param executor The executor that's used for aynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
      */
-    public DefaultZipwhipClient(ApiConnection connection, SignalProvider signalProvider) {
-        super(connection, signalProvider);
+    public DefaultZipwhipClient(Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
+        super(executor, importantTaskExecutor, connection, signalProvider);
     }
 
     @Override
@@ -570,12 +573,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public void addSignalObserver(Observer<List<Signal>> observer) {
-        getSignalProvider().onSignalReceived(observer);
+        getSignalProvider().getSignalReceivedEvent().addObserver(observer);
     }
 
     @Override
     public void addSignalsConnectionObserver(Observer<Boolean> observer) {
-        getSignalProvider().onConnectionChanged(observer);
+        getSignalProvider().getConnectionChangedEvent().addObserver(observer);
     }
 
     @Override

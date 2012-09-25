@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * Creates a Connection with the specified parameters.
  */
-public class ApiConnectionFactory implements Factory<ApiConnection> {
+public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
 
     private static final Logger LOGGER = Logger.getLogger(ApiConnectionFactory.class);
 
@@ -30,32 +30,6 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     private String secret;
     private String sessionKey;
 
-    private ApiConnection connection;
-
-    protected ApiConnectionFactory() {
-
-    }
-
-    public ApiConnectionFactory(ApiConnection connection) {
-        this.connection = connection;
-    }
-
-    public static ApiConnectionFactory newInstance() {
-        return new ApiConnectionFactory(new HttpConnection());
-    }
-
-    public static ApiConnectionFactory newAsyncInstance() {
-        return new ApiConnectionFactory(new NingHttpConnection());
-    }
-
-    public static ApiConnectionFactory newAsyncHttpsInstance() {
-
-        ApiConnection connection = new NingHttpConnection();
-        connection.setHost(ApiConnection.DEFAULT_HTTPS_HOST);
-
-        return new ApiConnectionFactory(connection);
-    }
-
     /**
      * Creates a generic unauthenticated ApiConnection.
      *
@@ -65,9 +39,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public ApiConnection create() {
 
         try {
-            if (connection == null) {
-                connection = new HttpConnection();
-            }
+            ApiConnection connection = createInstance();
 
             connection.setSessionKey(sessionKey);
             connection.setApiVersion(apiVersion);
@@ -113,45 +85,7 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
         }
     }
 
-    public ApiConnectionFactory responseParser(ResponseParser responseParser) {
-        this.responseParser = responseParser;
-        return this;
-    }
-
-    public ApiConnectionFactory username(String username) {
-        this.username = username;
-        return this;
-    }
-
-    public ApiConnectionFactory password(String password) {
-        this.password = password;
-        return this;
-    }
-
-    public ApiConnectionFactory apiKey(String apiKey) {
-        this.apiKey = apiKey;
-        return this;
-    }
-
-    public ApiConnectionFactory secret(String secret) {
-        this.secret = secret;
-        return this;
-    }
-
-    public ApiConnectionFactory sessionKey(String sessionKey) {
-        this.sessionKey = sessionKey;
-        return this;
-    }
-
-    public ApiConnectionFactory host(String host) {
-        this.host = host;
-        return this;
-    }
-
-    public ApiConnectionFactory apiVersion(String apiVersion) {
-        this.apiVersion = apiVersion;
-        return this;
-    }
+    protected abstract ApiConnection createInstance();
 
     public ResponseParser getResponseParser() {
         return responseParser;
@@ -216,13 +150,4 @@ public class ApiConnectionFactory implements Factory<ApiConnection> {
     public void setSessionKey(String sessionKey) {
         this.sessionKey = sessionKey;
     }
-
-    public ApiConnection getConnection() {
-        return connection;
-    }
-
-    public void setConnection(ApiConnection connection) {
-        this.connection = connection;
-    }
-
 }

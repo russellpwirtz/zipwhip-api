@@ -6,10 +6,12 @@ import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.important.schedulers.HashedWheelScheduler;
+import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.FutureDateUtil;
 import org.apache.log4j.Logger;
+import org.jboss.netty.util.Timer;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -40,12 +42,12 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     }
 
     public ImportantTaskExecutor(Scheduler scheduler) {
-        if (scheduler != null) {
-            this.setScheduler(scheduler);
+        if (scheduler == null){
+            TimerScheduler scheduler1 = new TimerScheduler((String)null);
+            this.setScheduler(scheduler1);
+            this.link(scheduler1);
         } else {
-            scheduler = new HashedWheelScheduler();
             this.setScheduler(scheduler);
-            this.link((HashedWheelScheduler) scheduler);
         }
     }
 
@@ -65,7 +67,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         final String requestId = UUID.randomUUID().toString();
 
         // we're returning this value.
-        final ObservableFuture<T> parentFuture = createObservableFuture(executor);
+        final ObservableFuture<T> parentFuture = createObservableFuture(executor, request);
 
         /**
          * Schedule a timeout in the future if it has an expirationDate.
@@ -216,8 +218,13 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         return diff > -1000;
     }
 
-    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture(Executor executor) {
-        return new DefaultObservableFuture<TResponse>(this, executor);
+    private <TResponse> DefaultObservableFuture<TResponse> createObservableFuture(Executor executor, final Callable request) {
+        return new DefaultObservableFuture<TResponse>(request, executor) {
+            @Override
+            public String toString() {
+                return String.format("[ImportantTaskExecutorFuture: %s]", request);
+            }
+        };
     }
 
     public Scheduler getScheduler() {
@@ -229,7 +236,12 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             this.scheduler.removeOnScheduleComplete(onTimerScheduleComplete);
         }
 
-        this.scheduler = scheduler;
+        this.scheduler = new ScopedScheduler(scheduler) {
+            @Override
+            public String toString() {
+                return String.format("[ImportantTaskScheduler: %s]", ImportantTaskExecutor.this.toString());
+            }
+        };
 
         if (this.scheduler != null) {
             this.scheduler.onScheduleComplete(onTimerScheduleComplete);
@@ -287,5 +299,10 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         public String getRequestId() {
             return requestId;
         }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[ImportantTaskExecutor: %s", hashCode());
     }
 }

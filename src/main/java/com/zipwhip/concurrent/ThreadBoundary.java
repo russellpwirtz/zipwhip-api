@@ -1,6 +1,6 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.api.signals.sockets.StateManager;
+import com.zipwhip.util.StateManager;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import org.apache.log4j.Logger;
@@ -17,7 +17,7 @@ import java.util.concurrent.locks.Lock;
  * Date: 8/15/12
  * Time: 9:29 AM
  * <p/>
- * Allows us to safely control threaded access
+ * Allows us to safely control threaded ensureAbleTo
  */
 public class ThreadBoundary<T extends Enum> extends DestroyableBase {
 

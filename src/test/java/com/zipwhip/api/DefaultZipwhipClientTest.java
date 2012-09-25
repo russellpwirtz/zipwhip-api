@@ -3,10 +3,15 @@ package com.zipwhip.api;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.MemorySettingStore;
+import com.zipwhip.api.signals.MockSignalProvider;
+import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
+import com.zipwhip.api.signals.sockets.*;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.NullExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
@@ -34,7 +39,10 @@ import static junit.framework.Assert.*;
  */
 public class DefaultZipwhipClientTest {
 
+    private static final Logger LOGGER = Logger.getLogger(DefaultZipwhipClientTest.class);
+
     ZipwhipClient client;
+    SignalProvider signalProvider;
     ApiConnection apiConnection;
 
     public final static String MOBILE_NUMBER = "2069797502";
@@ -42,9 +50,9 @@ public class DefaultZipwhipClientTest {
     @Before
     public void setUp() throws Exception {
         apiConnection = new MockApiConnection();
-        client = new DefaultZipwhipClient(apiConnection, new MockSignalProvider());
-        ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 1;
-        ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
+        signalProvider = new MockSignalProvider();
+        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider);
+        ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 5;
         client.setSettingsStore(new MemorySettingStore());
     }
 
@@ -54,25 +62,31 @@ public class DefaultZipwhipClientTest {
     }
 
     @Test
-    public void testDisconnectConnectDisconnect() throws Exception{
+    public void testSimpleConnect() throws Exception {
+        ObservableFuture<ConnectionHandle> future = client.connect();
 
-        ObservableFuture<Boolean> connectFuture1 = client.connect();
-        assertTrue(connectFuture1.get());
-        assertTrue(connectFuture1.isSuccess());
+        ConnectionHandle handle = TestUtil.awaitAndAssertSuccess(future);
 
-        ObservableFuture<Void> disconnectFuture1 = client.disconnect();
-        disconnectFuture1.await();
-        assertTrue(disconnectFuture1.isSuccess());
+        assertFalse(handle.isDestroyed());
+        assertTrue("Client not connected", client.isConnected());
+    }
 
-        ObservableFuture<Boolean> connectFuture2 = client.connect();
-        assertFalse(connectFuture1 == connectFuture2);
-        assertTrue(connectFuture2.get());
-        assertTrue(connectFuture2.isSuccess());
+    @Test
+    public void testDisconnectConnectDisconnect() throws Exception {
 
-        ObservableFuture<Void> disconnectFuture2 = client.disconnect();
+        ObservableFuture<ConnectionHandle> connectFuture1 = client.connect();
+        TestUtil.awaitAndAssertSuccess(connectFuture1);
+
+        ObservableFuture<ConnectionHandle> disconnectFuture1 = client.disconnect();
+        TestUtil.awaitAndAssertSuccess(disconnectFuture1);
+
+        ObservableFuture<ConnectionHandle> connectFuture2 = client.connect();
+        assertFalse("The two futures cannot be the same!", connectFuture1 == connectFuture2);
+        TestUtil.awaitAndAssertSuccess(connectFuture2);
+
+        ObservableFuture<ConnectionHandle> disconnectFuture2 = client.disconnect();
         assertFalse(disconnectFuture1 == disconnectFuture2);
-        disconnectFuture2.await();
-        assertTrue(disconnectFuture2.isSuccess());
+        TestUtil.awaitAndAssertSuccess(disconnectFuture2);
     }
 
     // connect
@@ -85,6 +99,10 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testConnectDisconnectNoDeadlock() throws Exception {
 
+        final int RUN_COUNT = 100;
+        final boolean[] hasErrors = {false};
+        final CountDownLatch latch = new CountDownLatch(RUN_COUNT - 1);
+
         class ConnectOrDisconnectBasedOnIterationNumberRunnable implements Runnable {
 
             int iteration;
@@ -95,31 +113,37 @@ public class DefaultZipwhipClientTest {
 
             @Override
             public void run() {
-                if (iteration % 2 == 0) {
-                    try {
-                        System.out.println("Connecting at iteration " + iteration);
-                        ObservableFuture<Boolean> connectFuture = client.connect();
-                        connectFuture.await();
-                    } catch (Exception e) {
-                        fail("Failed to connect! " + e.getMessage());
-                    }
-                } else {
-                    try {
-                        System.out.println("Disconnecting at iteration " + iteration);
-                        ObservableFuture<Void> disconnectFuture = client.disconnect();
-                        disconnectFuture.await();
-                    } catch (Exception e) {
-                        fail("Failed to disconnect! " + e.getMessage());
-                    }
+                try {
+                    System.out.println("Connecting at iteration " + iteration);
+                    ObservableFuture<ConnectionHandle> future = client.connect();
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    LOGGER.debug("Exception ", e);
+                    hasErrors[0] = true;
                 }
+                try {
+                    System.out.println("Disconnecting at iteration " + iteration);
+                    ObservableFuture<ConnectionHandle> future = client.disconnect();
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    LOGGER.debug("Exception ", e);
+                    hasErrors[0] = true;
+                }
+
+                latch.countDown();
             }
         }
 
         ExecutorService executor = Executors.newCachedThreadPool();
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < RUN_COUNT; i++) {
             executor.execute(new ConnectOrDisconnectBasedOnIterationNumberRunnable(i));
         }
+
+
+        assertTrue("All finished", latch.await(10, TimeUnit.SECONDS));
+
+        assertFalse("Has errors", hasErrors[0]);
 
         executor.shutdown();
     }
@@ -127,17 +151,19 @@ public class DefaultZipwhipClientTest {
 
     @Test
     public void testConnect() throws Exception {
+        ((DefaultZipwhipClient)client).setSignalsConnectTimeoutInSeconds(9000);
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
-        ObservableFuture<Boolean> future = client.connect();
-        assertTrue(future.await(5, TimeUnit.SECONDS));
+        ObservableFuture<ConnectionHandle> future = client.connect();
 
-        assertTrue(future.isDone());
-        assertTrue(future.isSuccess());
+        // ensure that we're connected
+        assertNotNull("Was not connected?", TestUtil.awaitAndAssertSuccess(future));
 
-        assertTrue(client.getSignalProvider().isConnected());
+        assertTrue("Client wasn't connected!", client.isConnected());
+        assertTrue(client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
+
         assertEquals(1, connectionChangedObserver.connectionChangedEvents);
         assertTrue(connectionChangedObserver.connected);
     }
@@ -149,29 +175,35 @@ public class DefaultZipwhipClientTest {
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
+        final CountDownLatch latch1 = new CountDownLatch(1);
+        final CountDownLatch latch2 = new CountDownLatch(1);
+        client.getSignalProvider().getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 if (Boolean.FALSE.equals(item))
-                    latch.countDown();
+                    latch2.countDown();
+                else
+                    latch1.countDown();
             }
         });
 
-        ObservableFuture<Boolean> future = client.connect();
+        ObservableFuture<ConnectionHandle> future = client.connect();
 
         assertTrue("Didn't finish!?", future.await(5, TimeUnit.SECONDS));
-
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        // connected first.
+        assertTrue(latch1.await(5, TimeUnit.SECONDS));
 
-        assertFalse(client.getSignalProvider().isConnected());
+        // disconnected next.
+        assertTrue(latch2.await(5, TimeUnit.SECONDS));
+
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
-        assertFalse(connectionChangedObserver.connected);
+        assertFalse("Should not be connected", connectionChangedObserver.connected);
     }
 
     @Test
@@ -181,10 +213,10 @@ public class DefaultZipwhipClientTest {
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch = new CountDownLatch(1);
-        client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
+        client.getSignalProvider().getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 if (item.equals(Boolean.FALSE))
@@ -196,7 +228,7 @@ public class DefaultZipwhipClientTest {
 
         latch.await(5, TimeUnit.SECONDS);
 
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
     }
@@ -205,17 +237,17 @@ public class DefaultZipwhipClientTest {
     public void testDisconnect() throws Exception {
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         assertTrue(client.connect().await(4, TimeUnit.SECONDS));
 
-        assertTrue(client.getSignalProvider().isConnected());
+        assertTrue(client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
         assertEquals(1, connectionChangedObserver.connectionChangedEvents);
         assertTrue(connectionChangedObserver.connected);
 
         assertTrue(client.disconnect().await(4, TimeUnit.SECONDS));
 
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
     }
@@ -223,10 +255,15 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testConnectSignalConnectTwoTimesQuicklyReturnsSameFuture() throws Exception {
 
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
-        ObservableFuture<Boolean> future1 = client.connect();
-        ObservableFuture<Boolean> future2 = client.connect();
+        // null out the executor so my connect requests don't come back.
+        ((MockSignalProvider) client.getSignalProvider()).executor = new NullExecutor();
+
+        ObservableFuture<ConnectionHandle> future1 = client.connect();
+        assertFalse("Future1 can't be done already or my test wont work!", future1.isDone());
+        ObservableFuture<ConnectionHandle> future2 = client.connect();
+        assertFalse("Future2 can't be done already or my test wont work!", future2.isDone());
 
         assertTrue(future1 == future2);
     }
@@ -234,31 +271,30 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testConnectBlocksOnSubscriptionComplete() throws Exception {
         apiConnection = new MockApiConnection();
-        final MockSignalProvider sp = new MockSignalProvider();
-        client = new DefaultZipwhipClient(apiConnection, sp) {
+        signalProvider = new MockSignalProvider();
+        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
-                sp.sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
+                ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
                 return new StringServerResponse("{success:true}", true, "{success:true}", null);
             }
         };
 
-        ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
         client.setSettingsStore(new MemorySettingStore());
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         client.connect().get(5, TimeUnit.SECONDS);
 
-        assertTrue(client.getSignalProvider().isConnected());
+        assertTrue(client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
         assertEquals(1, connectionChangedObserver.connectionChangedEvents);
         assertTrue(connectionChangedObserver.connected);
 
         client.disconnect().get(5, TimeUnit.SECONDS);
 
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
     }
@@ -266,8 +302,8 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testConnectBlocksOnSubscriptionCompleteWithDelay() throws Exception {
         apiConnection = new MockApiConnection();
-        final MockSignalProvider sp = new MockSignalProvider();
-        client = new DefaultZipwhipClient(apiConnection, sp) {
+        signalProvider = new MockSignalProvider();
+        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
                 Executors.newSingleThreadExecutor().execute(new Runnable() {
@@ -275,7 +311,7 @@ public class DefaultZipwhipClientTest {
                     public void run() {
                         try {
                             Thread.sleep(2000);
-                            sp.sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
+                            ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
                         } catch (InterruptedException e) {
                             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                         }
@@ -287,15 +323,13 @@ public class DefaultZipwhipClientTest {
             }
         };
 
-        ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
-
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch = new CountDownLatch(1);
         final boolean[] hit = {false};
-        client.getSignalProvider().onSubscriptionComplete(new Observer<SubscriptionCompleteCommand>() {
+        client.getSignalProvider().getSubscriptionCompleteReceivedEvent().addObserver(new Observer<SubscriptionCompleteCommand>() {
             @Override
             public void notify(Object sender, SubscriptionCompleteCommand item) {
                 hit[0] = true;
@@ -303,26 +337,22 @@ public class DefaultZipwhipClientTest {
             }
         });
 
-        ObservableFuture<Boolean> future = client.connect();
+        ObservableFuture<ConnectionHandle> future = client.connect();
 
-        if (!future.await(5, TimeUnit.SECONDS)) {
-            fail("Didnt complete");
-        }
+        TestUtil.awaitAndAssertSuccess(future);
 
         latch.await(4, TimeUnit.SECONDS);
         assertTrue(hit[0]);
 
+        assertTrue(client.getSignalProvider().getConnectionState() == ConnectionState.AUTHENTICATED);
+        assertTrue(client.isConnected());
 
-        assertTrue(future.isDone());
-        assertTrue(future.isSuccess());
-
-        assertTrue(client.getSignalProvider().isConnected());
         assertEquals(1, connectionChangedObserver.connectionChangedEvents);
         assertTrue(connectionChangedObserver.connected);
 
         client.disconnect().get(5, TimeUnit.SECONDS);
 
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
     }
@@ -330,52 +360,52 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testConnectBlocksOnSubscriptionCompleteWithFailure() throws Exception {
         ((ClientZipwhipNetworkSupport) client).signalsConnectTimeoutInSeconds = 1;
-        ((DefaultZipwhipClient) client).setImportantTaskExecutor(new ImportantTaskExecutor());
-        ((MockApiConnection)client.getConnection()).missSignalsConnect = true;
+        ((MockApiConnection) client.getConnection()).missSignalsConnect = true;
         client.setSettingsStore(new MemorySettingStore());
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
         client.addSignalsConnectionObserver(connectionChangedObserver);
-        assertFalse(client.getSignalProvider().isConnected());
+        assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final boolean[] hit = {false};
-        client.getSignalProvider().onSubscriptionComplete(new Observer<SubscriptionCompleteCommand>() {
+        client.getSignalProvider().getSubscriptionCompleteReceivedEvent().addObserver(new Observer<SubscriptionCompleteCommand>() {
             @Override
             public void notify(Object sender, SubscriptionCompleteCommand item) {
                 hit[0] = true;
             }
         });
 
-        ObservableFuture<Boolean> future = client.connect();
-
-        future.addObserver(new Observer<ObservableFuture<Boolean>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<Boolean> item) {
-                Logger.getLogger(DefaultZipwhipClientTest.class).debug("Who called me?");
-            }
-        });
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        client.getSignalProvider().onConnectionChanged(new Observer<Boolean>() {
+        final CountDownLatch latch = new CountDownLatch(2);
+        client.getSignalProvider().getConnectionChangedEvent().addObserver(new Observer<Boolean>() {
             @Override
             public void notify(Object sender, Boolean item) {
                 if (Boolean.FALSE.equals(item))
                     latch.countDown();
+                else
+                    latch.countDown();
+            }
+        });
+        ObservableFuture<ConnectionHandle> future = client.connect();
+
+        future.addObserver(new Observer() {
+            @Override
+            public void notify(Object sender, Object item) {
+                Logger.getLogger(DefaultZipwhipClientTest.class).debug("Who called me? " + item);
             }
         });
 
-        if (!future.await(500, TimeUnit.SECONDS)) {
-            fail("Didnt complete");
-        }
+        future.get(5, TimeUnit.SECONDS);
 
         // it shouldn't be a success since you didn't get a SubscriptionCompleteCommand.
         assertFalse("Should not have said success", future.isSuccess());
 
         assertFalse(hit[0]);
 
-        latch.await(4, TimeUnit.SECONDS);
+        assertTrue("Latch finished?", latch.await(10, TimeUnit.SECONDS));
 
-        assertFalse("SignalProvider connection should be torn down", client.getSignalProvider().isConnected());
+        // it reconnected succesfully?
+        assertTrue("SignalProvider connection should NOT be brought back up",
+                client.getSignalProvider().getConnectionState() == ConnectionState.DISCONNECTED);
         assertEquals(2, connectionChangedObserver.connectionChangedEvents);
         assertFalse(connectionChangedObserver.connected);
     }

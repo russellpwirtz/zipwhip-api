@@ -1,12 +1,16 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.sockets.ChannelStateManagerFactory;
-import com.zipwhip.api.signals.sockets.StateManager;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
+import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import com.zipwhip.concurrent.FutureUtil;
-import com.zipwhip.concurrent.NamedThreadFactory;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
+import com.zipwhip.util.StateManager;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -22,40 +26,63 @@ import java.util.concurrent.TimeUnit;
  * Date: 8/15/12
  * Time: 2:47 PM
  * <p/>
- * This wrapper controls the access to a channel. The concept is that 1 wrapper controls all access to 1 channel.
+ * This wrapper controls the ensureAbleTo to a channel. The concept is that 1 wrapper controls all ensureAbleTo to 1 channel.
  * Since all requests to a channel must go through this wrapper, we can safely control the threading behavior.
  *
- * THIS WRAPPER IS NEVER ALLOWED TO SELF DESTRUCT.
- *
+ * THIS WRAPPER IS NEVER ALLOWED TO SELF DESTRUCT!
  */
 public class ChannelWrapper extends CascadingDestroyableBase {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapper.class);
 
     /**
-     * This is the channel that we're trying to protect.
+     * This delegate represents the channel's ensureAbleTo to our SignalConnectionBase class. The ChannelHandlers
+     * need to be able to talk into the SignalProvider 'safely'. If their connection gets torn down we need to
+     * terminate their ensureAbleTo to the provider.
      */
-    protected Channel channel;
+    private SignalConnectionDelegate delegate;
 
     /**
-     * This delegate represents the channel's access to our SignalConnectionBase class.
+     * This is the channel that we're trying to protect.
      */
-    private final SignalConnectionDelegate delegate;
+    public Channel channel;
+
+    /**
+     * This connection is our external representation of the connection. External entities can interact with it
+     * through this 'connection' object. It's very similar to the "delegate" though I was concerned about combining
+     * them since they have different purposes and ensureAbleTo.
+     */
+    protected final ChannelWrapperConnectionHandle connection;
 
     /**
      * Independently keep track of the state of the connection.
      */
-    protected final StateManager<ChannelState> stateManager;
-    protected final ExecutorService executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper-"));
-    private SignalConnectionBase connection;
+    protected final StateManager<ConnectionState> stateManager;
+    protected final ExecutorService executor;
+
+    protected final SignalConnectionBase signalConnectionBase;
 
     /**
      * For keeping absolute care over the thread safe state
      */
-    public ChannelWrapper(Channel channel, SignalConnectionDelegate delegate) {
+    public ChannelWrapper(long id, Channel channel, SignalConnectionBase signalConnectionBase, ExecutorService executor) {
         this.channel = channel;
-        this.delegate = delegate;
-        this.stateManager = ChannelStateManagerFactory.newStateManager();
+        this.stateManager = ConnectionStateManagerFactory.newStateManager();
+        this.link(stateManager);
+        this.connection = new ChannelWrapperConnectionHandle(id, signalConnectionBase, this);
+        this.connection.link(this);
+        if (executor == null){
+            this.executor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ChannelWrapper(newSingleThreadExecutor)-"));
+            this.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    ChannelWrapper.this.executor.shutdownNow();
+                }
+            });
+        } else {
+            this.executor = executor;
+        }
+        this.signalConnectionBase = signalConnectionBase;
     }
 
     /**
@@ -64,48 +91,68 @@ public class ChannelWrapper extends CascadingDestroyableBase {
      * @param remoteAddress The address to connect to.
      * @throws InterruptedException if interrupted while connecting.
      */
-    public synchronized boolean connect(final SocketAddress remoteAddress) throws InterruptedException {
+    public synchronized void connect(final SocketAddress remoteAddress) throws Throwable {
 
-        stateManager.transitionOrThrow(ChannelState.CONNECTING);
-        Asserts.assertTrue(!isConnected(), "Channel is not connecting");
+        Asserts.assertTrue(!isDestroyed(), "I was destroyed?");
+        Asserts.assertTrue(channel != null, "Channel was destroyed?");
 
-        delegate.pause();
+        stateManager.transitionOrThrow(ConnectionState.CONNECTING);
+
+        Asserts.assertTrue(delegate == null, "Did this class get used twice?");
         // do the connect async.
-        ChannelFuture future = channel.connect(remoteAddress);
-        boolean completed;
+        ChannelFuture future = null;
 
         try {
-            // since we're on the IO thread, we need to block here.
-            completed = future.await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+            LOGGER.debug(String.format("Connecting %s to %s", channel,  remoteAddress));
 
-            delegate.resume();
-        } catch (InterruptedException e) {
-            if (!future.isDone()) {
+            future = channel.connect(remoteAddress);
+
+            // since we're on the IO thread, we need to block here.
+            future.await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (Exception e) {
+            if (future == null){
+                // oh shit! it crashed!
+                // Subsequent calls to close have no effect
+            } else if (!future.isDone()) {
                 future.cancel();
                 // Subsequent calls to close have no effect
                 future.getChannel().close();
             }
 
-            stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+            stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
 
             throw e;
         }
 
-        if (!completed) {
+        if (future.isSuccess() && future.getChannel().isConnected()) {
+            setupConnectedChannel(channel);
+
+            stateManager.transitionOrThrow(ConnectionState.CONNECTED);
+        } else {
             LOGGER.debug("Oh shit, it's not completed. We're going to cancel/close everything.");
             // cancel it.
             future.cancel();
             // Subsequent calls to close have no effect
             future.getChannel().close();
-        }
 
-        if (future.isSuccess()) {
-            stateManager.transitionOrThrow(ChannelState.CONNECTED);
-        } else {
-            stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
-        }
+            stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
 
-        return future.isSuccess();
+            if (future.getCause() != null) {
+                throw future.getCause();
+            } else {
+                throw new IllegalStateException(String.format("The future was not successful %s/%s/%s/%s", future.isDone(), future.isSuccess(), future.getCause(), future.getChannel()));
+            }
+        }
+    }
+
+    private void setupConnectedChannel(Channel channel) {
+        // the delegate lets the ChannelHandlers talk to the connection (such as pong-received)
+        this.delegate = new SignalConnectionDelegate(this.signalConnectionBase, this.connection);
+
+        // add the 'business logic' ChannelHandler to the pipeline
+        channel.getPipeline().addLast("nettyChannelHandler", new SignalsChannelHandler(this.delegate));
+
+        this.link(this.delegate);
     }
 
     /**
@@ -118,7 +165,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     public synchronized void disconnect() {
 
         // make sure our state is correct
-        stateManager.transitionOrThrow(ChannelState.DISCONNECTING);
+        stateManager.transitionOrThrow(ConnectionState.DISCONNECTING);
 
         // because we intend to delete this.channel during the 'ondestroy' method, we need to capture the
         // reference so we don't NPE.
@@ -132,23 +179,24 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         this.channel = null;
 
         // before we actually close the channel, we need to tear down the link.
-        this.delegate.destroy();
+        if (this.delegate != null)
+            this.delegate.pause();
 
         try {
             try {
                 // wait synchronously for it to close?
-                if (!channel.close().await(delegate.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
+                if (!channel.close().await(signalConnectionBase.getConnectTimeoutSeconds(), TimeUnit.SECONDS)){
                     // not completed in that time!
                     // what do we do?!?!
                     LOGGER.warn(String.format("The channel %s failed to close in the time limit! We are going to just destroy ourselves anyway.", channel));
 
                     // TODO: should we just say it's closed anyway??
 
-                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                    stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
                 } else {
                     LOGGER.debug(String.format("The channel %s closed cleanly", channel));
 
-                    stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                    stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
 
                     // for debugging (do after all the destroys took place so we aren't left in a bad state after the exception)
                     assertClosed(channel);
@@ -156,7 +204,7 @@ public class ChannelWrapper extends CascadingDestroyableBase {
             } catch (Exception e) {
                 LOGGER.error("Got exception trying to close", e);
                 // it was interrupted, do we call this disconnected??
-                stateManager.transitionOrThrow(ChannelState.DISCONNECTED);
+                stateManager.transitionOrThrow(ConnectionState.DISCONNECTED);
             }
         } catch (Exception e){
             LOGGER.error("Crazy, we got an error the catch block of an error! ", e);
@@ -164,77 +212,36 @@ public class ChannelWrapper extends CascadingDestroyableBase {
     }
 
     public synchronized ObservableFuture<Boolean> write(Object message) {
-        assertConnected();
+        // need to ensure that the CONNECTED state doesn't change.
+        stateManager.ensure(ConnectionState.CONNECTED);
 
         return FutureUtil.execute(executor, null,
                 new WriteOnChannelSafelyCallable(this, message));
     }
 
-    public boolean shouldBeConnected() {
-        synchronized (stateManager) {
-            return stateManager.get() == ChannelState.CONNECTED;
-        }
-    }
-
-    private void assertConnected() {
-        if (!isConnected()) {
-            throw new IllegalStateException("Not currently connected");
-        }
-
-        stateManager.ensure(ChannelState.CONNECTED);
-    }
-
-    /**
-     * Safely check if the underlying channel is connecting meaning that it is open or bound but not connected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is disconnected.
-     */
-    protected boolean isConnecting() {
-        return (channel != null) && channel.isOpen() && !channel.isConnected();
-    }
-
-    /**
-     * Safely check if the underlying channel is disconnected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is disconnected.
-     */
-    protected synchronized boolean isDisconnected() {
-        return (channel != null) && !channel.isConnected();
-    }
-
-    /**
-     * Safely check if the underlying channel is connected.
-     * We can't synchronize on this object because other threads are trying to peer in.
-     *
-     * @return True if the underlying channel is connected.
-     */
-    protected boolean isConnected() {
-        Channel c = channel;
-
-        return (c != null) && c.isConnected();
-    }
-
     private void assertClosed(Channel channel) {
         // double check that it worked?
-        if (isConnected()) {
+        if (channel.isConnected()) {
             throw new IllegalStateException(String.format("We assumed that Netty made isOpen, isConnected, isBound false! %b, %b, %b", channel.isOpen(), channel.isConnected(), channel.isBound()));
         }
     }
 
+    public ConnectionHandle getConnection() {
+        return connection;
+    }
+
     @Override
     protected void onDestroy() {
-        LOGGER.debug(String.format("Destroying ChannelWrapper %s / %s", this.channel, Thread.currentThread().toString()));
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(String.format("Destroying ChannelWrapper %s / %s", this.channel, Thread.currentThread().toString()));
+        }
 
         // ref counting
         this.channel = null;
 
         // forcibly kill it.
-        if (!delegate.isDestroyed()){
-            delegate.destroy();
-        }
+        this.delegate = null;
 
-        executor.shutdownNow();
+        // dont null out the "connection" object because it would cause null pointers. It's linked so it will auto destroy.
     }
 }

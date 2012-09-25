@@ -1,6 +1,8 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.api.signals.CommonExecutorFactory;
+import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
+import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.apache.log4j.Logger;
@@ -8,6 +10,9 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created with IntelliJ IDEA.
@@ -19,46 +24,82 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  */
 public class ChannelWrapperFactory extends DestroyableBase implements Factory<ChannelWrapper> {
 
+    private static AtomicLong id = new AtomicLong(0);
+
     private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
 
+    private int connectTimeoutSeconds = 15;
     private ChannelPipelineFactory channelPipelineFactory;
     private ChannelFactory channelFactory;
-    private SignalConnectionBase connection;
+    private SignalConnectionBase signalConnection;
+    private CommonExecutorFactory executorFactory;
 
-    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase connection) {
+    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection) {
+        this(channelPipelineFactory, channelFactory, signalConnection, null);
+    }
+
+    public ChannelWrapperFactory(ChannelPipelineFactory channelPipelineFactory, ChannelFactory channelFactory, SignalConnectionBase signalConnection, CommonExecutorFactory executorFactory) {
         this.channelPipelineFactory = channelPipelineFactory;
         this.channelFactory = channelFactory;
-        this.connection = connection;
+        this.signalConnection = signalConnection;
+        this.executorFactory = executorFactory;
     }
 
     @Override
-    public ChannelWrapper create() throws Exception {
+    public ChannelWrapper create() {
 
         // the pipeline is for the protocol (such as Websocket and/or regular sockets)
-        ChannelPipeline pipeline = channelPipelineFactory.getPipeline();
-
-        // the delegate lets the channel talk to the connection (such as disconnected)
-        SignalConnectionDelegate delegate = new SignalConnectionDelegate(connection);
-
-        // add the channelHandler to the pipeline
-        pipeline.addLast("nettyChannelHandler", new NettyChannelHandler(delegate));
+        ChannelPipeline pipeline;
+        try {
+            pipeline = channelPipelineFactory.getPipeline();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // create the channel
         Channel channel = channelFactory.newChannel(pipeline);
 
+        channel.getConfig().setConnectTimeoutMillis(getConnectTimeoutSeconds() * 1000);
+        channel.getConfig().setOption("receiveBufferSize", 1024);
+        channel.getConfig().setOption("sendBufferSize", 1024);
+//        channel.getConfig().setOption("keepAlive", true);
+//        channel.getConfig().setOption("tcpNoDelay", false);   // assuming default?
+//        channel.getConfig().setOption("reuseAddress", false); // assuming default?
+//        channel.getConfig().setOption("trafficClass", 0x04);    // RELIABILITY
+
         LOGGER.debug("Created a wrapper for channel: " + channel);
 
-        ChannelWrapper channelWrapper = new ChannelWrapper(channel, delegate);
+        // This needs to be here for WakeLockAwareExecutors to be passed in for Android.
+        ExecutorService executor = null;
+        if (executorFactory != null) {
+            executor = executorFactory.create(CommonExecutorTypes.EVENTS, "ChannelWrapper");
+        }
 
-        delegate.setChannelWrapper(channelWrapper);
+        ChannelWrapper channelWrapper = new ChannelWrapper(id.incrementAndGet(), channel, signalConnection, executor);
+
+        if (executor != null){
+            final ExecutorService finalExecutor = executor;
+            channelWrapper.link(new DestroyableBase() {
+                @Override
+                protected void onDestroy() {
+                    finalExecutor.shutdownNow();
+                }
+            });
+        }
 
         return channelWrapper;
     }
 
+    public int getConnectTimeoutSeconds() {
+        return connectTimeoutSeconds;
+    }
+
+    public void setConnectTimeoutSeconds(int connectTimeoutSeconds) {
+        this.connectTimeoutSeconds = connectTimeoutSeconds;
+    }
+
     @Override
     protected void onDestroy() {
-        if (channelPipelineFactory instanceof Destroyable) {
-            ((Destroyable) channelPipelineFactory).destroy();
-        }
+
     }
 }

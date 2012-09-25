@@ -29,18 +29,21 @@ public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
     @Override
     public Boolean call() throws Exception {
-
-        if (!wrapper.isConnected() || wrapper.isDestroyed()) {
-            // it seems that we aren't connected?
-            return Boolean.FALSE;
+        synchronized (wrapper) {
+            if (wrapper.isDestroyed()) {
+                // it seems that we aren't connected?
+                return Boolean.FALSE;
+            }
         }
 
         ChannelFuture future;
 
-        synchronized (wrapper) {
-            // dont let anyone destroy the wrapper (and channel) during access.
+        // this channel.write is NOT async like we thought. It's actually
+        // an OIO non sync.
+//        synchronized (wrapper) {
+            // dont let anyone destroy the wrapper (and channel) during ensureAbleTo.
             future = wrapper.channel.write(message);
-        }
+//        }
 
         boolean finished = future.await(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
