@@ -161,6 +161,8 @@ public interface ZipwhipClient extends Destroyable {
      */
     Contact saveUser(Contact contact) throws Exception;
 
+    void signalsConnect(String clientId, PresenceCategory category) throws Exception;
+
     /**
      * Saves or updates the user information.  For all values for which null is passed in, that value will remain unchanged,
      * relative to the website.

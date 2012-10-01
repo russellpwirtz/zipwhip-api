@@ -36,7 +36,7 @@ public class ZipwhipClientIntegrationTest {
         connectionFactory.setSessionKey(sessionKey);
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
-                .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))
+                .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 

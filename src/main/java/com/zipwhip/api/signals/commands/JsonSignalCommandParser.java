@@ -130,6 +130,7 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 			String subscriptionId = object.optString("subscriptionId");
 
 			SubscriptionCompleteCommand subscriptionCompleteCommand = new SubscriptionCompleteCommand(subscriptionId, channels);
+
 			subscriptionCompleteCommand.setVersion(new VersionMapEntry(object.optString("versionKey", StringUtil.EMPTY_STRING), object.optLong("version", -1)));
 
 			return subscriptionCompleteCommand;

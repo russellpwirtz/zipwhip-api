@@ -11,7 +11,7 @@ import com.zipwhip.lifecycle.Destroyable;
  * Time: 12:06 PM
  *
  * This is my attempt to allow multiple threads/handlers to process events asynchronously without touching the wrong
- * connection. If the underlying connection breaks, then this object is destroyed. A synanym for this class would
+ * connection. If the underlying connection breaks, then this object is destroyed. A synonym for this class would
  * be "RemoteControl" as the purpose of it is to remotely control the connection -at-arms-length. So any thread
  * can abuse/call .disconnect() and it will only take effect if-only-if it is currently active.
  *

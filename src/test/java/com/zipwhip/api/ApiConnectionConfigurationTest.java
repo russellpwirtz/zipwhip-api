@@ -16,7 +16,7 @@ public class ApiConnectionConfigurationTest {
     public void testProdHttpsDefault() {
         assertEquals(ApiConnection.DEFAULT_HTTPS_HOST, ApiConnectionConfiguration.API_HOST);
         assertEquals(ApiConnection.DEFAULT_SIGNALS_HOST, ApiConnectionConfiguration.SIGNALS_HOST);
-        assertEquals(ApiConnection.PORT_80, ApiConnectionConfiguration.SIGNALS_PORT);
+        assertEquals(ApiConnection.DEFAULT_SIGNALS_PORT, ApiConnectionConfiguration.SIGNALS_PORT);
     }
 
 }

@@ -83,8 +83,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             versionsStore = new SettingsVersionStore(settingsStore);
         }
 
-        // Start listening to provider events that interest us
-        initSignalProviderEvents();
+        if (signalProvider != null){
+            // Start listening to provider events that interest us
+            initSignalProviderEvents();
+        }
     }
 
     public ObservableFuture connect() throws Exception {

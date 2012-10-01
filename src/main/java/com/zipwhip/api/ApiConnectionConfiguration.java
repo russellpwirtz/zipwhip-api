@@ -25,25 +25,25 @@ public class ApiConnectionConfiguration {
 
             API_HOST = ApiConnection.DEFAULT_HOST;
             SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
-            SIGNALS_PORT = ApiConnection.PORT_80;
+            SIGNALS_PORT = ApiConnection.DEFAULT_SIGNALS_PORT;
 
         } else if (environment.equals("staging")) {
 
             API_HOST = ApiConnection.STAGING_HOST;
             SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
-            SIGNALS_PORT = ApiConnection.PORT_80;
+            SIGNALS_PORT = ApiConnection.DEFAULT_SIGNALS_PORT;
 
         } else if (environment.equals("test")) {
 
             API_HOST = ApiConnection.TEST_HOST;
             SIGNALS_HOST = ApiConnection.TEST_SIGNALS_HOST;
-            SIGNALS_PORT = ApiConnection.PORT_80;
+            SIGNALS_PORT = ApiConnection.DEFAULT_SIGNALS_PORT;
 
         } else { // DEFAULT: prod-https
 
             API_HOST = ApiConnection.DEFAULT_HTTPS_HOST;
             SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
-            SIGNALS_PORT = ApiConnection.PORT_80;
+            SIGNALS_PORT = ApiConnection.DEFAULT_SIGNALS_PORT;
         }
     }
 

@@ -71,7 +71,7 @@ public class DefaultZipwhipClientIntegrationTest {
 
                 SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                         .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
-                        .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))
+                        .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
                         .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
                 ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

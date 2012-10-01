@@ -171,7 +171,7 @@ public class SocketIoProtocol {
 		return messageType + ":" + messageId + ":" + (clientId == null ? "" : clientId) + ":" + message + "\n";
 	}
 
-    private static boolean isSocketIoPrefix(String message) {
+    public static boolean isSocketIoPrefix(String message) {
         return message.length() >= 2 && message.charAt(1) == ':';
     }
 

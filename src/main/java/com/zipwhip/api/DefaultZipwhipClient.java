@@ -395,6 +395,24 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
 
+    @Override
+    public void signalsConnect(String clientId, PresenceCategory category) throws Exception {
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        String sessionKey = getConnection().getSessionKey();
+
+        params.put("clientId", clientId);
+        params.put("sessions", sessionKey);
+        params.put("session", sessionKey);
+        params.put("subscriptionId", sessionKey);
+        params.put("category", category);
+
+        ServerResponse response = executeSync(SIGNALS_CONNECT, params);
+
+        if (!response.isSuccess()) {
+            throw new Exception(response.getRaw());
+        }
+    }
 
     @Override
     public void sendSignal(String scope, String channel, String event, String payload) throws Exception {

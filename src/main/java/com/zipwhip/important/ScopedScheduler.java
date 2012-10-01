@@ -59,7 +59,9 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
         String key = item.replace(name, "");
         if (StringUtil.equalsIgnoreCase(key, item)) {
             // no change? return, not for us.
-            LOGGER.debug(String.format("(%s) Ignoring %s because it was not our scope.", this, item));
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace(String.format("(%s) Ignoring %s because it was not our scope.", this, item));
+            }
             return;
         }
 

@@ -55,7 +55,7 @@ public interface ApiConnection extends Connection {
     /**
      * Signal Server port 80
      */
-    public static final int PORT_80 = 80;
+    public static final int DEFAULT_SIGNALS_PORT = 80;
 
     /**
      * Signal Server port 443
