@@ -8,27 +8,29 @@ package com.zipwhip.util;
  *
  * Extend this to adapt different stores.
  */
-public class KeyValueStoreAdapter<K,V> implements KeyValueStore<K,V> {
+public abstract class KeyValueStoreAdapter<KExternal,KInternal,V> implements KeyValueStore<KExternal,V> {
 
-    private final KeyValueStore<K, V> store;
+    private final KeyValueStore<KInternal, V> store;
 
-    public KeyValueStoreAdapter(KeyValueStore<K, V> store) {
+    public KeyValueStoreAdapter(KeyValueStore<KInternal, V> store) {
         this.store = store;
     }
 
     @Override
-    public void put(K key, V value) {
-        store.put(key, value);
+    public void put(KExternal key, V value) {
+        store.put(getKey(key), value);
     }
 
     @Override
-    public V get(K key) {
-        return store.get(key);
+    public V get(KExternal key) {
+        return store.get(getKey(key));
     }
 
+    protected abstract KInternal getKey(KExternal key);
+
     @Override
-    public void remove(K key) {
-        store.remove(key);
+    public void remove(KExternal key) {
+        store.remove(getKey(key));
     }
 
     @Override
