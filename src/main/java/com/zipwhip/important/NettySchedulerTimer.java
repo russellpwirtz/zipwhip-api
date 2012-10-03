@@ -19,22 +19,22 @@ import java.util.concurrent.TimeUnit;
  * Date: 9/4/12
  * Time: 12:50 PM
  */
-public class SchedulerTimer implements Timer {
+public class NettySchedulerTimer implements Timer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerTimer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettySchedulerTimer.class);
 
     private Map<String, Timeout> map = Collections.synchronizedMap(new TreeMap<String, Timeout>(HashCodeComparator.getInstance()));
 
     private final Scheduler scheduler;
 
-    public SchedulerTimer(Scheduler scheduler) {
+    public NettySchedulerTimer(Scheduler scheduler) {
         if (scheduler == null){
             this.scheduler = new TimerScheduler("SchedulerTimer");
         } else {
             this.scheduler = new ScopedScheduler(scheduler) {
                 @Override
                 public String toString() {
-                    return String.format("[SchedulerTimer: %s]", SchedulerTimer.this.toString());
+                    return String.format("[SchedulerTimer: %s]", NettySchedulerTimer.this);
                 }
             };
         }
@@ -128,7 +128,7 @@ public class SchedulerTimer implements Timer {
 
         @Override
         public Timer getTimer() {
-            return SchedulerTimer.this;
+            return NettySchedulerTimer.this;
         }
 
         @Override
