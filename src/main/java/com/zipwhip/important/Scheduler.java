@@ -18,6 +18,8 @@ public interface Scheduler {
 
     void schedule(String requestId, Date exitTime);
 
+    void cancel(String requestId);
+
     void onScheduleComplete(Observer<String> observer);
 
     void removeOnScheduleComplete(Observer<String> observer);

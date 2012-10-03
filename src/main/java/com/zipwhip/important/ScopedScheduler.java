@@ -2,9 +2,7 @@ package com.zipwhip.important;
 
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +40,11 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
     @Override
     public void schedule(String requestId, Date exitTime) {
         scheduler.schedule(name + requestId, exitTime);
+    }
+
+    @Override
+    public void cancel(String requestId) {
+        scheduler.cancel(name + requestId);
     }
 
     @Override

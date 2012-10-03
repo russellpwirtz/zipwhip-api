@@ -1,17 +1,21 @@
 package com.zipwhip.important.schedulers;
 
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.HashCodeComparator;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
+import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,6 +28,7 @@ public class TimerScheduler extends CascadingDestroyableBase implements Schedule
 
     private final Timer timer;
     private final ObservableHelper<String> observableHelper = new ObservableHelper<String>();
+    private Map<String, Timeout> map = Collections.synchronizedMap(new TreeMap<String, Timeout>(HashCodeComparator.getInstance()));
 
     public TimerScheduler() {
         this(null, "TimerScheduler");
@@ -52,13 +57,30 @@ public class TimerScheduler extends CascadingDestroyableBase implements Schedule
     }
 
     @Override
-    public void schedule(final String requestId, Date exitTime) {
-        timer.newTimeout(new TimerTask() {
+    public synchronized void schedule(final String requestId, Date exitTime) {
+        Timeout timeout = timer.newTimeout(new TimerTask() {
             @Override
             public void run(Timeout timeout) throws Exception {
-                observableHelper.notifyObservers(TimerScheduler.this, requestId);
+                synchronized (TimerScheduler.this) {
+                    observableHelper.notifyObservers(TimerScheduler.this, requestId);
+                    if (isSameRequest(requestId, timeout)) {
+                        map.remove(requestId);
+                    }
+                }
             }
         }, exitTime.getTime() - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+
+        map.put(requestId, timeout);
+    }
+
+    @Override
+    public synchronized void cancel(String requestId) {
+        Timeout timeout = map.get(requestId);
+
+        if (isSameRequest(requestId, timeout)) {
+            timeout.cancel();
+            map.remove(requestId);
+        }
     }
 
     @Override
@@ -74,5 +96,9 @@ public class TimerScheduler extends CascadingDestroyableBase implements Schedule
     @Override
     protected void onDestroy() {
 
+    }
+
+    private boolean isSameRequest(String requestId, Timeout timeout) {
+        return  (map.get(requestId) == timeout);
     }
 }

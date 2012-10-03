@@ -149,6 +149,7 @@ public class NettySchedulerTimer implements Timer {
         @Override
         public synchronized void cancel() {
             isCancelled = true;
+            scheduler.cancel(this.requestId);
         }
     }
 
