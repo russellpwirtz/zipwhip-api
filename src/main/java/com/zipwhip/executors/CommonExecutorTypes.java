@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.sockets;
+package com.zipwhip.executors;
 
 /**
 * Created with IntelliJ IDEA.
@@ -14,7 +14,10 @@ package com.zipwhip.api.signals.sockets;
 * NIO mode, otherwise just uses BOSS/EVENTS
 */
 public enum CommonExecutorTypes {
+
     BOSS,
+
     WORKER,
+
     EVENTS
 }

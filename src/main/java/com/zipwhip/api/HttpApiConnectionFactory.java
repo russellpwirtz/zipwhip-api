@@ -1,8 +1,7 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
-import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.lifecycle.DestroyableBase;
 
 import java.util.concurrent.Executor;

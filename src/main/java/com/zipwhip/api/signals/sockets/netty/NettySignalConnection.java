@@ -1,12 +1,11 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
-import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
@@ -16,7 +15,6 @@ import com.zipwhip.util.Asserts;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 import java.net.SocketAddress;

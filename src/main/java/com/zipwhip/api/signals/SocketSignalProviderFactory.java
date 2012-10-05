@@ -1,10 +1,10 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
-import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.jboss.netty.channel.ChannelPipelineFactory;

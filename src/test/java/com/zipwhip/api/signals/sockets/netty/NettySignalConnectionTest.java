@@ -1,20 +1,18 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipelineFactory;
-import com.zipwhip.concurrent.ConfiguredFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.util.Factory;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.junit.After;
