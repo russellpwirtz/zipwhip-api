@@ -380,6 +380,11 @@ public class NettySignalConnectionTest {
             public ExecutorService create(CommonExecutorTypes type, String name) {
                 return SimpleExecutor.getInstance();
             }
+
+            @Override
+            public ExecutorService create() {
+                return create(CommonExecutorTypes.BOSS, NettySignalConnectionTest.this.toString());
+            }
         }, null, null);
 
 

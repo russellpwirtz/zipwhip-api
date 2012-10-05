@@ -118,9 +118,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() {
-        DefaultZipwhipClient client = new DefaultZipwhipClient(null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory.create());
-
-        return client;
+        return new DefaultZipwhipClient(null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory.create());
     }
 
 }

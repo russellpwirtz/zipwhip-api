@@ -130,6 +130,11 @@ public class NettySignalConnection extends SignalConnectionBase {
 
                     throw new IllegalStateException("Not sure! " + type);
                 }
+
+                @Override
+                public ExecutorService create() {
+                    return create(CommonExecutorTypes.BOSS, NettySignalConnection.this.toString());
+                }
             };
         }
 

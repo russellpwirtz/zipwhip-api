@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  *
  *
  */
-public class ExecutorFactory implements Factory<Executor>, ConfiguredFactory<String, Executor> {
+public class ExecutorFactory implements Factory<ExecutorService>, ConfiguredFactory<String, Executor> {
 
     private static Map<String, NamedThreadFactory> factories = new HashMap<String, NamedThreadFactory>();
     public static NamedThreadFactory getOrCreate(String name) {
@@ -37,12 +37,12 @@ public class ExecutorFactory implements Factory<Executor>, ConfiguredFactory<Str
     };
 
     @Override
-    public Executor create() {
+    public ExecutorService create() {
         return create(null);
     }
 
     @Override
-    public Executor create(String name) {
+    public ExecutorService create(String name) {
         return NAMED_FACTORY.create(null);
     }
 
