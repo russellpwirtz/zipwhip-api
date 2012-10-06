@@ -87,6 +87,11 @@ public class Presence implements Serializable {
 
     }
 
+    public Presence(PresenceCategory category, UserAgent userAgent) {
+        this.setCategory(category);
+        this.setUserAgent(userAgent);
+    }
+
     public PresenceStatus getStatus() {
         return status;
     }
