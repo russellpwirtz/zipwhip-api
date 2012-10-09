@@ -3,21 +3,24 @@ package com.zipwhip.api;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ExecutorFactory;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.util.SignTool;
-import com.zipwhip.util.DownloadURL;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.util.DownloadURL;
+import com.zipwhip.util.SignTool;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Provides a persistent connection to a User on Zipwhip.
@@ -30,7 +33,7 @@ import java.util.concurrent.*;
  */
 public class HttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpConnection.class);
 
     private String apiVersion = "/";
     private String host = ApiConnectionConfiguration.API_HOST;
@@ -160,7 +163,7 @@ public class HttpConnection extends CascadingDestroyableBase implements ApiConne
                     result = DownloadURL.get(UrlUtil.getSignedUrl(host, apiVersion, method, params, sessionKey, authenticator));
                 } catch (Exception e) {
 
-                    LOGGER.fatal("problem with DownloadUrl", e);
+                    LOGGER.error("problem with DownloadUrl", e);
 
                     // NOTE: if this is a SimpleExecutor (single threaded) then this will be a deadlock. (workerExecutor)
                     future.setFailure(e);
