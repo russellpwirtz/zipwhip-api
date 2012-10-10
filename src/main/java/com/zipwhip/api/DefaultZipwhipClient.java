@@ -553,7 +553,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         } else {
             throw new Exception("Unrecognized server response for challenge request");
         }
-
     }
 
 
