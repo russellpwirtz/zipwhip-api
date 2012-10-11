@@ -3,19 +3,9 @@
  */
 package com.zipwhip.api.signals.reconnect;
 
-import com.zipwhip.api.signals.sockets.ConnectionHandle;
-import com.zipwhip.api.signals.sockets.MockSignalConnection;
-import com.zipwhip.concurrent.FakeFailingObservableFuture;
-import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
-import com.zipwhip.util.Factory;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.concurrent.*;
 
 import static org.junit.Assert.assertTrue;
 
@@ -36,7 +26,6 @@ public class ExponentialBackoffReconnectStrategyTest {
         retryStrategy = new ExponentialBackoffRetryStrategy(1000, 2.0);
 //        strategy = new DefaultReconnectStrategy(null, retryStrategy);
 //		strategy.setSignalConnection(new CannotConnectSignalConnection());
-		Logger.getRootLogger().setLevel(Level.DEBUG);
 	}
 
 	@Test

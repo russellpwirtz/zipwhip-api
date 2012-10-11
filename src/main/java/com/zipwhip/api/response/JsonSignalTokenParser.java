@@ -6,10 +6,11 @@ import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.subscriptions.SubscriptionEntry;
 import com.zipwhip.util.Parser;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.List;
  */
 public class JsonSignalTokenParser implements Parser<String, SignalToken> {
 
-    private static final Logger LOGGER = Logger.getLogger(JsonSignalTokenParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonSignalTokenParser.class);
 
     private JsonSignalParser signalParser = new JsonSignalParser();
 

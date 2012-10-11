@@ -1,9 +1,10 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.util.StateManager;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
-import org.apache.log4j.Logger;
+import com.zipwhip.util.StateManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -21,7 +22,7 @@ import java.util.concurrent.locks.Lock;
  */
 public class ThreadBoundary<T extends Enum> extends DestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(ThreadBoundary.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ThreadBoundary.class);
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private long timeout = 60;

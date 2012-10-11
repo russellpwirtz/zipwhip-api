@@ -7,10 +7,11 @@ import com.zipwhip.api.signals.commands.JsonSignalCommandParser;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
 import com.zipwhip.util.Parser;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +24,7 @@ import java.util.Map;
  */
 public class SocketIoCommandDecoder extends OneToOneDecoder {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketIoCommandDecoder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketIoCommandDecoder.class);
 
     private Parser<String, Command<?>> commandParser;
 
@@ -64,7 +65,7 @@ public class SocketIoCommandDecoder extends OneToOneDecoder {
 
                 } catch (Exception ex) {
 
-                    LOGGER.fatal("Could not extract command from " + extractedCommand, ex);
+                    LOGGER.error("Could not extract command from " + extractedCommand, ex);
                 }
             }
 

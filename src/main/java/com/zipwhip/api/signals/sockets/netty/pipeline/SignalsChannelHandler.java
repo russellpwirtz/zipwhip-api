@@ -5,11 +5,12 @@ import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionDelegate;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.timeout.IdleState;
 import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -21,7 +22,7 @@ import org.jboss.netty.handler.timeout.IdleStateEvent;
  */
 public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
 
-    protected static final Logger LOGGER = Logger.getLogger(SignalsChannelHandler.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(SignalsChannelHandler.class);
 
     private SignalConnectionDelegate delegate;
 

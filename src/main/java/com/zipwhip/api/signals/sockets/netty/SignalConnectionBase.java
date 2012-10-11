@@ -14,12 +14,12 @@ import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -34,7 +34,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public abstract class SignalConnectionBase extends CascadingDestroyableBase implements SignalConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(SignalConnectionBase.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignalConnectionBase.class);
 
     public static int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 10;
 

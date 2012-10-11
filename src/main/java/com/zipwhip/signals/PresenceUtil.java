@@ -1,26 +1,17 @@
 package com.zipwhip.signals;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import com.zipwhip.signals.address.ClientAddress;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.signals.presence.PresenceStatus;
-import com.zipwhip.signals.presence.Product;
-import com.zipwhip.signals.presence.ProductLine;
-import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.signals.presence.*;
 import com.zipwhip.util.Parser;
 import com.zipwhip.util.Serializer;
 import com.zipwhip.util.StringUtil;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -33,7 +24,7 @@ import com.zipwhip.util.StringUtil;
  */
 public class PresenceUtil implements Parser<JSONArray, List<Presence>>, Serializer<List<Presence>, JSONArray> {
 
-	private static Logger logger = Logger.getLogger(PresenceUtil.class);
+	private static Logger logger = LoggerFactory.getLogger(PresenceUtil.class);
 
 	private static PresenceUtil instance;
 

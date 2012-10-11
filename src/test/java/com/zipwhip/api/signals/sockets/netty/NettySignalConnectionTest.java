@@ -1,10 +1,8 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.SocketSignalProvider;
@@ -12,12 +10,15 @@ import com.zipwhip.api.signals.sockets.netty.pipeline.TestRawSocketIoChannelPipe
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -36,7 +37,7 @@ import static junit.framework.Assert.*;
  */
 public class NettySignalConnectionTest {
 
-    private static final Logger LOGGER = Logger.getLogger(NettySignalConnectionTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettySignalConnectionTest.class);
 
     NettySignalConnection connection;
 
