@@ -5,10 +5,11 @@ import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.util.SignTool;
 import com.zipwhip.util.Factory;
+import com.zipwhip.util.SignTool;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +19,7 @@ import java.util.Map;
  */
 public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
 
-    private static final Logger LOGGER = Logger.getLogger(ApiConnectionFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiConnectionFactory.class);
 
     private ResponseParser responseParser = new JsonResponseParser();
 

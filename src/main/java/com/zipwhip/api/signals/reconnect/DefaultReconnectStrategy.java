@@ -1,20 +1,20 @@
 package com.zipwhip.api.signals.reconnect;
 
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import com.zipwhip.reliable.retry.RetryStrategy;
-import com.zipwhip.util.Asserts;
 import com.zipwhip.util.FutureDateUtil;
-import org.apache.log4j.Logger;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by IntelliJ IDEA.
@@ -26,7 +26,7 @@ import java.util.concurrent.*;
  */
 public class DefaultReconnectStrategy extends ReconnectStrategy {
 
-    private static final Logger LOGGER = Logger.getLogger(DefaultReconnectStrategy.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultReconnectStrategy.class);
 
     private ObservableFuture<ConnectionHandle> connectFuture;
     private Timeout timeout;
