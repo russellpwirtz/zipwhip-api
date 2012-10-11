@@ -6,9 +6,9 @@ import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.timers.Timer;
 import com.zipwhip.util.Factory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.Timer;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;

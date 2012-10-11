@@ -4,10 +4,11 @@ import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.events.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.timers.HashedWheelTimer;
+import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.Timer;
+import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FlexibleTimedEvictionMap;
-import org.jboss.netty.util.*;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.TimerTask;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -168,7 +169,7 @@ public class SlidingWindow<P> extends DestroyableBase {
         }
 
         // DUPLICATE_SEQUENCE
-        if (window.containsKey(sequence) && window.get(sequence).equals(value)) {
+        if (window.containsKey(sequence)) {
             // No results to release, this packet gets dropped
             return ReceiveResult.DUPLICATE_SEQUENCE;
         }
@@ -256,6 +257,14 @@ public class SlidingWindow<P> extends DestroyableBase {
         }
     }
 
+    public Long getHighestSequence() {
+        try {
+            return window.firstKey();
+        } catch (Exception e) {
+            return indexSequence;
+        }
+    }
+
     /**
      * Get item with the highest sequence number inside the window.
      *
@@ -300,11 +309,13 @@ public class SlidingWindow<P> extends DestroyableBase {
                                 }
                             }
                         };
+
                         timer.newTimeout(waitAndCheckTask, holeTimeoutMillis * 2, TimeUnit.MILLISECONDS);
                     }
                 }
             }
         };
+
         timer.newTimeout(waitAndNotifyTask, holeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -347,9 +358,14 @@ public class SlidingWindow<P> extends DestroyableBase {
 
     protected List<HoleRange> getHoles(Set<Long> keys) {
 
-        List<HoleRange> holes = new ArrayList<HoleRange>();
-
         long previous = indexSequence;
+
+        if ((keys.size() == 1) && keys.contains(indexSequence)) {
+            // there are no holes?
+            return null;
+        }
+
+        List<HoleRange> holes = new ArrayList<HoleRange>();
 
         for (Long sequence : keys) {
             if (previous >= 0 && previous + step != sequence) {
@@ -359,6 +375,10 @@ public class SlidingWindow<P> extends DestroyableBase {
             previous = sequence;
         }
         return holes;
+    }
+
+    public List<HoleRange> getHoles() {
+        return getHoles(window.keySet());
     }
 
     /**

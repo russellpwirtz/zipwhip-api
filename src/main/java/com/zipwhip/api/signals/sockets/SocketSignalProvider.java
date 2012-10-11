@@ -11,17 +11,19 @@ import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
 import com.zipwhip.important.schedulers.TimerScheduler;
+import com.zipwhip.important.schedulers.ZipwhipTimerScheduler;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.timers.Timer;
+import com.zipwhip.timers.HashedWheelTimer;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.util.*;
-import org.jboss.netty.util.Timer;
 
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -78,7 +80,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
             this.timer = timer;
         }
 
-        this.scheduler = new TimerScheduler(this.timer);
+        this.scheduler = new ZipwhipTimerScheduler(this.timer);
         this.importantTaskExecutor = new ImportantTaskExecutor(this.scheduler);
         this.link(importantTaskExecutor);
 
