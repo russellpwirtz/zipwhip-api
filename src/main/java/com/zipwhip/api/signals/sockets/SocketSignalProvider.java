@@ -12,14 +12,13 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
-import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.important.schedulers.ZipwhipTimerScheduler;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import com.zipwhip.timers.Timer;
 import com.zipwhip.timers.HashedWheelTimer;
+import com.zipwhip.timers.Timer;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
@@ -1137,7 +1136,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         @Override
         public void notify(Object sender, ObservableFuture item) {
             if (!item.isSuccess()) {
-                LOGGER.fatal("FAILED TO WRITE TO CHANNEL! " + item);
+                LOGGER.error("FAILED TO WRITE TO CHANNEL! " + item);
             }
         }
     };

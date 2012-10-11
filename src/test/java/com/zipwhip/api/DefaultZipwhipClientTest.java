@@ -409,7 +409,7 @@ public class DefaultZipwhipClientTest {
         future.addObserver(new Observer() {
             @Override
             public void notify(Object sender, Object item) {
-                Logger.getLogger(DefaultZipwhipClientTest.class).debug("Who called me? " + item);
+                LOGGER.debug("Who called me? " + item);
             }
         });
 
