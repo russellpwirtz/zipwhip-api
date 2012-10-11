@@ -1,16 +1,20 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.*;
+import com.zipwhip.api.ApiConnection;
+import com.zipwhip.api.DefaultZipwhipClient;
+import com.zipwhip.api.HttpApiConnectionFactory;
+import com.zipwhip.api.ZipwhipClient;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 
@@ -23,7 +27,7 @@ import java.net.InetSocketAddress;
  */
 public class ZipwhipClientIntegrationTest {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketSignalProviderIntegrationTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProviderIntegrationTest.class);
     private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
 
     ZipwhipClient zipwhipClient;

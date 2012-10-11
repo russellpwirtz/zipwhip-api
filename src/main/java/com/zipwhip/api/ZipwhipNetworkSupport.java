@@ -1,6 +1,9 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.response.*;
+import com.zipwhip.api.response.JsonResponseParser;
+import com.zipwhip.api.response.ResponseParser;
+import com.zipwhip.api.response.ServerResponse;
+import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ExecutorFactory;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -9,7 +12,8 @@ import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.InputRunnable;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -17,7 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A base class for future implementation to extend.
@@ -30,7 +36,7 @@ import java.util.concurrent.*;
  */
 public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
-    protected static final Logger LOGGER = Logger.getLogger(ZipwhipNetworkSupport.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ZipwhipNetworkSupport.class);
 
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
 
@@ -251,7 +257,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                 try {
                     serverResponse = responseParser.parse(responseString);
                 } catch (Exception e) {
-                    LOGGER.fatal("Problem parsing json response", e);
+                    LOGGER.error("Problem parsing json response", e);
                     // this will execute in the "callbackExecutor"
                     result.setFailure(e);
                     return;
@@ -272,7 +278,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                         result.setSuccess(null);
                     }
                 } catch (Exception e) {
-                    LOGGER.fatal("Problem with running the business logic conversion", e);
+                    LOGGER.error("Problem with running the business logic conversion", e);
                     // this will execute in the "callbackExecutor"
                     result.setFailure(e);
                 }
