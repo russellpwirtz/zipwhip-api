@@ -15,20 +15,18 @@ import com.zipwhip.api.signals.sockets.ConnectionHandleAware;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.DebuggingExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
 
@@ -43,7 +41,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport {
 
-    protected static final Logger LOGGER = Logger.getLogger(ClientZipwhipNetworkSupport.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ClientZipwhipNetworkSupport.class);
 
     protected final ImportantTaskExecutor importantTaskExecutor;
     protected long signalsConnectTimeoutInSeconds = 10;
@@ -857,7 +855,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
      */
     private static class UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver implements Observer<ObservableFuture<ConnectionHandle>> {
 
-        private static final Logger LOGGER = Logger.getLogger(UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver.class);
+        private static final Logger LOGGER = LoggerFactory.getLogger(UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver.class);
 
         private final ClientZipwhipNetworkSupport client;
 

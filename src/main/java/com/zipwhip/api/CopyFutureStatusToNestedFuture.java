@@ -2,14 +2,15 @@ package com.zipwhip.api;
 
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * When the future finishes, if it's the current "connectFuture" clean up the references.
  */
 public class CopyFutureStatusToNestedFuture<T> implements Observer<ObservableFuture<T>> {
 
-    private final static Logger LOGGER = Logger.getLogger(CopyFutureStatusToNestedFuture.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(CopyFutureStatusToNestedFuture.class);
 
     final ObservableFuture<T> nestedFuture;
 

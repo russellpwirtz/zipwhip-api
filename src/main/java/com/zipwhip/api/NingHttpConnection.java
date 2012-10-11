@@ -1,7 +1,9 @@
 package com.zipwhip.api;
 
-import com.ning.http.client.*;
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Part;
+import com.ning.http.client.Response;
 import com.ning.http.multipart.FilePart;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
@@ -9,17 +11,18 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.SignTool;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Provides a persistent connection to a User on Zipwhip.
@@ -32,7 +35,7 @@ import java.util.concurrent.*;
  */
 public class NingHttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NingHttpConnection.class);
 
     private String apiVersion = DEFAULT_API_VERSION;
     private String host = ApiConnectionConfiguration.API_HOST;

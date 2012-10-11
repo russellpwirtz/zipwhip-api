@@ -5,15 +5,16 @@ import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SignalsChannelHandler;
 import com.zipwhip.concurrent.FutureUtil;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.StateManager;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChannelWrapper extends CascadingDestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(ChannelWrapper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChannelWrapper.class);
 
     /**
      * This delegate represents the channel's ensureAbleTo to our SignalConnectionBase class. The ChannelHandlers

@@ -7,17 +7,18 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.executors.DebuggingExecutor;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.Factory;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public abstract class SignalProviderBase extends CascadingDestroyableBase implements SignalProvider {
 
-    private static final Logger LOGGER = Logger.getLogger(SignalProviderBase.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignalProviderBase.class);
 
     protected static Factory<Long> CONNECTION_HANDLE_ID_FACTORY = IncrementingLongFactory.getInstance();
     protected final Object PROVIDER_CONNECTION_HANDLE_LOCK = new Object() {

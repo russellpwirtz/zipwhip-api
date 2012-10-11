@@ -1,6 +1,7 @@
 package com.zipwhip.util;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -10,7 +11,7 @@ import org.apache.log4j.Logger;
  */
 public class UrlUtil {
 
-    private static final Logger LOGGER = Logger.getLogger(UrlUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UrlUtil.class);
 
     /**
      * Get an authenticated URL for posting to Zipwhip.

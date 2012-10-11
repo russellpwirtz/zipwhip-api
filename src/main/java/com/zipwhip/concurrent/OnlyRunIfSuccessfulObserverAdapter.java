@@ -1,7 +1,8 @@
 package com.zipwhip.concurrent;
 
 import com.zipwhip.events.Observer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -12,7 +13,7 @@ import org.apache.log4j.Logger;
  */
 public class OnlyRunIfSuccessfulObserverAdapter<T> extends ObserverAdapter<ObservableFuture<T>> {
 
-    private static final Logger LOGGER = Logger.getLogger(OnlyRunIfSuccessfulObserverAdapter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OnlyRunIfSuccessfulObserverAdapter.class);
 
     public OnlyRunIfSuccessfulObserverAdapter(Observer<ObservableFuture<T>> observer) {
         super(observer);

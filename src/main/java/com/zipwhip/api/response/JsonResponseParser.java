@@ -1,14 +1,15 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
-import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -20,7 +21,7 @@ import java.util.*;
  */
 public class JsonResponseParser implements ResponseParser {
 
-    private static final Logger LOGGER = Logger.getLogger(JsonResponseParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonResponseParser.class);
     private static final String EMPTY_OBJECT = "{}";
 
     private JsonDtoParser parser = new JsonDtoParser();

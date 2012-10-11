@@ -1,7 +1,8 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class WriteOnChannelSafelyCallable implements Callable<Boolean> {
 
-    private static final Logger LOGGER = Logger.getLogger(WriteOnChannelSafelyCallable.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WriteOnChannelSafelyCallable.class);
     private static final int WRITE_TIMEOUT_SECONDS = 30;
 
     final ChannelWrapper wrapper;

@@ -8,10 +8,9 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.FutureDateUtil;
-import org.apache.log4j.Logger;
-import org.jboss.netty.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -27,7 +26,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(ImportantTaskExecutor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportantTaskExecutor.class);
 
     private final Map<String, ScheduledRequest> queuedRequests = Collections.synchronizedMap(new HashMap<String, ScheduledRequest>());
     private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());

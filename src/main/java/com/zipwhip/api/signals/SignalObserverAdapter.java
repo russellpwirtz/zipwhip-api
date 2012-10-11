@@ -3,7 +3,8 @@ package com.zipwhip.api.signals;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ import java.util.List;
  */
 public abstract class SignalObserverAdapter implements Observer<List<Signal>> {
 
-    private static Logger logger = Logger.getLogger(SignalObserverAdapter.class);
+    private static Logger logger = LoggerFactory.getLogger(SignalObserverAdapter.class);
 
     public enum SignalType {
 

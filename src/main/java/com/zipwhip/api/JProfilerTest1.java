@@ -9,8 +9,8 @@ import com.zipwhip.api.signals.sockets.SocketSignalProvider;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.util.Asserts;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -25,13 +25,12 @@ import static com.zipwhip.util.Asserts.assertTrue;
  */
 public class JProfilerTest1 {
 
-    private static final Logger LOGGER = Logger.getLogger(JProfilerTest1.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JProfilerTest1.class);
 
     ZipwhipClient client;
     SocketSignalProvider signalProvider;
 
     public static void main(String[] args) throws Exception {
-        BasicConfigurator.configure();
 
         JProfilerTest1 t = new JProfilerTest1();
         t.setUp();

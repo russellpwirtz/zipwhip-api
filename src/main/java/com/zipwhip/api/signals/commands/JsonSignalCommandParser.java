@@ -1,20 +1,20 @@
 package com.zipwhip.api.signals.commands;
 
+import com.zipwhip.api.signals.JsonSignalParser;
+import com.zipwhip.api.signals.VersionMapEntry;
+import com.zipwhip.signals.PresenceUtil;
+import com.zipwhip.signals.message.Action;
+import com.zipwhip.util.Parser;
+import com.zipwhip.util.StringUtil;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import com.zipwhip.api.signals.JsonSignalParser;
-import com.zipwhip.signals.PresenceUtil;
-import com.zipwhip.api.signals.VersionMapEntry;
-import com.zipwhip.signals.message.Action;
-import com.zipwhip.util.Parser;
-import com.zipwhip.util.StringUtil;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/3/11 Time: 5:20 PM
@@ -23,7 +23,7 @@ import com.zipwhip.util.StringUtil;
  */
 public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
-	private static final Logger LOGGER = Logger.getLogger(JsonSignalCommandParser.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonSignalCommandParser.class);
 
 	private final Map<Action, Parser<JSONObject, Command<?>>> parsers;
 	private final JsonSignalParser signalContentParser = new JsonSignalParser();
@@ -81,8 +81,7 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 
 			String clientId = object.optString("clientId");
 			if(clientId == null || clientId.length() < 18) {
-				Throwable t = new Throwable();
-				LOGGER.fatal(t);
+				LOGGER.error("ClientId was null or length < 18", new Throwable());
 			}
 
 			return new ConnectCommand(clientId);

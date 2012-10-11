@@ -1,14 +1,14 @@
 package com.zipwhip.api.signals.commands;
 
-import java.util.List;
-
-import org.apache.log4j.Logger;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.signals.presence.Presence;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -22,7 +22,7 @@ public class PresenceCommand extends SerializingCommand {
 
     public static final Action ACTION = Action.PRESENCE; // "presence";
 
-    private static Logger logger = Logger.getLogger(PresenceCommand.class);
+    private static Logger logger = LoggerFactory.getLogger(PresenceCommand.class);
 
     private List<Presence> presence;
 

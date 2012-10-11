@@ -1,9 +1,8 @@
 package com.zipwhip.executors;
 
 import com.zipwhip.concurrent.ConfiguredFactory;
-import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.util.Factory;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,7 +26,7 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
         }
     };
 
-    private final static Logger LOGGER = Logger.getLogger(DebuggingExecutor.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(DebuggingExecutor.class);
 
     protected final List<Runnable> runnableSet = Collections.synchronizedList(new LinkedList<Runnable>());
 

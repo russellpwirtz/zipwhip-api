@@ -13,6 +13,8 @@ import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -27,6 +29,8 @@ import java.util.concurrent.Executor;
  * the "Zipwhip" class.
  */
 public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements ZipwhipClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultZipwhipClient.class);
 
     /**
      * Create a new DefaultZipwhipClient with out a {@code SignalProvider}

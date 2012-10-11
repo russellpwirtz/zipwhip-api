@@ -1,11 +1,10 @@
 package com.zipwhip.api.signals.sockets.netty;
 
 import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIdleStateHandler;
-import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandEncoder;
 import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandDecoder;
+import com.zipwhip.api.signals.sockets.netty.pipeline.SocketIoCommandEncoder;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -16,6 +15,8 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -27,7 +28,7 @@ import org.jboss.netty.util.Timer;
  */
 public class RawSocketIoChannelPipelineFactory extends DestroyableBase implements ChannelPipelineFactory {
 
-    private static final Logger LOGGER = Logger.getLogger(RawSocketIoChannelPipelineFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RawSocketIoChannelPipelineFactory.class);
 
     public static final int DEFAULT_FRAME_SIZE = 8192;
     public static final int DEFAULT_PING_INTERVAL_SECONDS = 300; // when to ping inactive seconds

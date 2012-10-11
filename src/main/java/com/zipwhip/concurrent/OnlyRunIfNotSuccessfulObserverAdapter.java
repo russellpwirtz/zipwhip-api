@@ -1,8 +1,8 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.api.ClientZipwhipNetworkSupport;
 import com.zipwhip.events.Observer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * So we can do conditionals with constructors
@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
  */
 public class OnlyRunIfNotSuccessfulObserverAdapter<T> implements Observer<ObservableFuture<T>> {
 
-    private final static Logger LOGGER = Logger.getLogger(OnlyRunIfNotSuccessfulObserverAdapter.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(OnlyRunIfNotSuccessfulObserverAdapter.class);
 
     final Observer<ObservableFuture<T>> observer;
 

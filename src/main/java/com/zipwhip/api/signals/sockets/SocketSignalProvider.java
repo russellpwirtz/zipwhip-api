@@ -1,12 +1,14 @@
 package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.NestedObservableFuture;
-import com.zipwhip.api.signals.*;
+import com.zipwhip.api.signals.PingEvent;
+import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
@@ -22,8 +24,8 @@ import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
-import org.jboss.netty.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -42,7 +44,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public class SocketSignalProvider extends SignalProviderBase implements SignalProvider {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProvider.class);
 
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
 

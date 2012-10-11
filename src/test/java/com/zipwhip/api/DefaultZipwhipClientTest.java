@@ -6,20 +6,21 @@ import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.MockSignalProvider;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
-import com.zipwhip.api.signals.sockets.*;
+import com.zipwhip.api.signals.sockets.ConnectionHandle;
+import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.NullExecutor;
-import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
@@ -41,7 +42,7 @@ import static junit.framework.Assert.*;
  */
 public class DefaultZipwhipClientTest {
 
-    private static final Logger LOGGER = Logger.getLogger(DefaultZipwhipClientTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultZipwhipClientTest.class);
 
     ZipwhipClient client;
     SignalProvider signalProvider;
@@ -134,7 +135,7 @@ public class DefaultZipwhipClientTest {
                 try {
                     System.out.println("Connecting at iteration " + iteration);
                     ObservableFuture<ConnectionHandle> future = client.connect();
-                    assertTrue(future.await(20, TimeUnit.SECONDS));
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;
@@ -142,7 +143,7 @@ public class DefaultZipwhipClientTest {
                 try {
                     System.out.println("Disconnecting at iteration " + iteration);
                     ObservableFuture<ConnectionHandle> future = client.disconnect();
-                    assertTrue(future.await(20, TimeUnit.SECONDS));
+                    assertTrue(future.await(2, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;

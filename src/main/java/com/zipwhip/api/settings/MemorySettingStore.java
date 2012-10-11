@@ -1,7 +1,8 @@
 package com.zipwhip.api.settings;
 
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +18,7 @@ import java.util.Map;
  */
 public class MemorySettingStore implements SettingsStore {
 
-    private static Logger logger = Logger.getLogger(MemorySettingStore.class);
+    private static Logger logger = LoggerFactory.getLogger(MemorySettingStore.class);
 
     private Map<String, String> memoryStore = new HashMap<String, String>();
 
