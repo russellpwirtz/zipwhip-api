@@ -15,6 +15,7 @@ import com.zipwhip.executors.NullExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
+import com.zipwhip.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
@@ -22,6 +23,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -49,9 +51,25 @@ public class DefaultZipwhipClientTest {
 
     @Before
     public void setUp() throws Exception {
-        apiConnection = new MockApiConnection();
         signalProvider = new MockSignalProvider();
-        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider);
+        apiConnection = new MockApiConnection() {
+
+            @Override
+            public ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception {
+                if (StringUtil.equals(method, ZipwhipNetworkSupport.SIGNALS_CONNECT)) {
+                    ((MockSignalProvider)signalProvider).subscriptionCompleteEvent.notify(signalProvider, new SubscriptionCompleteCommand("asdf", Arrays.asList(new Object())));
+                }
+
+                return super.send(method, params);
+            }
+        };
+        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
+
+            @Override
+            protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
+                return super.executeSync(method, params);
+            }
+        };
         ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 5;
         client.setSettingsStore(new MemorySettingStore());
     }
@@ -116,7 +134,7 @@ public class DefaultZipwhipClientTest {
                 try {
                     System.out.println("Connecting at iteration " + iteration);
                     ObservableFuture<ConnectionHandle> future = client.connect();
-                    assertTrue(future.await(2, TimeUnit.SECONDS));
+                    assertTrue(future.await(20, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;
@@ -124,7 +142,7 @@ public class DefaultZipwhipClientTest {
                 try {
                     System.out.println("Disconnecting at iteration " + iteration);
                     ObservableFuture<ConnectionHandle> future = client.disconnect();
-                    assertTrue(future.await(2, TimeUnit.SECONDS));
+                    assertTrue(future.await(20, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     LOGGER.debug("Exception ", e);
                     hasErrors[0] = true;
