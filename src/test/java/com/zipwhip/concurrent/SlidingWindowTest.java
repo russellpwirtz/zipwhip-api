@@ -330,24 +330,24 @@ public class SlidingWindowTest {
 
         List<Long> results = new ArrayList<Long>();
 
-        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(1l, 1l, results));
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(4l, 4l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(4), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(5l, 5l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(5), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(6l, 6l, results));
+        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(new Long(6), results.get(0));
+        results.clear();
+
+        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 1l, results));
         Assert.assertEquals(1, results.size());
         Assert.assertEquals(new Long(1), results.get(0));
-        results.clear();
-
-        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(2l, 2l, results));
-        Assert.assertEquals(1, results.size());
-        Assert.assertEquals(new Long(2), results.get(0));
-        results.clear();
-
-        Assert.assertEquals(SlidingWindow.ReceiveResult.EXPECTED_SEQUENCE, window.receive(3l, 3l, results));
-        Assert.assertEquals(1, results.size());
-        Assert.assertEquals(new Long(3), results.get(0));
-        results.clear();
-
-        Assert.assertEquals(SlidingWindow.ReceiveResult.NEGATIVE_HOLE, window.receive(1l, 10l, results));
-        Assert.assertEquals(1, results.size());
-        Assert.assertEquals(new Long(10), results.get(0));
         Assert.assertEquals(1l, window.getIndexSequence());
         Assert.assertEquals(1, window.window.size());
     }
