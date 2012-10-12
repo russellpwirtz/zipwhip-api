@@ -15,7 +15,6 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.NullExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.SignTool;
-import com.zipwhip.util.StringUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -53,24 +51,8 @@ public class DefaultZipwhipClientTest {
     @Before
     public void setUp() throws Exception {
         signalProvider = new MockSignalProvider();
-        apiConnection = new MockApiConnection() {
-
-            @Override
-            public ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception {
-                if (StringUtil.equals(method, ZipwhipNetworkSupport.SIGNALS_CONNECT)) {
-                    ((MockSignalProvider)signalProvider).subscriptionCompleteEvent.notify(signalProvider, new SubscriptionCompleteCommand("asdf", Arrays.asList(new Object())));
-                }
-
-                return super.send(method, params);
-            }
-        };
-        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
-
-            @Override
-            protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
-                return super.executeSync(method, params);
-            }
-        };
+        apiConnection = new MockApiConnection();
+        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider);
         ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 5;
         client.setSettingsStore(new MemorySettingStore());
     }
