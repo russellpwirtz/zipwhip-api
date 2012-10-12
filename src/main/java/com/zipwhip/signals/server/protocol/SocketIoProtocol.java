@@ -129,7 +129,7 @@ public class SocketIoProtocol {
 		if (blocks.length >= 3) {
 			String possibleId = blocks[2];
 			if ((possibleId != null) && (possibleId.length() >= CLIENT_ID_LENGTH)) {
-				return Long.parseLong(possibleId);
+				return Long.parseLong(possibleId.trim());
 			}
 		}
 		return NO_ID;
