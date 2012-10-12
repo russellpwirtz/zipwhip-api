@@ -36,6 +36,7 @@ public class JsonSignalCommandParser implements Parser<String, Command<?>> {
 		parsers.put(DisconnectCommand.ACTION, DISCONNECT_PARSER);
 		parsers.put(SubscriptionCompleteCommand.ACTION, SUBSCRIPTION_COMPLETE_PARSER);
 		parsers.put(SignalCommand.ACTION, SIGNAL_PARSER);
+		parsers.put(BackfillCommand.ACTION, SIGNAL_PARSER);
 		parsers.put(PresenceCommand.ACTION, PRESENCE_PARSER);
 		parsers.put(SignalVerificationCommand.ACTION, SIGNAL_VERIFICATION_PARSER);
 		parsers.put(PingPongCommand.ACTION, PING_PONG_PARSER);
