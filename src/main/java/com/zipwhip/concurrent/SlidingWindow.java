@@ -358,14 +358,14 @@ public class SlidingWindow<P> extends DestroyableBase {
 
     protected List<HoleRange> getHoles(Set<Long> keys) {
 
+        List<HoleRange> holes = new ArrayList<HoleRange>();
+
         long previous = indexSequence;
 
         if ((keys.size() == 1) && keys.contains(indexSequence)) {
             // there are no holes?
-            return null;
+            return holes;
         }
-
-        List<HoleRange> holes = new ArrayList<HoleRange>();
 
         for (Long sequence : keys) {
             if (previous >= 0 && previous + step != sequence) {
