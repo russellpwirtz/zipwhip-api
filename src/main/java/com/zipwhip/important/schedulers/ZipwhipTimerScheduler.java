@@ -73,6 +73,31 @@ public class ZipwhipTimerScheduler extends CascadingDestroyableBase implements S
         map.put(requestId, timeout);
     }
 
+
+    @Override
+    public void scheduleRecurring(final String requestId, final long interval, final TimeUnit units) {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run(Timeout timeout) throws Exception {
+
+                synchronized (ZipwhipTimerScheduler.this) {
+                    observableHelper.notifyObservers(ZipwhipTimerScheduler.this, requestId);
+                    if (isSameRequest(requestId, timeout)) {
+                        map.remove(requestId);
+                    }
+                }
+
+                Timeout t = timer.newTimeout(this, interval, units);
+                map.put(requestId, t);
+            }
+        };
+
+        Timeout timeout = timer.newTimeout(task, interval, units);
+
+        map.put(requestId, timeout);
+    }
+
+
     @Override
     public synchronized void cancel(String requestId) {
         Timeout timeout = map.get(requestId);

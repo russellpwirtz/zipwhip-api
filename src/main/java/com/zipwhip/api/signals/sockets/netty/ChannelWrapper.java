@@ -113,7 +113,6 @@ public class ChannelWrapper extends CascadingDestroyableBase {
         } catch (Exception e) {
             if (future == null){
                 // oh shit! it crashed!
-                // Subsequent calls to close have no effect
             } else if (!future.isDone()) {
                 future.cancel();
                 // Subsequent calls to close have no effect

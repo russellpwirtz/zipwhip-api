@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by IntelliJ IDEA.
@@ -40,6 +41,11 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
     @Override
     public void schedule(String requestId, Date exitTime) {
         scheduler.schedule(name + requestId, exitTime);
+    }
+
+    @Override
+    public void scheduleRecurring(String requestId, long interval, TimeUnit units) {
+        scheduler.scheduleRecurring(name + requestId, interval, units);
     }
 
     @Override

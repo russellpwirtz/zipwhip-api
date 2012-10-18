@@ -74,8 +74,35 @@ public class TimerScheduler extends CascadingDestroyableBase implements Schedule
     }
 
     @Override
+    public void scheduleRecurring(final String requestId, final long interval, final TimeUnit units) {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run(Timeout timeout) throws Exception {
+
+                synchronized (TimerScheduler.this) {
+                    observableHelper.notifyObservers(TimerScheduler.this, requestId);
+                    if (isSameRequest(requestId, timeout)) {
+                        map.remove(requestId);
+                    }
+                }
+
+                Timeout t = timer.newTimeout(this, interval, units);
+                map.put(requestId, t);
+            }
+        };
+
+        Timeout timeout = timer.newTimeout(task, interval, units);
+
+        map.put(requestId, timeout);
+    }
+
+    @Override
     public synchronized void cancel(String requestId) {
         Timeout timeout = map.get(requestId);
+
+        if (timeout == null) {
+            return;
+        }
 
         if (isSameRequest(requestId, timeout)) {
             timeout.cancel();
@@ -99,6 +126,10 @@ public class TimerScheduler extends CascadingDestroyableBase implements Schedule
     }
 
     private boolean isSameRequest(String requestId, Timeout timeout) {
+        if (timeout == null){
+            return false;
+        }
+
         return  (map.get(requestId) == timeout);
     }
 }
