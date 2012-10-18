@@ -31,4 +31,8 @@ public class FutureDateUtil {
     public static boolean isExpired(Date expireDate) {
         return (System.currentTimeMillis() > expireDate.getTime());
     }
+
+    public static Date in1Minute() {
+        return inFuture(60, TimeUnit.SECONDS);
+    }
 }

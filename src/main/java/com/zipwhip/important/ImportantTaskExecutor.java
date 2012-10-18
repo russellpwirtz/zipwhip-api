@@ -304,4 +304,15 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     public String toString() {
         return String.format("[ImportantTaskExecutor: %s", hashCode());
     }
+
+    public static boolean isFailedDueToTimeout(ObservableFuture<?> future) {
+        if (future == null){
+            throw new NullPointerException("future");
+        } else if (!future.isFailed()) {
+            return false;
+        }
+
+        return future.getCause() instanceof TimeoutException;
+    }
+
 }
