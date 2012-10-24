@@ -259,7 +259,7 @@ public abstract class SignalProviderBase extends CascadingDestroyableBase implem
      * @param connectionHandle The underlying connectionHandle (like a netty one).
      */
     protected SignalProviderConnectionHandle newConnectionHandle(ConnectionHandle connectionHandle) {
-        return new SignalProviderConnectionHandle(CONNECTION_HANDLE_ID_FACTORY.create(), this, null);
+        return new SignalProviderConnectionHandle(CONNECTION_HANDLE_ID_FACTORY.create(), this, connectionHandle);
     }
 
     @Override
