@@ -83,9 +83,12 @@ public class RequestBuilder {
      *
      * @param key The param key.
      * @param value The param value.
-     * @param encode If {@code true} then encode the params, otherwise don't.
      * @return The resulting query string.
      */
+    public RequestBuilder param(String key, String value) {
+        return param(key, value, false);
+    }
+
     public RequestBuilder param(String key, String value, boolean encode) {
 
         if (StringUtil.isNullOrEmpty(key)) {
@@ -125,6 +128,14 @@ public class RequestBuilder {
     public String build() {
         String result = sb.toString();
         return result.substring(0, result.length() - 1);
+    }
+
+    public static String getUrl(String url, Map<String, Object> params) {
+        RequestBuilder rb = new RequestBuilder();
+
+        rb.params(params, true);
+
+        return url + rb.build();
     }
 
 }

@@ -84,7 +84,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public List<MessageToken> sendMessage(Collection<String> addresses, String body, String fromName, String advertisement) throws Exception {
-
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("contacts", addresses);
