@@ -55,7 +55,6 @@ public class SettingsVersionStore implements VersionStore {
 
     @Override
     public boolean set(String versionKey, long newVersion) {
-
         logger.debug("Setting version " + versionKey + " : " + newVersion);
 
         Long previousVersion = memoryVersions.put(versionKey, newVersion);
