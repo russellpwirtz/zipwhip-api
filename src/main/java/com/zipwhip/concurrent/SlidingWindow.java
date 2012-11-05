@@ -1,8 +1,8 @@
 package com.zipwhip.concurrent;
 
-import com.zipwhip.executors.NamedThreadFactory;
-import com.zipwhip.events.*;
+import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.timers.HashedWheelTimer;
 import com.zipwhip.timers.Timeout;
@@ -259,7 +259,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
     public Long getHighestSequence() {
         try {
-            return window.firstKey();
+            return window.lastKey();
         } catch (Exception e) {
             return indexSequence;
         }
