@@ -21,7 +21,6 @@ public class PreferencesSettingsStore implements SettingsStore {
 
     @Override
     public void put(Keys key, String value) {
-
         logger.debug("Putting " + key.toString() + " = " + value);
 
         if (value == null) {

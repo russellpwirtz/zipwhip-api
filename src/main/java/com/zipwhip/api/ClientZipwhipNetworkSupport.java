@@ -62,7 +62,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
      * @param connection For talking with Zipwhip (message/send)
      * @param signalProvider For signal i/o
      */
-    public ClientZipwhipNetworkSupport(Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
+    public ClientZipwhipNetworkSupport(SettingsStore store, Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
         super(executor, connection);
 
         if (signalProvider != null) {
@@ -76,10 +76,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         }
         this.importantTaskExecutor = importantTaskExecutor;
 
-        if (settingsStore == null) {
-            settingsStore = new PreferencesSettingsStore();
-            versionsStore = new SettingsVersionStore(settingsStore);
+        if (store == null) {
+            store = new PreferencesSettingsStore();
         }
+        this.setSettingsStore(store);
 
         if (signalProvider != null){
             // Start listening to provider events that interest us

@@ -1,5 +1,6 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
@@ -13,19 +14,21 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     private Factory<ApiConnection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
     private ImportantTaskExecutor importantTaskExecutor;
+    private SettingsStore settingsStore;
 
     public ZipwhipClientFactory() {
-        this(null, null, null);
+        this(null, null);
     }
 
     public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
-        this(connectionFactory, signalProviderFactory, null);
+        this(connectionFactory, signalProviderFactory, null, null);
     }
 
-    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory, ImportantTaskExecutor importantTaskExecutor) {
+    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory, ImportantTaskExecutor importantTaskExecutor, SettingsStore settingsStore) {
         this.connectionFactory = connectionFactory;
         this.signalProviderFactory = signalProviderFactory;
         this.importantTaskExecutor = importantTaskExecutor;
+        this.settingsStore = settingsStore;
 
         if (this.importantTaskExecutor == null){
             this.importantTaskExecutor = new ImportantTaskExecutor();
@@ -118,7 +121,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() {
-        return new DefaultZipwhipClient(null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory.create());
+        return new DefaultZipwhipClient(settingsStore, null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory == null ? null : signalProviderFactory.create());
     }
 
 }

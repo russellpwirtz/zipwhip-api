@@ -44,7 +44,7 @@ public class ZipwhipClientIntegrationTest {
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
-        DefaultZipwhipClient client = new DefaultZipwhipClient(null, null, connectionFactory.create(), signalProviderFactory.create());
+        DefaultZipwhipClient client = new DefaultZipwhipClient(null, null, null, connectionFactory.create(), signalProviderFactory.create());
         client.setSettingsStore(new MemorySettingStore());
 
         zipwhipClient = client;

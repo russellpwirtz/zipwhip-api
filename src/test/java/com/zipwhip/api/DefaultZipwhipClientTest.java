@@ -52,7 +52,7 @@ public class DefaultZipwhipClientTest {
     public void setUp() throws Exception {
         signalProvider = new MockSignalProvider();
         apiConnection = new MockApiConnection();
-        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider);
+        client = new DefaultZipwhipClient(null, null, null, apiConnection, signalProvider);
         ((DefaultZipwhipClient) client).signalsConnectTimeoutInSeconds = 5;
         client.setSettingsStore(new MemorySettingStore());
     }
@@ -273,7 +273,7 @@ public class DefaultZipwhipClientTest {
     public void testConnectBlocksOnSubscriptionComplete() throws Exception {
         apiConnection = new MockApiConnection();
         signalProvider = new MockSignalProvider();
-        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
+        client = new DefaultZipwhipClient(null, null, null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
                 ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
@@ -304,7 +304,7 @@ public class DefaultZipwhipClientTest {
     public void testConnectBlocksOnSubscriptionCompleteWithDelay() throws Exception {
         apiConnection = new MockApiConnection();
         signalProvider = new MockSignalProvider();
-        client = new DefaultZipwhipClient(null, null, apiConnection, signalProvider) {
+        client = new DefaultZipwhipClient(null, null, null, apiConnection, signalProvider) {
             @Override
             protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
                 Executors.newSingleThreadExecutor().execute(new Runnable() {
