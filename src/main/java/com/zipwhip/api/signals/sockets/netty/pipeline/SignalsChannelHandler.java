@@ -97,7 +97,7 @@ public class SignalsChannelHandler extends IdleStateAwareChannelHandler {
             LOGGER.debug("Channel READER_IDLE");
 
             if (channel.isConnected()) {
-                LOGGER.warn("PONG timed out closing channel...");
+                LOGGER.warn("PONG timed out. Closing channel...");
                 delegate.disconnectAsyncIfActive(true);
             } else {
                 LOGGER.error("Received a READER_IDLE event but the channel is not connected.");

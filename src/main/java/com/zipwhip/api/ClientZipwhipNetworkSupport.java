@@ -303,7 +303,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                                                 future.addObserver(
                                                         new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
-                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(false)));
+                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(true)));
                                             }
                                         }
                                     }
