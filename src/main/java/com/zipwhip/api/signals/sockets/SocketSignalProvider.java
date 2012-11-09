@@ -951,9 +951,8 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 LOGGER.warn("BANNED by SignalServer! Those jerks!");
             }
 
-            // If the command has not said 'ban' or 'stop'
-            if (!command.isStop() || !command.isBan()) {
-
+            // If the command has not said 'ban' and 'stop'
+            if (!command.isStop() && !command.isBan()) {
                 String host;
                 int port;
 
@@ -985,7 +984,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                     LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
                 }
 
-                scheduler.schedule(originalClientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
+                scheduler.schedule(clientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
             }
         }
     }
@@ -993,23 +992,37 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     private final Observer<String> onScheduleComplete = new Observer<String>() {
         @Override
         public void notify(Object sender, String clientId) {
-            if (!StringUtil.equals(originalClientId, clientId)) {
+            if (!StringUtil.equals(SocketSignalProvider.this.clientId, clientId)) {
                 // must have been for a different request.
+                return;
+            } else if (getConnectionState() == ConnectionState.CONNECTED) {
+                LOGGER.debug("It seems that the connectionState is connected already. Aborting this reconnect attempt.");
                 return;
             }
 
-            // Clear the clientId so we will re-up on connect
-            originalClientId = StringUtil.EMPTY_STRING;
-
-            LOGGER.debug("Executing the connect that was requested by the server. Nulled out the clientId...");
+            LOGGER.debug("Executing the connect that was requested by the server.");
             try {
-                if (getConnectionState() != ConnectionState.CONNECTED) {
-                    connect();
-                }
-                // TODO: what if this never finishes? Will the reconnectStrategy pay off?
+                connect(clientId, versions, presence).addObserver(retryOnFailureObserver);
             } catch (Exception e) {
                 LOGGER.error("Crash on connect. We hope that the reconnectStrategy will do us good.", e);
             }
+        }
+    };
+
+    private Observer<ObservableFuture<ConnectionHandle>> retryOnFailureObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+            if (item.isSuccess() && item.getResult() != null && !item.getResult().getDisconnectFuture().isDone()) {
+                LOGGER.warn("The future was successful! We reconnected just fine.");
+                return;
+            } else if (item.isCancelled()) {
+                LOGGER.warn("The future was cancelled, so this must mean it was forcibly disconnected! Not retrying.");
+                return;
+            }
+
+            // TODO: how do we handle this case? It's considered an 'initial connect' so it can't be retried.
+
+            connect(clientId, versions, presence).addObserver(this);
         }
     };
 
