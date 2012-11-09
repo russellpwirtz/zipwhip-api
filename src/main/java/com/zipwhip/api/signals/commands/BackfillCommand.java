@@ -76,6 +76,10 @@ public class BackfillCommand extends SerializingCommand<Long> {
         this.channel = channel;
     }
 
+    public String toString() {
+        return String.format("[Backfill: %s]", serialize());
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

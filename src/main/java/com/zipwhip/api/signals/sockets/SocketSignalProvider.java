@@ -328,25 +328,25 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
                 switch (result) {
                     case EXPECTED_SEQUENCE:
-                        LOGGER.debug("EXPECTED_SEQUENCE");
+                        LOGGER.debug("EXPECTED_SEQUENCE: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     case HOLE_FILLED:
-                        LOGGER.debug("HOLE_FILLED");
+                        LOGGER.debug("HOLE_FILLED: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     case DUPLICATE_SEQUENCE:
-                        LOGGER.warn("DUPLICATE_SEQUENCE");
+                        LOGGER.warn("DUPLICATE_SEQUENCE: " + commandResults);
                         break;
                     case POSITIVE_HOLE:
-                        LOGGER.warn("POSITIVE_HOLE");
+                        LOGGER.warn("POSITIVE_HOLE: " + commandResults);
                         break;
                     case NEGATIVE_HOLE:
-                        LOGGER.debug("NEGATIVE_HOLE");
+                        LOGGER.debug("NEGATIVE_HOLE: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     default:
-                        LOGGER.warn("UNKNOWN_RESULT");
+                        LOGGER.warn("UNKNOWN_RESULT: " + commandResults);
                 }
             } else {
                 // Non versioned command, not windowed

@@ -8,6 +8,7 @@ import com.zipwhip.timers.HashedWheelTimer;
 import com.zipwhip.timers.Timeout;
 import com.zipwhip.timers.Timer;
 import com.zipwhip.timers.TimerTask;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FlexibleTimedEvictionMap;
 
 import java.util.*;
@@ -20,6 +21,21 @@ import java.util.concurrent.TimeUnit;
  * Time: 12:40 PM
  */
 public class SlidingWindow<P> extends DestroyableBase {
+
+    protected static final int INITIAL_CONDITION = -1;
+
+    private static final Comparator<? super HoleRange> HOLE_RANGE_COMPARATOR = new Comparator<HoleRange>() {
+        @Override
+        public int compare(HoleRange o1, HoleRange o2) {
+            if (o1.start > o2.start) {
+                return 1;
+            } else if (o1.start == o2.start) {
+                return 0;
+            } else {
+                return -1;
+            }
+        }
+    };
 
     public enum ReceiveResult {
         EXPECTED_SEQUENCE,
@@ -35,6 +51,7 @@ public class SlidingWindow<P> extends DestroyableBase {
 
     // Backing data structure holding an ordered map
     protected FlexibleTimedEvictionMap<Long, P> window;
+    protected Set<Long> holes;
 
     // This is used to fire notifications if a hole was not filled inside the timeout window
     private final ObservableHelper<HoleRange> holeTimeoutEvent = new ObservableHelper<HoleRange>();
@@ -46,7 +63,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     private final Timer timer;
 
     // The last known sequence that was released from the window
-    private long indexSequence = 0L;
+    protected long indexSequence = INITIAL_CONDITION;
 
     // A way to identify the channel we have a window on
     private String key;
@@ -71,12 +88,13 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @param minimumEvictionTimeMillis The time in milliseconds that a packet will be kept in the window.
      */
     public SlidingWindow(Timer timer, String key, int idealSize, long minimumEvictionTimeMillis) {
-        if (timer == null){
+        if (timer == null) {
             timer = new HashedWheelTimer(new NamedThreadFactory("SlidingWindow-"));
         }
         this.timer = timer;
         this.key = key;
         this.window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionTimeMillis);
+        this.holes = new TreeSet<Long>();
     }
 
     public long getIndexSequence() {
@@ -163,6 +181,7 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @return An enum ReceiveResult indicating the state of the window after the sequence was received.
      */
     public ReceiveResult receive(Long sequence, P value, List<P> results) {
+        long expectedSequence = indexSequence + step;
 
         if (results == null) {
             results = new ArrayList<P>();
@@ -174,21 +193,29 @@ public class SlidingWindow<P> extends DestroyableBase {
             return ReceiveResult.DUPLICATE_SEQUENCE;
         }
 
-        // HOLE_FILLED
-        if (hasHoles(window.keySet()) && fillsAHole(sequence)) {
+        // DUPLICATE?
+        // It's not in the window, but it might be the "initial condition"
+        if (sequence == indexSequence) {
+            return ReceiveResult.DUPLICATE_SEQUENCE;
+        }
 
+        // HOLE_FILLED
+        if (hasHoles() && fillsAHole(sequence)) {
             window.put(sequence, value);
 
             // We only want to add the results if the filled hole was the first hole
-            if (!hasHoles(window.headMap(sequence).keySet())) {
-                results.addAll(getResultsFromIndexSequenceForward(sequence));
+            long firstHole = holes.isEmpty() ? sequence : holes.iterator().next();
+            holes.remove(sequence);
+
+            if (firstHole == sequence) {
+                results.addAll(getResultsAfterAndMoveIndex(sequence));
             }
+
             return ReceiveResult.HOLE_FILLED;
         }
 
         // EXPECTED_SEQUENCE
-        if (indexSequence <= 0 || sequence.equals(indexSequence + step)) {
-
+        if (indexSequence == INITIAL_CONDITION || sequence.equals(indexSequence + step)) {
             // Add a single result
             results.add(value);
 
@@ -200,17 +227,13 @@ public class SlidingWindow<P> extends DestroyableBase {
         }
 
         // POSITIVE_HOLE
-        if (sequence > indexSequence + step) {
-
+        if (sequence > expectedSequence) {
+            Set<Long> holes = getHolesBetween(indexSequence, sequence);
             window.put(sequence, value);
+            this.holes.addAll(holes);
 
-            List<HoleRange> holes = getHoles(window.keySet());
-
-            for (HoleRange hole : holes) {
-                if (sequence.equals(hole.end + step)) {
-                    waitForHole(hole);
-                }
-            }
+            // TODO: Reenable
+            waitForHole(sequence, holes);
 
             // No results to release since we just created a hole
             return ReceiveResult.POSITIVE_HOLE;
@@ -223,6 +246,7 @@ public class SlidingWindow<P> extends DestroyableBase {
             if (indexSequence + step - sequence > window.getIdealSize()) {
                 indexSequence = sequence;
                 window.clear();
+                holes.clear();
             }
 
             // Always pass this packet through even if it's out of order.
@@ -237,11 +261,32 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     /**
+     * @param indexSequence non-inclusive
+     * @param sequence      non-inclusive
+     * @return
+     */
+    protected Set<Long> getHolesBetween(long indexSequence, long sequence) {
+        Set<Long> result = new TreeSet<Long>();
+
+        for (long index = indexSequence + step; index < sequence; index++) {
+            if (window.containsKey(index)) {
+                // not a hole
+                continue;
+            }
+
+            result.add(index);
+        }
+
+        return result;
+    }
+
+    /**
      * Resets the indexSequence to an invalid sequence number and clears the stored data in the window.
      */
     public void reset() {
-        indexSequence = -1L;
+        indexSequence = INITIAL_CONDITION;
         window.clear();
+        holes.clear();
     }
 
     /**
@@ -278,45 +323,113 @@ public class SlidingWindow<P> extends DestroyableBase {
         }
     }
 
-    protected void waitForHole(final HoleRange hole) {
+    /**
+     * From this map, get the ones that are still holes
+     *
+     * @param holes
+     * @return
+     */
+    protected Set<Long> getExistingHoles(Map<Long, Void> holes) {
+        return getExistingHoles(holes.keySet());
+    }
 
-        TimerTask waitAndNotifyTask = new TimerTask() {
+    /**
+     * From this set, get the ones that are still holes
+     *
+     * @param holes
+     * @return
+     */
+    protected Set<Long> getExistingHoles(Set<Long> holes) {
+        Set<Long> result = new TreeSet<Long>();
+
+        for (Long sequence : holes) {
+            if (this.holes.contains(sequence)) {
+                result.add(sequence);
+            }
+        }
+
+        return result;
+    }
+
+    protected void waitForHole(final Long sequence, final Set<Long> discoveredHoles) {
+        if (CollectionUtil.isNullOrEmpty(holes)) {
+            return;
+        }
+
+        timer.newTimeout(new TimerTask() {
             @Override
             public void run(Timeout timeout) throws Exception {
-
-                for (HoleRange h : getHoles(window.keySet())) {
-
-                    if (hole.equals(h)) {
-
-                        holeTimeoutEvent.notifyObservers(this, hole);
-
-                        // Set another event and wait 2x for the hole to be back filled.
-                        TimerTask waitAndCheckTask = new TimerTask() {
-                            @Override
-                            public void run(Timeout timeout) throws Exception {
-
-                                for (HoleRange h : getHoles(window.keySet())) {
-
-                                    if (hole.equals(h)) {
-                                        // If it is not filled at this timeout then slide the window to end.
-                                        indexSequence = hole.end;
-                                        List<P> results = getResultsFromIndexSequenceForward(indexSequence);
-
-                                        if (!results.isEmpty()) {
-                                            packetsReleasedEvent.notifyObservers(this, results);
-                                        }
-                                    }
-                                }
-                            }
-                        };
-
-                        timer.newTimeout(waitAndCheckTask, holeTimeoutMillis * 2, TimeUnit.MILLISECONDS);
+                synchronized (SlidingWindow.this) {
+                    final Set<Long> existingHoles = getExistingHoles(discoveredHoles);
+                    if (CollectionUtil.isNullOrEmpty(existingHoles)) {
+                        // All of the holes we were looking for are no longer holes!
+                        return;
                     }
+
+                    notifyObserversOfHoles(existingHoles);
+
+                    timer.newTimeout(new TimerTask() {
+                        @Override
+                        public void run(Timeout timeout) throws Exception {
+                            // we need to clean up any holes and just discard them.
+                            Set<Long> currentHoles = getExistingHoles(existingHoles);
+
+                            flushAndReleaseHoles(sequence, currentHoles);
+                        }
+                    }, getHoleTimeoutMillis() * 2, TimeUnit.MILLISECONDS);
                 }
             }
-        };
+        }, getHoleTimeoutMillis(), TimeUnit.MILLISECONDS);
+    }
 
-        timer.newTimeout(waitAndNotifyTask, holeTimeoutMillis, TimeUnit.MILLISECONDS);
+    protected synchronized void flushAndReleaseHoles(Long sequence, Set<Long> existingHoles) {
+        this.holes.removeAll(existingHoles);
+
+        List<P> results = getResultsAfterAndMoveIndex(sequence);
+
+        packetsReleasedEvent.notifyObservers(SlidingWindow.this, results);
+    }
+
+    private void notifyObserversOfHoles(Set<Long> existingHoles) {
+        Set<HoleRange> ranges = buildHoleRanges(existingHoles);
+
+        for (HoleRange range : ranges) {
+            holeTimeoutEvent.notifyObservers(this, range);
+        }
+    }
+
+    /**
+     * Will calculate inclusive ranges. For example, if 0 and 2 are holes, then it would return [0,0;2,2]
+     * If 0 2 3 were holes, it would return [0,0;2,3]
+     *
+     *
+     * @param existingHoles
+     * @return
+     */
+    protected Set<HoleRange> buildHoleRanges(Set<Long> existingHoles) {
+        HoleRange range = new HoleRange(key, INITIAL_CONDITION, INITIAL_CONDITION);
+        Set<HoleRange> result = new TreeSet<HoleRange>(HOLE_RANGE_COMPARATOR);
+        result.add(range);
+        long expectedSequence = INITIAL_CONDITION;
+        for (Long sequence : existingHoles) {
+            if (expectedSequence == INITIAL_CONDITION) {
+                expectedSequence = sequence;
+            }
+
+            if (sequence != expectedSequence) {
+                // it was a gap!
+                range.end = expectedSequence - step;
+                range = new HoleRange(key, sequence, sequence);
+                result.add(range);
+            } else if (range.start == INITIAL_CONDITION) {
+                range.start = sequence;
+            }
+
+            range.end = sequence;
+            expectedSequence = sequence + step;
+        }
+
+        return result;
     }
 
     /**
@@ -335,45 +448,40 @@ public class SlidingWindow<P> extends DestroyableBase {
      *
      * @return true if holes exist, otherwise false
      */
-    protected boolean hasHoles(Set<Long> keys) {
-
-        long previous = indexSequence;
-
-        for (Long sequence : keys) {
-            if (sequence > indexSequence && previous + step != sequence) {
-                return true;
-            }
-            previous = sequence;
-        }
-        return false;
+    protected boolean hasHoles() {
+        return !holes.isEmpty();
     }
 
     protected boolean fillsAHole(long sequence) {
-        Set<Long> keysBefore = new TreeSet<Long>(window.keySet());
-        Set<Long> keysAfter = new TreeSet<Long>(window.keySet());
-        keysAfter.add(sequence);
-
-        return getHoles(keysBefore).size() > getHoles(keysAfter).size();
+        return holes.contains(sequence);
     }
 
     protected List<HoleRange> getHoles(Set<Long> keys) {
-
         List<HoleRange> holes = new ArrayList<HoleRange>();
-
-        long previous = indexSequence;
 
         if ((keys.size() == 1) && keys.contains(indexSequence)) {
             // there are no holes?
             return holes;
         }
 
+        long previous = INITIAL_CONDITION;
         for (Long sequence : keys) {
-            if (previous >= 0 && previous + step != sequence) {
+            if (previous == INITIAL_CONDITION) {
+                if (sequence > indexSequence && !(indexSequence + step == sequence)) {
+                    holes.add(new HoleRange(key, indexSequence + step, sequence - step));
+                }
+
+                previous = sequence - step;
+            }
+
+            if (previous >= INITIAL_CONDITION && (previous + step != sequence)) {
                 HoleRange range = new HoleRange(key, previous + step, sequence - step);
                 holes.add(range);
             }
+
             previous = sequence;
         }
+
         return holes;
     }
 
@@ -381,35 +489,53 @@ public class SlidingWindow<P> extends DestroyableBase {
         return getHoles(window.keySet());
     }
 
-    /**
-     * Get the results from the {@code sequence} forward up to the end of the list
-     * unless a hole is found going forward. If a hole is found then the results are
-     * {@code sequence} + {@code step} to the next hole.
-     *
-     * @param sequence The starting sequence to find results from.
-     * @return A list of the results or an empty list if there are non.
-     */
-    protected List<P> getResultsFromIndexSequenceForward(long sequence) {
+    protected P getValue(long sequence) {
+        return window.get(sequence);
+    }
 
-        List<P> results = new ArrayList<P>();
+    protected Long getNextHole(long sequence) {
+        return getNextValueAfter(holes.iterator(), sequence);
+    }
 
-        NavigableMap<Long, P> tail = window.tailMap(sequence, true);
-        long previous = sequence;
-
-        for (Long key : tail.keySet()) {
-            if (key != previous && key != previous + step) {
-                // This case indicates that we found a hole higher in the sequence
-                break;
-            }
-            results.add(tail.get(key));
-            previous = key;
-            indexSequence = key;
+    protected Long getLastValueUntilHole(long sequence) {
+        Long nextHole = getNextHole(sequence);
+        if (nextHole == null) {
+            return window.lastKey();
         }
 
-        // Attempt to resize the map
-        window.shrink(results.size());
+        return nextHole - step;
+    }
 
-        return results;
+    protected static Long getNextValueAfter(Iterator<Long> iterator, long index) {
+        while(iterator.hasNext()) {
+            long next = iterator.next();
+            if (next > index) {
+                return next;
+            }
+        }
+
+        return null;
+    }
+
+    protected List<P> getResultsAfterAndMoveIndex(long sequence) {
+        if (indexSequence > sequence) {
+            throw new IllegalStateException(String.format("The indexSequence must be lower than the passed in value. %s < %s", indexSequence, sequence));
+        }
+
+        sequence = getLastValueUntilHole(sequence);
+
+        List<P> result = new ArrayList<P>();
+        for (long index = indexSequence + step; index <= sequence; index += step) {
+            if (!window.containsKey(index)) {
+                continue;
+            }
+
+            result.add(window.get(index));
+        }
+
+        indexSequence = sequence;
+
+        return result;
     }
 
     public static class HoleRange {
@@ -420,6 +546,10 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         public HoleRange(String key, long start, long end) {
             this.key = key;
+            if (start > end) {
+                throw new IllegalArgumentException(String.format("Your numbers are reversed. Please track/fix this bug! {key: %s, start: %s, end:%s}", key, start, end));
+            }
+
             this.start = start;
             this.end = end;
         }
