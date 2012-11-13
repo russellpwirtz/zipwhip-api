@@ -514,7 +514,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("registrationId", registrationId);
         }
 
-        ServerResponse response = executeSync(CARBON_REGISTER, params);
+        ServerResponse response = executeSync(CARBON_V2_REGISTER, params);
 
         checkAndThrowError(response);
     }

@@ -90,6 +90,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String CARBON_INSTALLED = "carbon/installed";
     public static final String CARBON_SUGGEST = "carbon/suggest";
     public static final String CARBON_REGISTER = "carbon/register";
+    public static final String CARBON_V2_REGISTER = "carbon/v2/register";
     public static final String CARBON_STATS = "carbon/stats";
     public static final String CARBON_ACCEPTED_TCS = "carbon/acceptedTCs";
 

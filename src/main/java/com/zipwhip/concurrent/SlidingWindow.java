@@ -102,6 +102,10 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     public void setIndexSequence(long indexSequence) {
+        if (indexSequence < INITIAL_CONDITION) {
+            indexSequence = INITIAL_CONDITION;
+        }
+
         this.indexSequence = indexSequence;
     }
 
