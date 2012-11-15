@@ -31,7 +31,7 @@ public class NettySchedulerTimer implements Timer {
         if (scheduler == null){
             this.scheduler = new TimerScheduler("SchedulerTimer");
         } else {
-            this.scheduler = new ScopedScheduler(scheduler) {
+            this.scheduler = new ScopedScheduler(scheduler, "Netty" + UUID.randomUUID().toString()) {
                 @Override
                 public String toString() {
                     return String.format("[SchedulerTimer: %s]", NettySchedulerTimer.this);
