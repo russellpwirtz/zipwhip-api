@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.connection.ParameterizedRequest;
+import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.settings.PreferencesSettingsStore;
@@ -19,10 +21,13 @@ import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Asserts;
+import com.zipwhip.util.Converter;
+import com.zipwhip.util.StreamUtil;
 import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -667,7 +672,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     Asserts.assertTrue(!fired, "failConnectingFutureIfDisconnectedObserver fired twice. That's not allowed.");
                     fired = true;
 
-                    resultFuture.setFailure(new Exception("Disconnected"));
+                    resultFuture.setFailure(new Exception("Disconnected before able to complete connection."));
                 }
             }
 
@@ -838,13 +843,13 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         return signalsConnectFuture;
     }
 
-    private void executeSignalsDisconnect(String sessionKey, String clientId) {
+    protected void executeSignalsDisconnect(String sessionKey, String clientId) {
         // Do a disconnect then connect
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("clientId", clientId);
         params.put("sessions", sessionKey);
         try {
-            executeAsync(SIGNALS_DISCONNECT, params);
+            executeAsync(RequestMethod.GET, SIGNALS_DISCONNECT, new ParameterizedRequest(params), normalStringResponseConverter);
         } catch (Exception e) {
             LOGGER.warn("Couldn't execute SIGNALS_DISCONNECT. We're going to ignore this problem.", e);
         }
@@ -993,7 +998,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
             ServerResponse response;
             try {
-                response = executeSync(ZipwhipNetworkSupport.SIGNALS_CONNECT, getSignalsConnectParams(sessionKey, clientId));
+                response = executeSync(RequestMethod.GET, ZipwhipNetworkSupport.SIGNALS_CONNECT, getSignalsConnectParams(sessionKey, clientId));
             } catch (Exception e) {
                 LOGGER.error("Failed to execute request: ", e);
                 resultFuture.setFailure(e);
@@ -1009,7 +1014,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             }
 
             if (!response.isSuccess()) {
-                resultFuture.setFailure(new Exception(response.getRaw()));
+                resultFuture.setFailure(new Exception(StreamUtil.getString(response.getRaw())));
 
                 return resultFuture;
             }
@@ -1057,6 +1062,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         public String toString() {
             return "SignalsConnectTask(Waiting for SubscriptionCompleteCommand)";
         }
+    }
+
+    protected ServerResponse executeSync(RequestMethod get, String messageSend, Map<String, Object> params) throws Exception {
+        return get(executeAsync(get, messageSend, new ParameterizedRequest(params), normalStringResponseConverter));
     }
 
     /**

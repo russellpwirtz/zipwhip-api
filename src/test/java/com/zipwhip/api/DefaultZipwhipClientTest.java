@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.connection.RequestBody;
+import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.MemorySettingStore;
@@ -14,13 +16,14 @@ import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.NullExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
-import com.zipwhip.util.SignTool;
+import com.zipwhip.util.Authenticator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
@@ -154,7 +157,7 @@ public class DefaultZipwhipClientTest {
     public void testConnect() throws Exception {
         ((DefaultZipwhipClient)client).setSignalsConnectTimeoutInSeconds(9000);
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         ObservableFuture<ConnectionHandle> future = client.connect();
@@ -175,7 +178,7 @@ public class DefaultZipwhipClientTest {
         ((MockApiConnection) apiConnection).failSignalsConnect = true;
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch1 = new CountDownLatch(1);
@@ -213,7 +216,7 @@ public class DefaultZipwhipClientTest {
         ((MockApiConnection) apiConnection).failSignalsConnectWithException = true;
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -237,7 +240,7 @@ public class DefaultZipwhipClientTest {
     @Test
     public void testDisconnect() throws Exception {
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         assertTrue(client.connect().await(4, TimeUnit.SECONDS));
@@ -275,16 +278,16 @@ public class DefaultZipwhipClientTest {
         signalProvider = new MockSignalProvider();
         client = new DefaultZipwhipClient(null, null, null, apiConnection, signalProvider) {
             @Override
-            protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
+            protected ServerResponse executeSync(RequestMethod get, String messageSend, Map<String, Object> params) throws Exception {
                 ((MockSignalProvider)signalProvider).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand("", null));
-                return new StringServerResponse("{success:true}", true, "{success:true}", null);
+                return new StringServerResponse("{success:true}", true, "{success:true}");
             }
         };
 
         client.setSettingsStore(new MemorySettingStore());
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         client.connect().get(5, TimeUnit.SECONDS);
@@ -305,8 +308,9 @@ public class DefaultZipwhipClientTest {
         apiConnection = new MockApiConnection();
         signalProvider = new MockSignalProvider();
         client = new DefaultZipwhipClient(null, null, null, apiConnection, signalProvider) {
+
             @Override
-            protected ServerResponse executeSync(String method, Map<String, Object> params) throws Exception {
+            protected ServerResponse executeSync(RequestMethod get, String messageSend, Map<String, Object> params) throws Exception {
                 Executors.newSingleThreadExecutor().execute(new Runnable() {
                     @Override
                     public void run() {
@@ -320,12 +324,12 @@ public class DefaultZipwhipClientTest {
                 });
 
                 Thread.sleep(1000);
-                return new StringServerResponse("{success:true}", true, "{success:true}", null);
+                return new StringServerResponse("{success:true}", true, "{success:true}");
             }
         };
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -365,7 +369,7 @@ public class DefaultZipwhipClientTest {
         client.setSettingsStore(new MemorySettingStore());
 
         ConnectionChangedObserver connectionChangedObserver = new ConnectionChangedObserver();
-        client.addSignalsConnectionObserver(connectionChangedObserver);
+        client.getSignalConnectionChangedEvent().addObserver(connectionChangedObserver);
         assertFalse(client.getSignalProvider().getConnectionState() == ConnectionState.CONNECTED);
 
         final boolean[] hit = {false};
@@ -443,21 +447,20 @@ public class DefaultZipwhipClientTest {
         boolean missSignalsConnect = false;
 
         @Override
-        public ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception {
+        public ObservableFuture<InputStream> send(RequestMethod method, String uri, RequestBody body) throws Exception {
+            ObservableFuture<InputStream> result = new DefaultObservableFuture<InputStream>(this);
 
-            ObservableFuture<String> result = new DefaultObservableFuture<String>(this);
-
-            if (ZipwhipNetworkSupport.CHALLENGE_REQUEST.equalsIgnoreCase(method)) {
-                result.setSuccess(SESSION_CHALLENGE_RESPONSE);
+            if (ZipwhipNetworkSupport.CHALLENGE_REQUEST.equalsIgnoreCase(uri)) {
+                result.setSuccess(stream(SESSION_CHALLENGE_RESPONSE));
             }
 
-            if (ZipwhipNetworkSupport.SIGNALS_CONNECT.equalsIgnoreCase(method)) {
+            if (ZipwhipNetworkSupport.SIGNALS_CONNECT.equalsIgnoreCase(uri)) {
                 if (failSignalsConnectWithException) {
                     throw new Exception("Faking a signals/connect exception");
                 } else if (failSignalsConnect) {
-                    result.setSuccess(SIGNALS_CONNECT_RESPONSE_FAILURE);
+                    result.setSuccess(stream(SIGNALS_CONNECT_RESPONSE_FAILURE));
                 } else {
-                    result.setSuccess(SIGNALS_CONNECT_RESPONSE_SUCCESS);
+                    result.setSuccess(stream(SIGNALS_CONNECT_RESPONSE_SUCCESS));
 
                     if (!missSignalsConnect) {
                         ((MockSignalProvider) client.getSignalProvider()).sendSubscriptionCompleteCommand(new SubscriptionCompleteCommand(null, null));
@@ -466,11 +469,6 @@ public class DefaultZipwhipClientTest {
             }
 
             return result;
-        }
-
-        @Override
-        public ObservableFuture<String> send(String method, Map<String, Object> params, List<File> files) throws Exception {
-            return null;
         }
 
         @Override
@@ -494,12 +492,12 @@ public class DefaultZipwhipClientTest {
         }
 
         @Override
-        public void setAuthenticator(SignTool authenticator) {
+        public void setAuthenticator(Authenticator authenticator) {
 
         }
 
         @Override
-        public SignTool getAuthenticator() {
+        public Authenticator getAuthenticator() {
             return null;
         }
 
@@ -528,11 +526,10 @@ public class DefaultZipwhipClientTest {
 
         }
 
-        @Override
-        public ObservableFuture<InputStream> sendBinaryResponse(String method, Map<String, Object> params) throws Exception {
-            return null;
-        }
+    }
 
+    private InputStream stream(String response) {
+        return new ByteArrayInputStream(response.getBytes());
     }
 
 }

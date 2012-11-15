@@ -39,8 +39,8 @@ public class SocketSignalProviderIntegrationTest {
 
     @Before
     public void setUp() throws Exception {
-        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
-        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
+        ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HOST;
+        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))

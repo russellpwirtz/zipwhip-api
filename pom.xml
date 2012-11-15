@@ -45,6 +45,9 @@
 
     <dependencies>
         <dependency>
+            <groupId></groupId>
+        </dependency>
+        <dependency>
             <groupId>com.zipwhip</groupId>
             <artifactId>zipwhip-common-util</artifactId>
             <version>1.60.4-SNAPSHOT</version>

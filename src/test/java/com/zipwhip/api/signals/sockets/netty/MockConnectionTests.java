@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.zipwhip.concurrent.TestUtil.assertNotDone;
 import static com.zipwhip.concurrent.TestUtil.assertSignalConnectionDisconnected;
@@ -100,7 +101,10 @@ public class MockConnectionTests {
 
         connectionHandle.disconnect(true).await();
 
-        assertTrue(observer.isCalled());
+        // a little sleep in order?
+        assertTrue(observer.getLatch().await(5, TimeUnit.SECONDS));
+
+        assertTrue("Observer not .isCalled() like it should be?", observer.isCalled());
         assertTrue(connectionHandle.disconnectedViaNetwork());
         assertNull("Current connection null because disconnected", signalConnection.getConnectionHandle());
     }

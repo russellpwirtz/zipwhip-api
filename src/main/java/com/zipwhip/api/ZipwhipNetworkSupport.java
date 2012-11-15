@@ -1,5 +1,10 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.connection.Connection;
+import com.zipwhip.api.connection.ParameterizedRequest;
+import com.zipwhip.api.connection.RequestBody;
+import com.zipwhip.api.connection.RequestMethod;
+import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
@@ -10,16 +15,15 @@ import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
-import com.zipwhip.util.CollectionUtil;
+import com.zipwhip.util.Converter;
 import com.zipwhip.util.InputRunnable;
+import com.zipwhip.util.StreamUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -121,13 +125,39 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         }
     };
 
+    protected final Converter<InputStream, ServerResponse> normalStringResponseConverter = new Converter<InputStream, ServerResponse>() {
+        @Override
+        public ServerResponse convert(InputStream inputStream) throws Exception {
+            String body = StreamUtil.getString(inputStream);
+
+            return responseParser.parse(body);
+        }
+
+        @Override
+        public InputStream restore(ServerResponse serverResponse) throws Exception {
+            return null;
+        }
+    };
+
+    protected final Converter<InputStream, ServerResponse> nullStreamConverter = new Converter<InputStream, ServerResponse>() {
+        @Override
+        public ServerResponse convert(InputStream inputStream) throws Exception {
+            return null;
+        }
+
+        @Override
+        public InputStream restore(ServerResponse serverResponse) throws Exception {
+            return null;
+        }
+    };
+
     /**
      * This importantTaskExecutor really matters. This is the importantTaskExecutor that runs client code. I mean, the guys that call us.
      * They are observing our web calls via this importantTaskExecutor. If it's too small, and they are too slow, it'll backlog.
      */
     protected final Executor callbackExecutor;
 
-    protected ApiConnection connection;
+    protected Connection connection;
     protected ResponseParser responseParser;
 
     /**
@@ -141,18 +171,13 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         this(null, connection);
     }
 
-    public ZipwhipNetworkSupport(Executor callbackExecutor, ApiConnection connection) {
-
-        if (connection == null) {
-            connection = new HttpConnection();
-        }
-
-        if (callbackExecutor == null){
+    public ZipwhipNetworkSupport(Executor callbackExecutor, Connection connection) {
+        if (callbackExecutor == null) {
             callbackExecutor = ExecutorFactory.newInstance("ZipwhipNetworkSupport-callbacks");
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {
-                    ((ExecutorService)ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
+                    ((ExecutorService) ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
                 }
             });
         }
@@ -164,11 +189,11 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         setResponseParser(new JsonResponseParser());
     }
 
-    public ApiConnection getConnection() {
+    public Connection getConnection() {
         return connection;
     }
 
-    public void setConnection(ApiConnection connection) {
+    public void setConnection(Connection connection) {
         if (this.connection != null) {
             unlink(this.connection);
         }
@@ -184,152 +209,123 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
         this.responseParser = responseParser;
     }
 
-    protected ServerResponse executeSync(final String method, final Map<String, Object> params) throws Exception {
-        return get(executeAsync(method, params, true, FORWARD_RUNNABLE));
+    protected ObservableFuture<ServerResponse> executeAsync(String uri, Map<String, Object> params) throws Exception {
+        return executeAsync(
+                RequestMethod.GET,
+                uri,
+                new ParameterizedRequest(params),
+                normalStringResponseConverter);
     }
 
-    protected ServerResponse executeSync(final String method, final Map<String, Object> params, boolean requiresAuthentication) throws Exception {
-        return get(executeAsync(method, params, requiresAuthentication, FORWARD_RUNNABLE));
-    }
-
-    protected ServerResponse executeSync(final String method, final Map<String, Object> params, List<File> files) throws Exception {
-        return get(executeAsync(method, params, files, true, FORWARD_RUNNABLE));
-    }
-
-    protected ServerResponse executeSync(final String method, final Map<String, Object> params, List<File> files, boolean requiresAuthentication) throws Exception {
-        return get(executeAsync(method, params, files, requiresAuthentication, FORWARD_RUNNABLE));
-    }
-
-    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params) throws Exception {
-        return executeAsync(method, params, true, null);
-    }
-
-    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
-        return executeAsync(method, params, null, requiresAuthentication, businessLogic);
-    }
-
-    protected <T> ObservableFuture<T> executeAsync(String method, Map<String, Object> params, List<File> files, boolean requiresAuthentication, final InputRunnable<ParsableServerResponse<T>> businessLogic) throws Exception {
-
-        if (requiresAuthentication && !connection.isAuthenticated()) {
-            throw new Exception("The connection is not authenticated, can't continue.");
-        }
-
+    protected <T> ObservableFuture<T> executeAsync(RequestMethod method, String uri, RequestBody body, final Converter<InputStream, T> converter) throws Exception {
         final ObservableFuture<T> result = new DefaultObservableFuture<T>(this, callbackExecutor);
 
-        final ObservableFuture<String> responseFuture;
+        getConnection()
+                .send(method, uri, body)
+                .addObserver(new Observer<ObservableFuture<InputStream>>() {
 
-        if (CollectionUtil.exists(files)) {
-            responseFuture = getConnection().send(method, params, files);
-        } else {
-            responseFuture = getConnection().send(method, params);
-        }
+                    /**
+                     * This code will execute in the "workerExecutor" of the connection.
+                     * If you pass in a bogus/small importantTaskExecutor to him, our code will lag.
+                     *
+                     * @param sender The sender might not be the same object every time.
+                     * @param item Rich object representing the notification.
+                     */
+                    @Override
+                    public void notify(Object sender, ObservableFuture<InputStream> item) {
+                        // The network is done! let's check for our cake!
+                        if (!item.isDone()) {
+                            return;
+                        }
 
-        responseFuture.addObserver(new Observer<ObservableFuture<String>>() {
+                        if (item.isCancelled()) {
+                            // this will execute in the "callbackExecutor"
+                            result.cancel();
+                            return;
+                        }
 
-            /**
-             * This code will execute in the "workerExecutor" of the connection.
-             * If you pass in a bogus/small importantTaskExecutor to him, our code will lag.
-             *
-             * @param sender The sender might not be the same object every time.
-             * @param item Rich object representing the notification.
-             */
-            @Override
-            public void notify(Object sender, ObservableFuture<String> item) {
+                        if (!item.isSuccess()) {
+                            // this will execute in the "callbackExecutor"
+                            result.setFailure(item.getCause());
+                            return;
+                        }
 
-                // The network is done! let's check for our cake!
-                if (!item.isDone()) {
-                    return;
-                }
+                        try {
+                            result.setSuccess(converter.convert(item.getResult()));
 
-                if (item.isCancelled()) {
-                    // this will execute in the "callbackExecutor"
-                    result.cancel();
-                    return;
-                }
-                if (!item.isSuccess()) {
-                    // this will execute in the "callbackExecutor"
-                    result.setFailure(item.getCause());
-                    return;
-                }
-
-                String responseString = item.getResult();
-
-                ServerResponse serverResponse;
-                try {
-                    serverResponse = responseParser.parse(responseString);
-                } catch (Exception e) {
-                    LOGGER.error("Problem parsing json response", e);
-                    // this will execute in the "callbackExecutor"
-                    result.setFailure(e);
-                    return;
-                }
-
-                try {
-                    checkAndThrowError(serverResponse);
-                } catch (Exception e) {
-                    // this will execute in the "callbackExecutor"
-                    result.setFailure(e);
-                    return;
-                }
-
-                try {
-                    if (businessLogic != null){
-                        businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
-                    } else {
-                        result.setSuccess(null);
+                        } catch (Exception e) {
+                            LOGGER.error("Problem parsing json response", e);
+                            // this will execute in the "callbackExecutor"
+                            result.setFailure(e);
+                        }
                     }
-                } catch (Exception e) {
-                    LOGGER.error("Problem with running the business logic conversion", e);
-                    // this will execute in the "callbackExecutor"
-                    result.setFailure(e);
-                }
-            }
-        });
+                });
 
         return result;
     }
 
-    protected ObservableFuture<byte[]> executeAsyncBinaryResponse(String method, Map<String, Object> params, boolean requiresAuthentication) throws Exception {
+//    protected ObservableFuture<byte[]> executeAsyncBinaryResponse(String method, Map<String, Object> params, boolean requiresAuthentication) throws Exception {
+//
+//        if (requiresAuthentication && !connection.isAuthenticated()) {
+//            throw new Exception("The connection is not authenticated, can't continue.");
+//        }
+//
+//        final ObservableFuture<byte[]> result = new DefaultObservableFuture<byte[]>(this, callbackExecutor);
+//
+//        final ObservableFuture<InputStream> responseFuture = getConnection().sendBinaryResponse(method, params);
+//
+//        responseFuture.addObserver(new Observer<ObservableFuture<InputStream>>() {
+//
+//            @Override
+//            public void notify(Object sender, ObservableFuture<InputStream> item) {
+//
+//                // The network is done! let's check for our cake!
+//                if (!item.isDone()) {
+//                    return;
+//                }
+//
+//                if (item.isCancelled()) {
+//                    // this will execute in the "callbackExecutor"
+//                    result.cancel();
+//                    return;
+//                }
+//                if (!item.isSuccess()) {
+//                    // this will execute in the "callbackExecutor"
+//                    result.setFailure(item.getCause());
+//                    return;
+//                }
+//
+//                byte[] bytes;
+//
+//                try {
+//                    bytes = toByteArray(item.getResult());
+//                } catch (IOException e) {
+//                    result.setFailure(e);
+//                    return;
+//                }
+//
+//                result.setSuccess(bytes);
+//            }
+//        });
+//
+//        return result;
+//    }
 
-        if (requiresAuthentication && !connection.isAuthenticated()) {
-            throw new Exception("The connection is not authenticated, can't continue.");
-        }
+    protected ObservableFuture<Void> executeAsyncVoid(String uri, Map<String, Object> params) throws Exception {
+        return toVoid(executeAsync(RequestMethod.GET, uri, new ParameterizedRequest(params), nullStreamConverter));
+    }
 
-        final ObservableFuture<byte[]> result = new DefaultObservableFuture<byte[]>(this, callbackExecutor);
+    protected ObservableFuture<Void> executeAsyncVoid(RequestMethod method, String uri, Map<String, Object> params) throws Exception {
+        return toVoid(executeAsync(method, uri, new ParameterizedRequest(params), nullStreamConverter));
+    }
 
-        final ObservableFuture<InputStream> responseFuture = getConnection().sendBinaryResponse(method, params);
+    protected ObservableFuture<Void> toVoid(ObservableFuture future) {
+        final ObservableFuture<Void> result = new NestedObservableFuture<Void>(this);
 
-        responseFuture.addObserver(new Observer<ObservableFuture<InputStream>>() {
-
+        future.addObserver(new Observer<ObservableFuture>() {
             @Override
-            public void notify(Object sender, ObservableFuture<InputStream> item) {
-
-                // The network is done! let's check for our cake!
-                if (!item.isDone()) {
-                    return;
-                }
-
-                if (item.isCancelled()) {
-                    // this will execute in the "callbackExecutor"
-                    result.cancel();
-                    return;
-                }
-                if (!item.isSuccess()) {
-                    // this will execute in the "callbackExecutor"
-                    result.setFailure(item.getCause());
-                    return;
-                }
-
-                byte[] bytes;
-
-                try {
-                    bytes = toByteArray(item.getResult());
-                } catch (IOException e) {
-                    result.setFailure(e);
-                    return;
-                }
-
-                result.setSuccess(bytes);
+            public void notify(Object sender, ObservableFuture item) {
+                NestedObservableFuture.syncState(item, result, null);
             }
         });
 
@@ -337,7 +333,6 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     }
 
     protected void checkAndThrowError(ServerResponse serverResponse) throws Exception {
-
         if (serverResponse == null) {
             // A null response from the server is OK
             return;
@@ -349,14 +344,12 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     }
 
     protected void throwError(ServerResponse serverResponse) throws Exception {
-
         if (serverResponse instanceof StringServerResponse) {
-
             StringServerResponse string = (StringServerResponse) serverResponse;
-            throw new Exception(string.response);
 
+            throw new Exception(string.response);
         } else {
-            throw new Exception(serverResponse.getRaw());
+            throw new Exception(StreamUtil.getString(serverResponse.getRaw()));
         }
     }
 

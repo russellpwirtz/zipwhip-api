@@ -69,7 +69,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaUsername(String username, String password) throws Exception {
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
         connectionFactory.setUsername(username);
         connectionFactory.setPassword(password);
 
@@ -108,7 +108,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaSessionKey(String sessionKey) throws Exception {
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
         connectionFactory.setSessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
