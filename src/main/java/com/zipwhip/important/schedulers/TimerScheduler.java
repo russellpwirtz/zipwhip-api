@@ -6,11 +6,11 @@ import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
+import com.zipwhip.timers.HashedWheelTimer;
+import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.Timer;
+import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.HashCodeComparator;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timeout;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.TimerTask;
 
 import java.util.Collections;
 import java.util.Date;
