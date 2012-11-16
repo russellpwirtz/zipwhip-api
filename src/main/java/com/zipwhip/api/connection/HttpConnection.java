@@ -1,28 +1,19 @@
 package com.zipwhip.api.connection;
 
-import com.ning.http.client.*;
-import com.ning.http.client.generators.InputStreamBodyGenerator;
-import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
-import com.zipwhip.concurrent.ExecutorFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.executors.DefaultCommonExecutorFactory;
-import com.zipwhip.executors.NamedThreadFactory;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Provides a persistent connection to a User on Zipwhip.
@@ -37,7 +28,10 @@ public class HttpConnection extends ApiConnectionBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpConnection.class);
 
-    private final AsyncHttpClient client;
+    private static final String BOUNDARY = "AaB03x";
+    private static final String CRLF = "\r\n";
+
+    private final ExecutorService executor;
 
     public HttpConnection(CommonExecutorFactory factory) {
         super();
@@ -46,11 +40,7 @@ public class HttpConnection extends ApiConnectionBase {
             factory = DefaultCommonExecutorFactory.getInstance();
         }
 
-        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder()
-                .setExecutorService(factory.create(CommonExecutorTypes.WORKER, "HttpConnection"))
-                .build();
-
-        client = new AsyncHttpClient(config);
+        executor = factory.create(CommonExecutorTypes.WORKER, "HttpConnection");
     }
 
     public HttpConnection(String apiKey, String secret) throws Exception {
@@ -63,11 +53,39 @@ public class HttpConnection extends ApiConnectionBase {
         final ObservableFuture<InputStream> future = new DefaultObservableFuture<InputStream>(this);
 
         try {
-            com.ning.http.client.RequestBuilder builder = createRequestBuilder(method, uri, body);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        HttpURLConnection connection = openConnection(method, uri, body);
 
-            // Ning is already asynchronous.
-            client.prepareRequest(builder.build())
-                    .execute(new FutureAsyncCompletionHandler(future));
+                        connection.connect();
+
+                        try {
+                            int statusCode = connection.getResponseCode();
+
+                            if (300 < statusCode || statusCode < 200) {
+                                InputStream stream = new BufferedInputStream(connection.getErrorStream());
+                                String data = StreamUtil.getString(stream);
+
+                                future.setFailure(new Exception("ResponseCode: " + statusCode + ": " + data));
+                                return;
+                            }
+
+                            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+                            StreamUtil.copy(new BufferedInputStream(connection.getInputStream()), stream);
+
+                            future.setSuccess(new ByteArrayInputStream(stream.toByteArray()));
+                        } finally {
+                            connection.disconnect();
+                        }
+                    } catch (Exception e) {
+                        future.setFailure(e);
+                    }
+                }
+            });
+
 
         } catch (Exception e) {
             future.setFailure(e);
@@ -85,8 +103,7 @@ public class HttpConnection extends ApiConnectionBase {
      * @return
      * @throws Exception
      */
-    private com.ning.http.client.RequestBuilder createRequestBuilder(RequestMethod method, String uri, RequestBody body) throws Exception {
-        com.ning.http.client.RequestBuilder b = new com.ning.http.client.RequestBuilder();
+    private HttpURLConnection openConnection(RequestMethod method, String uri, RequestBody body) throws Exception {
 
         /**
          * The next 4 lines are needed because of a bug in Ning in NettyAsyncHttpProvider.java.
@@ -104,41 +121,58 @@ public class HttpConnection extends ApiConnectionBase {
         ///////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////
 
-        b.setMethod(getString(method));
-        b.setUrl(UrlUtil.getSignedUrl(toUseHost, getApiVersion(), uri, getUrlParams(method, body), getSessionKey(), getAuthenticator()));
+        URL url = new URL(UrlUtil.getSignedUrl(toUseHost, getApiVersion(), uri, getUrlParams(method, body), getSessionKey(), getAuthenticator()));
+
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
         if (isBodyAllowed(method)) {
-            b.setBody(new InputStreamBodyGenerator(body.toStream()));
+            connection.setDoOutput(true);
         }
 
-        return b;
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        connection.setUseCaches(false);
+        connection.setRequestMethod(getString(method));
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 ( compatible ) ");
+        connection.setRequestProperty("Accept", "*/*");
+        connection.setRequestProperty("Connection", "Close");
+
+        if (isBodyAllowed(method)) {
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+
+            OutputStream outputStream = connection.getOutputStream();
+
+            StreamUtil.copy(body.toStream(), outputStream);
+        }
+
+        return connection;
     }
 
-    private static class FutureAsyncCompletionHandler extends AsyncCompletionHandler<Object> {
-
-        private final ObservableFuture<InputStream> future;
-
-        private FutureAsyncCompletionHandler(ObservableFuture<InputStream> future) {
-            this.future = future;
-        }
-
-        @Override
-        public Object onCompleted(Response response) throws Exception {
-            try {
-                // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
-                if (response.getStatusCode() != 200) {
-                    future.setFailure(new Exception(String.format("HTTP Headers returned non-successful value: %s: %s", response.getStatusCode(), response.getStatusText())));
-                    return response;
-                }
-
-                future.setSuccess(response.getResponseBodyAsStream());
-            } catch (IOException e) {
-                future.setFailure(e);
-            }
-
-            return response;
-        }
-    }
+//    private static class FutureAsyncCompletionHandler extends AsyncCompletionHandler<Object> {
+//
+//        private final ObservableFuture<InputStream> future;
+//
+//        private FutureAsyncCompletionHandler(ObservableFuture<InputStream> future) {
+//            this.future = future;
+//        }
+//
+//        @Override
+//        public Object onCompleted(Response response) throws Exception {
+//            try {
+//                // this will call the callbacks in the "workerExecutor" because of the constructor arg above.
+//                if (response.getStatusCode() != 200) {
+//                    future.setFailure(new Exception(String.format("HTTP Headers returned non-successful value: %s: %s", response.getStatusCode(), response.getStatusText())));
+//                    return response;
+//                }
+//
+//                future.setSuccess(response.getResponseBodyAsStream());
+//            } catch (IOException e) {
+//                future.setFailure(e);
+//            }
+//
+//            return response;
+//        }
+//    }
 
     /**
      * If the method supports url based params, then return them. Otherwise just return
@@ -169,6 +203,6 @@ public class HttpConnection extends ApiConnectionBase {
     protected void onDestroy() {
         LOGGER.debug("Destroying HttpConnection");
 
-        client.closeAsynchronously();
+        executor.shutdownNow();
     }
 }

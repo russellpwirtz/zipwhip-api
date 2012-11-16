@@ -405,6 +405,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("clientId", clientId);
         params.put("category", category);
+        params.put("subscriptionId", connection.getSessionKey());
+        params.put("sessions", connection.getSessionKey());
 
         ServerResponse response = executeSync(RequestMethod.GET, SIGNALS_CONNECT, params);
 

@@ -58,12 +58,13 @@ public class UrlUtil {
     public static String getSignedUrl(String host, String apiVersion, String method, String params, String sessionKey, Authenticator authenticator) throws Exception {
 
         StringBuilder builder = new StringBuilder();
-        builder.append(params);
 
         String connector = "&";
 
         if (StringUtil.isNullOrEmpty(params)) {
             connector = "?";
+        } else {
+            builder.append(params);
         }
 
         if (StringUtil.exists(sessionKey)) {

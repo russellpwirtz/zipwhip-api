@@ -24,7 +24,7 @@ public class ParameterizedRequest implements RequestBody {
     public InputStream toStream() {
         RequestBuilder rb = new RequestBuilder();
 
-        rb.params(params);
+        rb.params(params, true);
 
         return new ByteArrayInputStream(rb.build().getBytes());
     }
