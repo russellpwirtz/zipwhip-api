@@ -58,7 +58,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         return enqueue(executor, request, FutureDateUtil.inFuture(timeoutInSeconds, TimeUnit.SECONDS));
     }
 
-    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, Date expirationDate) {
+    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, final Date expirationDate) {
         if (executor == null){
             executor = SimpleExecutor.getInstance();
         }
@@ -114,6 +114,10 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                                         // sync over the requestFuture to the parentFuture.
                                         // ie: if the requestFuture is already done then cascade that over.
                                         NestedObservableFuture.syncState(parentFuture, requestFuture);
+
+                                        if (expirationDate != null) {
+                                            scheduler.cancel(requestId);
+                                        }
                                     }
                                 });
                             }
