@@ -38,9 +38,9 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
     public synchronized void execute(final Runnable command) {
         final DebugDurationHelper helper = new DebugDurationHelper(String.format("%s:%s", DebuggingExecutor.this, command.toString()));
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace(String.format("[%s %s queue=%s]", "enqueue", command, runnableSet));
-        }
+//        if (LOGGER.isTraceEnabled()) {
+            LOGGER.debug(String.format("[%s %s queue=%s]", "enqueue", command, runnableSet));
+//        }
         runnableSet.add(command);
 
         super.execute(new Runnable() {
@@ -48,16 +48,16 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
             public void run() {
                 try {
                     runnableSet.remove(command);
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(String.format("[%s %s queue=%s]", "run", command, runnableSet));
-                        LOGGER.trace(helper.start());
-                    }
+//                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.debug(String.format("[%s %s queue=%s]", "run", command, runnableSet));
+                        LOGGER.debug(helper.start());
+//                    }
                     command.run();
                 } finally {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(helper.stop());
-                        LOGGER.trace(String.format("[%s %s queue=%s]", "finish", command, runnableSet));
-                    }
+//                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.debug(helper.stop());
+                        LOGGER.debug(String.format("[%s %s queue=%s]", "finish", command, runnableSet));
+//                    }
                 }
             }
 
