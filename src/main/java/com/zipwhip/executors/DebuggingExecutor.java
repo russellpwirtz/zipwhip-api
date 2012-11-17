@@ -60,6 +60,11 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
                     }
                 }
             }
+
+            @Override
+            public String toString() {
+                return command.toString();
+            }
         });
     }
 

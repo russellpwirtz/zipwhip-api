@@ -138,6 +138,11 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                         }
                     }
                 }
+
+                @Override
+                public String toString() {
+                    return String.format("[ImportantTask: %s]", request.toString());
+                }
             });
 
         } catch (Exception e) {
