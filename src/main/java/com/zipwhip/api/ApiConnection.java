@@ -50,7 +50,7 @@ public interface ApiConnection extends Connection {
     /**
      * Signal Server port 80
      */
-    public static final int DEFAULT_SIGNALS_PORT = 80;
+    public static final int PORT_80 = 80;
 
     /**
      * Signal Server port 443
@@ -66,6 +66,8 @@ public interface ApiConnection extends Connection {
      * Signal Server port 8080
      */
     public static final int PORT_8080 = 8080;
+
+    public static final int DEFAULT_SIGNALS_PORT = PORT_3000;
 
     /**
      * The default Zipwhip API version
