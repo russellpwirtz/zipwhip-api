@@ -4,7 +4,8 @@ import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,7 +17,7 @@ import org.apache.log4j.Logger;
  */
 public abstract class ReconnectStrategy extends DestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(ReconnectStrategy.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReconnectStrategy.class);
 
     protected SignalConnection signalConnection;
     protected Observer<ConnectionHandle> disconnectObserver;

@@ -2,20 +2,39 @@ package com.zipwhip.vendor;
 
 import com.zipwhip.api.Address;
 import com.zipwhip.api.ApiConnection;
+import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.ZipwhipNetworkSupport;
+import com.zipwhip.api.connection.ParameterizedRequest;
+import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.MessageListResult;
+import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.util.CollectionUtil;
-import com.zipwhip.util.InputRunnable;
-import com.zipwhip.util.StringUtil;
+import com.zipwhip.events.*;
+import com.zipwhip.events.Observer;
+import com.zipwhip.util.*;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.Callable;
 
 public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements AsyncVendorClient {
+
+    private final Converter<InputStream, EnrollmentResult> enrollmentResultConverter = new Converter<InputStream, EnrollmentResult>() {
+        @Override
+        public EnrollmentResult convert(InputStream inputStream) throws Exception {
+            return responseParser.parseEnrollmentResult(responseParser.parse(StreamUtil.getString(inputStream)));
+        }
+
+        @Override
+        public InputStream restore(EnrollmentResult enrollmentResult) throws Exception {
+            return null;
+        }
+    };
 
     /**
      * Create a new {@code DefaultAsyncVendorClient} with a default configuration.
@@ -35,7 +54,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<EnrollmentResult> enrollUser(String deviceAddress) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -44,16 +62,13 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.USER_ENROLL, params, true, new InputRunnable<ParsableServerResponse<EnrollmentResult>>() {
-                @Override
-                public void run(ParsableServerResponse<EnrollmentResult> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseEnrollmentResult(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
-                }
-            });
+            return executeAsync(
+                    RequestMethod.GET,
+                    ZipwhipNetworkSupport.USER_ENROLL,
+                    new ParameterizedRequest(params),
+                    enrollmentResultConverter);
+
+
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -70,12 +85,13 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.USER_DEACT, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            final ObservableFuture<ServerResponse> future = executeAsync(
+                    RequestMethod.GET,
+                    ZipwhipNetworkSupport.USER_DEACT,
+                    new ParameterizedRequest(params),
+                    nullStreamConverter);
+
+            return toVoid(future);
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -92,21 +108,36 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("mobileNumber", Address.stripToMobileNumber(deviceAddress));
 
-        try {
-            return executeAsync(ZipwhipNetworkSupport.USER_EXISTS, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
-                @Override
-                public void run(ParsableServerResponse<Boolean> parsableServerResponse) {
+        final ObservableFuture<Boolean> result = new DefaultObservableFuture<Boolean>(this);
 
-                    if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
-                        parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
-                    } else {
-                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
+        try {
+            ObservableFuture<ServerResponse> response = executeAsync(
+                    RequestMethod.GET,
+                    ZipwhipNetworkSupport.USER_EXISTS,
+                    new ParameterizedRequest(params),
+                    normalStringResponseConverter);
+
+            response.addObserver(new Observer<ObservableFuture<ServerResponse>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<ServerResponse> item) {
+                    if (!item.isSuccess()) {
+                        result.setFailure(item.getCause());
+                        return;
                     }
+
+                    if (item.getResult() instanceof BooleanServerResponse) {
+                        result.setSuccess(((BooleanServerResponse) item.getResult()).getResponse());
+                        return;
+                    }
+
+                    throw new IllegalStateException("Not sure what response was!");
                 }
             });
         } catch (Exception e) {
             return failureFuture(e);
         }
+
+        return result;
     }
 
     @Override
@@ -120,12 +151,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CARBON_SUGGEST, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            return executeAsyncVoid(ZipwhipNetworkSupport.CARBON_SUGGEST, params);
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -133,7 +159,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Boolean> carbonInstalled(String deviceAddress) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -142,15 +167,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CARBON_INSTALLED, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
-                @Override
-                public void run(ParsableServerResponse<Boolean> parsableServerResponse) {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CARBON_INSTALLED, params);
 
-                    if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
-                        parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
-                    } else {
-                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
-                    }
+            return parse(future, new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    return getBoolean(future);
                 }
             });
         } catch (Exception e) {
@@ -160,7 +182,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Boolean> carbonEnabled(String deviceAddress) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -169,20 +190,36 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CARBON_ENABLED_VENDOR, params, true, new InputRunnable<ParsableServerResponse<Boolean>>() {
-                @Override
-                public void run(ParsableServerResponse<Boolean> parsableServerResponse) {
+            final ObservableFuture<ServerResponse> future = executeAsync(
+                    ZipwhipNetworkSupport.CARBON_ENABLED_VENDOR,
+                    params);
 
-                    if (parsableServerResponse.getServerResponse() instanceof BooleanServerResponse) {
-                        parsableServerResponse.getFuture().setSuccess(((BooleanServerResponse) parsableServerResponse.getServerResponse()).getResponse());
-                    } else {
-                        parsableServerResponse.getFuture().setFailure(new Exception("Bad server response type"));
-                    }
+            return parse(future, new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    return getBoolean(future);
                 }
             });
         } catch (Exception e) {
             return failureFuture(e);
         }
+    }
+
+    protected Boolean getBoolean(ObservableFuture<ServerResponse> future) throws Exception {
+        if (future.isSuccess()) {
+            ServerResponse serverResponse = future.getResult();
+            if (serverResponse instanceof BooleanServerResponse) {
+                return ((BooleanServerResponse) serverResponse).getResponse();
+            }
+        } else if (future.isCancelled()) {
+            throw new IllegalStateException("Cancelled");
+        }
+
+        if (future.getCause() instanceof Exception) {
+            throw (Exception)future.getCause();
+        }
+
+        throw new Exception(future.getCause());
     }
 
     @Override
@@ -192,7 +229,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<List<MessageToken>> sendMessage(String deviceAddress, Set<String> contactMobileNumbers, String body) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -213,14 +249,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("body", body);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_SEND, params, true, new InputRunnable<ParsableServerResponse<List<MessageToken>>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.MESSAGE_SEND, params);
+
+            return parse(future, new Callable<List<MessageToken>>() {
                 @Override
-                public void run(ParsableServerResponse<List<MessageToken>> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessageTokens(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public List<MessageToken> call() throws Exception {
+                    return responseParser.parseMessageTokens(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -239,14 +273,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<MessageListResult>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params);
+
+            return parse(future, new Callable<MessageListResult>() {
                 @Override
-                public void run(ParsableServerResponse<MessageListResult> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessagesListResult(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public MessageListResult call() throws Exception {
+                    return responseParser.parseMessagesListResult(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -267,16 +299,17 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("limit", Integer.toString(limit));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params, true, new InputRunnable<ParsableServerResponse<MessageListResult>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.MESSAGE_LIST, params);
+
+            return parse(future, new Callable<MessageListResult>() {
                 @Override
-                public void run(ParsableServerResponse<MessageListResult> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseMessagesListResult(parsableServerResponse.getServerResponse()));
-                        parsableServerResponse.getFuture().getResult().setStart(start);
-                        parsableServerResponse.getFuture().getResult().setLimit(limit);
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public MessageListResult call() throws Exception {
+                    MessageListResult result = responseParser.parseMessagesListResult(future.getResult());
+
+                    result.setStart(start);
+                    result.setLimit(limit);
+
+                    return result;
                 }
             });
         } catch (Exception e) {
@@ -309,14 +342,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.USER_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.USER_SAVE, params);
+
+            return parse(future, new Callable<Contact>() {
                 @Override
-                public void run(ParsableServerResponse<Contact> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseUserAsContact(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public Contact call() throws Exception {
+                    return responseParser.parseUserAsContact(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -336,12 +367,9 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("message", ids);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_READ, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.MESSAGE_READ, params);
+
+            return parse(future, NullCallable.getInstance());
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -359,12 +387,9 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("message", ids);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.MESSAGE_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.MESSAGE_DELETE, params);
+
+            return parse(future, NullCallable.getInstance());
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -382,12 +407,9 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("fingerprint", fingerprint);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_READ, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CONVERSATION_READ, params);
+
+            return parse(future, NullCallable.getInstance());
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -395,7 +417,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Void> deleteConversation(String deviceAddress, String fingerprint) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -405,12 +426,9 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("fingerprint", fingerprint);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CONVERSATION_DELETE, params);
+
+            return parse(future, NullCallable.getInstance());
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -418,7 +436,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<List<Conversation>> listConversations(String deviceAddress) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -427,14 +444,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Conversation>>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CONVERSATION_LIST, params);
+
+            return parse(future, new Callable<List<Conversation>>() {
                 @Override
-                public void run(ParsableServerResponse<List<Conversation>> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseConversations(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public List<Conversation> call() throws Exception {
+                    return responseParser.parseConversations(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -444,16 +459,11 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Contact> saveContact(String deviceAddress, Contact contact) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
-        }
-
-        if (contact == null) {
+        } else if (contact == null) {
             return invalidArgumentFailureFuture("Contact is a required argument");
-        }
-
-        if (StringUtil.isNullOrEmpty(contact.getAddress())) {
+        } else if (StringUtil.isNullOrEmpty(contact.getAddress())) {
             return invalidArgumentFailureFuture("Contact.address is a required argument");
         }
 
@@ -474,14 +484,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_SAVE, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CONTACT_SAVE, params);
+
+            return parse(future, new Callable<Contact>() {
                 @Override
-                public void run(ParsableServerResponse<Contact> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseContact(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public Contact call() throws Exception {
+                    return responseParser.parseContact(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -491,7 +499,6 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Void> deleteContacts(String deviceAddress, Set<String> contactMobileNumbers) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
         }
@@ -508,12 +515,7 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("contact", contactAddresses);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_DELETE, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            return executeAsyncVoid(ZipwhipNetworkSupport.CONTACT_DELETE, params);
         } catch (Exception e) {
             return failureFuture(e);
         }
@@ -530,14 +532,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params, true, new InputRunnable<ParsableServerResponse<List<Contact>>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(ZipwhipNetworkSupport.CONTACT_LIST, params);
+
+            return parse(future, new Callable<List<Contact>>() {
                 @Override
-                public void run(ParsableServerResponse<List<Contact>> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseContacts(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public List<Contact> call() throws Exception {
+                    return responseParser.parseContacts(future.getResult());
                 }
             });
         } catch (Exception e) {
@@ -547,32 +547,50 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
 
     @Override
     public ObservableFuture<Contact> getContact(String deviceAddress, String contactMobileNumber) {
-
         if (StringUtil.isNullOrEmpty(deviceAddress)) {
             return invalidArgumentFailureFuture("Device address is a required argument");
-        }
-        if (StringUtil.isNullOrEmpty(contactMobileNumber)) {
+        } else if (StringUtil.isNullOrEmpty(contactMobileNumber)) {
             return invalidArgumentFailureFuture("Contact mobileNumber is a required argument");
         }
 
         Map<String, Object> params = new HashMap<String, Object>();
+
         params.put("deviceAddress", getDeviceAddress(deviceAddress));
         params.put("address", getAddress(contactMobileNumber));
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.CONTACT_GET, params, true, new InputRunnable<ParsableServerResponse<Contact>>() {
+            final ObservableFuture<ServerResponse> future = executeAsync(
+                    RequestMethod.GET,
+                    ZipwhipNetworkSupport.CONTACT_GET,
+                    new ParameterizedRequest(params),
+                    normalStringResponseConverter);
+
+            return parse(future, new Callable<Contact>() {
                 @Override
-                public void run(ParsableServerResponse<Contact> parsableServerResponse) {
-                    try {
-                        parsableServerResponse.getFuture().setSuccess(responseParser.parseContact(parsableServerResponse.getServerResponse()));
-                    } catch (Exception e) {
-                        parsableServerResponse.getFuture().setFailure(e);
-                    }
+                public Contact call() throws Exception {
+                    return responseParser.parseContact(future.getResult());
                 }
             });
         } catch (Exception e) {
             return failureFuture(e);
         }
+    }
+
+    protected <T> ObservableFuture<T> parse(final ObservableFuture<ServerResponse> future, final Callable<T> callable) {
+        final ObservableFuture<T> result = new NestedObservableFuture<T>(this);
+
+        future.addObserver(new Observer<ObservableFuture<ServerResponse>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<ServerResponse> item) {
+                try {
+                    NestedObservableFuture.syncState(item, result, callable.call());
+                } catch (Exception e) {
+                    future.setFailure(e);
+                }
+            }
+        });
+
+        return result;
     }
 
     @Override
@@ -585,16 +603,12 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("phoneNumber", phoneNumber);
 
-        try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_PROVISION, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
-        } catch (Exception e) {
-            return failureFuture(e);
-        }
+        return toVoid(
+                executeAsync(
+                        RequestMethod.GET,
+                        ZipwhipNetworkSupport.TEXTLINE_PROVISION,
+                        new ParameterizedRequest(params),
+                        nullStreamConverter));
 
     }
 
@@ -609,20 +623,16 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
+
         params.put("phoneNumber", phoneNumber);
         params.put("email", email);
 
-        try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_ENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
-        } catch (Exception e) {
-            return failureFuture(e);
-        }
-
+        return toVoid(
+                executeAsync(
+                        RequestMethod.GET,
+                        ZipwhipNetworkSupport.TEXTLINE_ENROLL,
+                        new ParameterizedRequest(params),
+                        nullStreamConverter));
     }
 
     @Override
@@ -636,16 +646,15 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
         params.put("phoneNumber", phoneNumber);
 
         try {
-            return executeAsync(ZipwhipNetworkSupport.TEXTLINE_UNENROLL, params, true, new InputRunnable<ParsableServerResponse<Void>>() {
-                @Override
-                public void run(ParsableServerResponse<Void> parsableServerResponse) {
-                    parsableServerResponse.getFuture().setSuccess(null);
-                }
-            });
+            return toVoid(
+                    executeAsync(
+                            RequestMethod.GET,
+                            ZipwhipNetworkSupport.TEXTLINE_UNENROLL,
+                            new ParameterizedRequest(params),
+                            nullStreamConverter));
         } catch (Exception e) {
             return failureFuture(e);
         }
-
     }
 
     private <T> ObservableFuture<T> invalidArgumentFailureFuture(String message) {
@@ -670,5 +679,4 @@ public class DefaultAsyncVendorClient extends ZipwhipNetworkSupport implements A
     protected void onDestroy() {
 
     }
-
 }

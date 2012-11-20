@@ -1,11 +1,11 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.api.ClientZipwhipNetworkSupport;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionHandleAware;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Created with IntelliJ IDEA.
@@ -16,7 +16,7 @@ import org.apache.log4j.Logger;
 */
 public class TearDownConnectionObserver<T> implements Observer<ObservableFuture<T>> {
 
-    private static final Logger LOGGER = Logger.getLogger(TearDownConnectionObserver.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TearDownConnectionObserver.class);
 
     private final boolean reconnect;
 

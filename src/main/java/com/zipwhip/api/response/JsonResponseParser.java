@@ -1,14 +1,16 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
-import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.api.signals.Signal;
+import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.util.StreamUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -20,7 +22,7 @@ import java.util.*;
  */
 public class JsonResponseParser implements ResponseParser {
 
-    private static final Logger LOGGER = Logger.getLogger(JsonResponseParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonResponseParser.class);
     private static final String EMPTY_OBJECT = "{}";
 
     private JsonDtoParser parser = new JsonDtoParser();
@@ -40,18 +42,17 @@ public class JsonResponseParser implements ResponseParser {
         String responseKey = "response";
 
         boolean success = thing.optBoolean("success");
-        Map<String, Map<String, List<Signal>>> sessions = null;
 
         // IS THIS A COMPLEX OBJECT?
         JSONObject jsonObject = thing.optJSONObject(responseKey);
         if (jsonObject != null) {
-            return new ObjectServerResponse(response, success, jsonObject, sessions);
+            return new ObjectServerResponse(response, success, jsonObject);
         }
 
         // IS THIS AN ARRAY?
         JSONArray jsonArray = thing.optJSONArray(responseKey);
         if (jsonArray != null) {
-            return new ArrayServerResponse(response, success, jsonArray, sessions);
+            return new ArrayServerResponse(response, success, jsonArray);
         }
 
         // IS THIS A STRING?
@@ -60,16 +61,16 @@ public class JsonResponseParser implements ResponseParser {
         // Unfortunately the JSON libs in Android coerce bool into Strings
         if (string != null && !string.equalsIgnoreCase("true") && !string.equalsIgnoreCase("false")) {
             // a string
-            return new StringServerResponse(response, success, string, sessions);
+            return new StringServerResponse(response, success, string);
         }
 
         /// MIGHT BE A BOOLEAN
         try {
             boolean bool = thing.getBoolean(responseKey);
-            return new BooleanServerResponse(response, success, bool, sessions);
+            return new BooleanServerResponse(response, success, bool);
         } catch (Exception e) {
             // NOPE, JUST RETURN THE RAW RESULT
-            return new StringServerResponse(response, true, response, null);
+            return new StringServerResponse(response, true, response);
         }
     }
 
@@ -120,7 +121,6 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public MessageListResult parseMessagesListResult(ServerResponse serverResponse) throws Exception {
-
         if (!(serverResponse instanceof ArrayServerResponse)) {
             throw new Exception("ServerResponse must be an ArrayServerResponse");
         }
@@ -136,7 +136,7 @@ public class JsonResponseParser implements ResponseParser {
         MessageListResult result = new MessageListResult();
         result.setMessages(messages);
 
-        JSONObject rawObject = new JSONObject(serverResponse.getRaw());
+        JSONObject rawObject = new JSONObject(StreamUtil.getString(serverResponse.getRaw()));
         result.setTotal(rawObject.optInt("total", 0));
         result.setSize(rawObject.optInt("size", 0));
 
@@ -335,8 +335,7 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public List<Presence> parsePresence(ServerResponse serverResponse) throws Exception {
-
-        JSONObject raw = new JSONObject(serverResponse.getRaw());
+        JSONObject raw = new JSONObject(StreamUtil.getString(serverResponse.getRaw()));
         JSONObject response = raw.optJSONObject("response");
         JSONArray result = response.getJSONArray("result");
 
@@ -417,8 +416,7 @@ public class JsonResponseParser implements ResponseParser {
 
     @Override
     public TinyUrl parseTinyUrl(ServerResponse serverResponse) throws Exception {
-
-        JSONObject jsonObject = new JSONObject(serverResponse.getRaw());
+        JSONObject jsonObject = new JSONObject(StreamUtil.getString(serverResponse.getRaw()));
 
         TinyUrl result = new TinyUrl();
         result.setKey(jsonObject.optString("key"));

@@ -5,11 +5,12 @@ import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.PingPongCommand;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBase;
 import com.zipwhip.api.signals.sockets.netty.SignalConnectionBaseConnectionHandleBase;
+import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.DebuggingExecutor;
-import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ import java.util.concurrent.Executor;
  */
 public class MockSignalConnection extends SignalConnectionBase {
 
-    private static final Logger LOGGER = Logger.getLogger(MockSignalConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MockSignalConnection.class);
 
     protected Executor executor = new DebuggingExecutor(SimpleExecutor.getInstance()) {
         @Override

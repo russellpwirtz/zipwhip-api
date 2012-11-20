@@ -1,7 +1,6 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.executors;
 
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
-import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.util.Factory;
 
 import java.util.concurrent.ExecutorService;
 
@@ -13,7 +12,7 @@ import java.util.concurrent.ExecutorService;
  *
  *
  */
-public interface CommonExecutorFactory {
+public interface CommonExecutorFactory extends Factory<ExecutorService> {
 
     ExecutorService create(CommonExecutorTypes type, String name);
 

@@ -1,15 +1,15 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
-import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,7 +26,7 @@ public class ChannelWrapperFactory extends DestroyableBase implements Factory<Ch
 
     private static AtomicLong id = new AtomicLong(0);
 
-    private static final Logger LOGGER = Logger.getLogger(ChannelWrapperFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChannelWrapperFactory.class);
 
     private int connectTimeoutSeconds = 15;
     private ChannelPipelineFactory channelPipelineFactory;

@@ -1,16 +1,20 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.*;
+import com.zipwhip.api.ApiConnection;
+import com.zipwhip.api.DefaultZipwhipClient;
+import com.zipwhip.api.HttpApiConnectionFactory;
+import com.zipwhip.api.ZipwhipClient;
 import com.zipwhip.api.settings.MemorySettingStore;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 
@@ -23,8 +27,9 @@ import java.net.InetSocketAddress;
  */
 public class ZipwhipClientIntegrationTest {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketSignalProviderIntegrationTest.class);
-    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProviderIntegrationTest.class);
+//    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
+    private String sessionKey = "cf7adca8-25ca-4970-a13a-785bcda26a1a:175141103"; // evo 3d
 
     ZipwhipClient zipwhipClient;
 
@@ -32,15 +37,15 @@ public class ZipwhipClientIntegrationTest {
     public void setUp() throws Exception {
         HttpApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
 
-        connectionFactory.setHost(ApiConnection.STAGING_HOST);
+        connectionFactory.setHost(ApiConnection.DEFAULT_HOST);
         connectionFactory.setSessionKey(sessionKey);
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
-                .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))
+                .address(new InetSocketAddress(ApiConnection.DEFAULT_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
-        DefaultZipwhipClient client = new DefaultZipwhipClient(null, null, connectionFactory.create(), signalProviderFactory.create());
+        DefaultZipwhipClient client = new DefaultZipwhipClient(null, null, null, connectionFactory.create(), signalProviderFactory.create());
         client.setSettingsStore(new MemorySettingStore());
 
         zipwhipClient = client;

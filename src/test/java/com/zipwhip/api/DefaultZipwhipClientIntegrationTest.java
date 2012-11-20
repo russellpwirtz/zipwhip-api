@@ -52,13 +52,13 @@ public class DefaultZipwhipClientIntegrationTest {
     }
 
 
-
     private static class AndroidZipwhipClientFactory extends DestroyableBase implements Factory<ZipwhipClient> {
 
         //    private String host = "http://network.zipwhip.com";
-        private String host = ApiConnection.STAGING_HOST;
-        //    private String sessionKey = "c821c96c-39fd-49ad-b9d4-b71d0d14f6ae:375"; // evo 3d
-        private String sessionKey = "6c20b056-6843-404d-9fb4-b492d54efe75:142584301"; // evo 3d
+        private String host = ApiConnection.DEFAULT_HOST;
+            private String sessionKey = "cf7adca8-25ca-4970-a13a-785bcda26a1a:175141103"; // evo 3d
+//            private String sessionKey = "c821c96c-39fd-49ad-b9d4-b71d0d14f6ae:375"; // evo 3d
+//        private String sessionKey = "6c20b056-6843-404d-9fb4-b492d54efe75:142584301"; // evo 3d
 
 
         @Override
@@ -71,7 +71,7 @@ public class DefaultZipwhipClientIntegrationTest {
 
                 SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                         .reconnectStrategy(new ExponentialBackoffReconnectStrategy())
-                        .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.PORT_80))
+                        .address(new InetSocketAddress(ApiConnection.DEFAULT_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
                         .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 
                 ZipwhipClientFactory zipwhipClientFactory = new ZipwhipClientFactory(connectionFactory, signalProviderFactory);

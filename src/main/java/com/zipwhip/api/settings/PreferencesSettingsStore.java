@@ -1,7 +1,8 @@
 package com.zipwhip.api.settings;
 
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.prefs.Preferences;
 
@@ -13,14 +14,13 @@ import java.util.prefs.Preferences;
  */
 public class PreferencesSettingsStore implements SettingsStore {
 
-    private static Logger logger = Logger.getLogger(PreferencesSettingsStore.class);
+    private static Logger logger = LoggerFactory.getLogger(PreferencesSettingsStore.class);
 
     // Java's underlying, platform independent disk storage.
     private Preferences preferences = Preferences.userRoot().node(PreferencesSettingsStore.class.getCanonicalName());
 
     @Override
     public void put(Keys key, String value) {
-
         logger.debug("Putting " + key.toString() + " = " + value);
 
         if (value == null) {

@@ -6,17 +6,18 @@ import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.ChannelWrapperConnectionHandle;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,14 +28,17 @@ import java.util.concurrent.*;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 /**
  * Created by IntelliJ IDEA. User: jed Date: 8/30/11 Time: 3:30 PM
  */
 public class SocketSignalProviderTest {
 
-    private static final Logger LOG = Logger.getLogger(SocketSignalProviderTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SocketSignalProviderTest.class);
 
     private SocketSignalProvider provider;
     private MockSignalConnection signalConnection;
@@ -474,7 +478,7 @@ public class SocketSignalProviderTest {
         assertEquals(1, signalObserver.signalReceivedCount);
         assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
 
-        Thread.sleep(3000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(4000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
         assertEquals(2, signalObserver.signalReceivedCount);

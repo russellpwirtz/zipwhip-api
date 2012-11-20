@@ -1,5 +1,7 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.connection.ParameterizedRequest;
+import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.exception.NotAuthenticatedException;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.settings.PreferencesSettingsStore;
@@ -15,20 +17,21 @@ import com.zipwhip.api.signals.sockets.ConnectionHandleAware;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.executors.DebuggingExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.Asserts;
+import com.zipwhip.util.Converter;
+import com.zipwhip.util.StreamUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
 
@@ -43,7 +46,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport {
 
-    protected static final Logger LOGGER = Logger.getLogger(ClientZipwhipNetworkSupport.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ClientZipwhipNetworkSupport.class);
 
     protected final ImportantTaskExecutor importantTaskExecutor;
     protected long signalsConnectTimeoutInSeconds = 10;
@@ -64,7 +67,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
      * @param connection For talking with Zipwhip (message/send)
      * @param signalProvider For signal i/o
      */
-    public ClientZipwhipNetworkSupport(Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
+    public ClientZipwhipNetworkSupport(SettingsStore store, Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
         super(executor, connection);
 
         if (signalProvider != null) {
@@ -78,13 +81,15 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         }
         this.importantTaskExecutor = importantTaskExecutor;
 
-        if (settingsStore == null) {
-            settingsStore = new PreferencesSettingsStore();
-            versionsStore = new SettingsVersionStore(settingsStore);
+        if (store == null) {
+            store = new PreferencesSettingsStore();
         }
+        this.setSettingsStore(store);
 
-        // Start listening to provider events that interest us
-        initSignalProviderEvents();
+        if (signalProvider != null){
+            // Start listening to provider events that interest us
+            initSignalProviderEvents();
+        }
     }
 
     public ObservableFuture connect() throws Exception {
@@ -303,7 +308,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                                                 future.addObserver(
                                                         new ThreadSafeObserver<ObservableFuture<SubscriptionCompleteCommand>>(
-                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(false)));
+                                                                new TearDownConnectionObserver<SubscriptionCompleteCommand>(true)));
                                             }
                                         }
                                     }
@@ -667,7 +672,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
                     Asserts.assertTrue(!fired, "failConnectingFutureIfDisconnectedObserver fired twice. That's not allowed.");
                     fired = true;
 
-                    resultFuture.setFailure(new Exception("Disconnected"));
+                    resultFuture.setFailure(new Exception("Disconnected before able to complete connection."));
                 }
             }
 
@@ -838,13 +843,13 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         return signalsConnectFuture;
     }
 
-    private void executeSignalsDisconnect(String sessionKey, String clientId) {
+    protected void executeSignalsDisconnect(String sessionKey, String clientId) {
         // Do a disconnect then connect
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("clientId", clientId);
         params.put("sessions", sessionKey);
         try {
-            executeAsync(SIGNALS_DISCONNECT, params);
+            executeAsync(RequestMethod.GET, SIGNALS_DISCONNECT, new ParameterizedRequest(params), normalStringResponseConverter);
         } catch (Exception e) {
             LOGGER.warn("Couldn't execute SIGNALS_DISCONNECT. We're going to ignore this problem.", e);
         }
@@ -855,7 +860,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
      */
     private static class UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver implements Observer<ObservableFuture<ConnectionHandle>> {
 
-        private static final Logger LOGGER = Logger.getLogger(UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver.class);
+        private static final Logger LOGGER = LoggerFactory.getLogger(UpdateLocalStoreWithLastKnownSubscribedClientIdOnSuccessObserver.class);
 
         private final ClientZipwhipNetworkSupport client;
 
@@ -993,7 +998,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
             ServerResponse response;
             try {
-                response = executeSync(ZipwhipNetworkSupport.SIGNALS_CONNECT, getSignalsConnectParams(sessionKey, clientId));
+                response = executeSync(RequestMethod.GET, ZipwhipNetworkSupport.SIGNALS_CONNECT, getSignalsConnectParams(sessionKey, clientId));
             } catch (Exception e) {
                 LOGGER.error("Failed to execute request: ", e);
                 resultFuture.setFailure(e);
@@ -1009,7 +1014,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
             }
 
             if (!response.isSuccess()) {
-                resultFuture.setFailure(new Exception(response.getRaw()));
+                resultFuture.setFailure(new Exception(StreamUtil.getString(response.getRaw())));
 
                 return resultFuture;
             }
@@ -1057,6 +1062,10 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         public String toString() {
             return "SignalsConnectTask(Waiting for SubscriptionCompleteCommand)";
         }
+    }
+
+    protected ServerResponse executeSync(RequestMethod get, String messageSend, Map<String, Object> params) throws Exception {
+        return get(executeAsync(get, messageSend, new ParameterizedRequest(params), normalStringResponseConverter));
     }
 
     /**

@@ -1,9 +1,10 @@
 package com.zipwhip.api.settings;
 
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -21,7 +22,7 @@ public class SettingsVersionStore implements VersionStore {
 
     private Map<String, Long> memoryVersions = new HashMap<String, Long>();
 
-    private static Logger logger = Logger.getLogger(SettingsVersionStore.class);
+    private static Logger logger = LoggerFactory.getLogger(SettingsVersionStore.class);
 
     /**
      * Create a new SettingsVersionStore using the settingsStore as the underlying storage solution.
@@ -54,7 +55,6 @@ public class SettingsVersionStore implements VersionStore {
 
     @Override
     public boolean set(String versionKey, long newVersion) {
-
         logger.debug("Setting version " + versionKey + " : " + newVersion);
 
         Long previousVersion = memoryVersions.put(versionKey, newVersion);

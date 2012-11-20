@@ -1,27 +1,30 @@
 package com.zipwhip.api.signals.sockets;
 
 import com.zipwhip.api.NestedObservableFuture;
-import com.zipwhip.api.signals.*;
+import com.zipwhip.api.signals.PingEvent;
+import com.zipwhip.api.signals.SignalConnection;
+import com.zipwhip.api.signals.SignalProvider;
+import com.zipwhip.api.signals.VersionMapEntry;
 import com.zipwhip.api.signals.commands.*;
 import com.zipwhip.api.signals.sockets.netty.NettySignalConnection;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observer;
-import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.Scheduler;
-import com.zipwhip.important.schedulers.TimerScheduler;
+import com.zipwhip.important.schedulers.ZipwhipTimerScheduler;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.timers.HashedWheelTimer;
+import com.zipwhip.timers.Timer;
 import com.zipwhip.util.Asserts;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
-import org.jboss.netty.util.*;
-import org.jboss.netty.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -40,7 +43,7 @@ import static com.zipwhip.concurrent.ThreadUtil.ensureLock;
  */
 public class SocketSignalProvider extends SignalProviderBase implements SignalProvider {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketSignalProvider.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProvider.class);
 
     private final Map<String, SlidingWindow<Command>> slidingWindows = new HashMap<String, SlidingWindow<Command>>();
 
@@ -78,7 +81,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
             this.timer = timer;
         }
 
-        this.scheduler = new TimerScheduler(this.timer);
+        this.scheduler = new ZipwhipTimerScheduler(this.timer);
         this.importantTaskExecutor = new ImportantTaskExecutor(this.scheduler);
         this.link(importantTaskExecutor);
 
@@ -325,25 +328,25 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
 
                 switch (result) {
                     case EXPECTED_SEQUENCE:
-                        LOGGER.debug("EXPECTED_SEQUENCE");
+                        LOGGER.debug("EXPECTED_SEQUENCE: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     case HOLE_FILLED:
-                        LOGGER.debug("HOLE_FILLED");
+                        LOGGER.debug("HOLE_FILLED: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     case DUPLICATE_SEQUENCE:
-                        LOGGER.warn("DUPLICATE_SEQUENCE");
+                        LOGGER.warn("DUPLICATE_SEQUENCE: " + commandResults);
                         break;
                     case POSITIVE_HOLE:
-                        LOGGER.warn("POSITIVE_HOLE");
+                        LOGGER.warn("POSITIVE_HOLE: " + commandResults);
                         break;
                     case NEGATIVE_HOLE:
-                        LOGGER.debug("NEGATIVE_HOLE");
+                        LOGGER.debug("NEGATIVE_HOLE: " + commandResults);
                         handleCommands(connection, commandResults);
                         break;
                     default:
-                        LOGGER.warn("UNKNOWN_RESULT");
+                        LOGGER.warn("UNKNOWN_RESULT: " + commandResults);
                 }
             } else {
                 // Non versioned command, not windowed
@@ -948,9 +951,8 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                 LOGGER.warn("BANNED by SignalServer! Those jerks!");
             }
 
-            // If the command has not said 'ban' or 'stop'
-            if (!command.isStop() || !command.isBan()) {
-
+            // If the command has not said 'ban' and 'stop'
+            if (!command.isStop() && !command.isBan()) {
                 String host;
                 int port;
 
@@ -982,7 +984,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                     LOGGER.debug(String.format("We are going to connect again %d seconds from now", command.getReconnectDelay()));
                 }
 
-                scheduler.schedule(originalClientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
+                scheduler.schedule(clientId, FutureDateUtil.inFuture(command.getReconnectDelay(), TimeUnit.SECONDS));
             }
         }
     }
@@ -990,23 +992,37 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
     private final Observer<String> onScheduleComplete = new Observer<String>() {
         @Override
         public void notify(Object sender, String clientId) {
-            if (!StringUtil.equals(originalClientId, clientId)) {
+            if (!StringUtil.equals(SocketSignalProvider.this.clientId, clientId)) {
                 // must have been for a different request.
+                return;
+            } else if (getConnectionState() == ConnectionState.CONNECTED) {
+                LOGGER.debug("It seems that the connectionState is connected already. Aborting this reconnect attempt.");
                 return;
             }
 
-            // Clear the clientId so we will re-up on connect
-            originalClientId = StringUtil.EMPTY_STRING;
-
-            LOGGER.debug("Executing the connect that was requested by the server. Nulled out the clientId...");
+            LOGGER.debug("Executing the connect that was requested by the server.");
             try {
-                if (getConnectionState() != ConnectionState.CONNECTED) {
-                    connect();
-                }
-                // TODO: what if this never finishes? Will the reconnectStrategy pay off?
+                connect(clientId, versions, presence).addObserver(retryOnFailureObserver);
             } catch (Exception e) {
                 LOGGER.error("Crash on connect. We hope that the reconnectStrategy will do us good.", e);
             }
+        }
+    };
+
+    private Observer<ObservableFuture<ConnectionHandle>> retryOnFailureObserver = new Observer<ObservableFuture<ConnectionHandle>>() {
+        @Override
+        public void notify(Object sender, ObservableFuture<ConnectionHandle> item) {
+            if (item.isSuccess() && item.getResult() != null && !item.getResult().getDisconnectFuture().isDone()) {
+                LOGGER.warn("The future was successful! We reconnected just fine.");
+                return;
+            } else if (item.isCancelled()) {
+                LOGGER.warn("The future was cancelled, so this must mean it was forcibly disconnected! Not retrying.");
+                return;
+            }
+
+            // TODO: how do we handle this case? It's considered an 'initial connect' so it can't be retried.
+
+            connect(clientId, versions, presence).addObserver(this);
         }
     };
 
@@ -1133,7 +1149,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         @Override
         public void notify(Object sender, ObservableFuture item) {
             if (!item.isSuccess()) {
-                LOGGER.fatal("FAILED TO WRITE TO CHANNEL! " + item);
+                LOGGER.error("FAILED TO WRITE TO CHANNEL! " + item);
             }
         }
     };

@@ -3,6 +3,7 @@ package com.zipwhip.important;
 import com.zipwhip.events.Observer;
 
 import java.lang.String;import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,6 +18,10 @@ import java.lang.String;import java.util.Date;
 public interface Scheduler {
 
     void schedule(String requestId, Date exitTime);
+
+    void scheduleRecurring(String requestId, long interval, TimeUnit units);
+
+    void cancel(String requestId);
 
     void onScheduleComplete(Observer<String> observer);
 

@@ -1,11 +1,11 @@
 package com.zipwhip.api.signals.commands;
 
-import org.apache.log4j.Logger;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.util.StringUtil;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,7 +16,7 @@ import com.zipwhip.util.StringUtil;
 public class PingPongCommand extends SerializingCommand {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger LOGGER = Logger.getLogger(PingPongCommand.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PingPongCommand.class);
     private static PingPongCommand shortformInstance;
 
     public static final Action ACTION = Action.PING; // "ping";

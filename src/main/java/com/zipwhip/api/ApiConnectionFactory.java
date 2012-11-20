@@ -1,15 +1,20 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.connection.ParameterizedRequest;
+import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.response.JsonResponseParser;
 import com.zipwhip.api.response.ResponseParser;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.util.SignTool;
+import com.zipwhip.util.Authenticator;
 import com.zipwhip.util.Factory;
+import com.zipwhip.util.StreamUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,7 +23,7 @@ import java.util.Map;
  */
 public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
 
-    private static final Logger LOGGER = Logger.getLogger(ApiConnectionFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiConnectionFactory.class);
 
     private ResponseParser responseParser = new JsonResponseParser();
 
@@ -46,7 +51,7 @@ public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
             connection.setHost(host);
 
             if (StringUtil.exists(apiKey) && StringUtil.exists(secret)) {
-                connection.setAuthenticator(new SignTool(apiKey, secret));
+                connection.setAuthenticator(new Authenticator(apiKey, secret));
             }
 
             // We have a username/password
@@ -56,7 +61,7 @@ public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
                 params.put("mobileNumber", username);
                 params.put("password", password);
 
-                ObservableFuture<String> future = connection.send("user/login", params);
+                ObservableFuture<InputStream> future = connection.send(RequestMethod.GET, "user/login", new ParameterizedRequest(params));
 
                 future.awaitUninterruptibly();
 
@@ -64,7 +69,7 @@ public abstract class ApiConnectionFactory implements Factory<ApiConnection> {
                     throw new RuntimeException("Cannot create connection, login rejected");
                 }
 
-                ServerResponse serverResponse = responseParser.parse(future.getResult());
+                ServerResponse serverResponse = responseParser.parse(StreamUtil.getString(future.getResult()));
 
                 if (!serverResponse.isSuccess()) {
                     throw new RuntimeException("Error authenticating client");

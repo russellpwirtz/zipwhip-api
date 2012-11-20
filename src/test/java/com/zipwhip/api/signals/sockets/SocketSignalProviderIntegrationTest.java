@@ -1,8 +1,7 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.*;
-import com.zipwhip.api.settings.MemorySettingStore;
-import com.zipwhip.api.signals.Signal;
+import com.zipwhip.api.ApiConnection;
+import com.zipwhip.api.ApiConnectionConfiguration;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.sockets.netty.RawSocketIoChannelPipelineFactory;
@@ -11,15 +10,12 @@ import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
-import com.zipwhip.util.DownloadURL;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +29,7 @@ import static junit.framework.Assert.*;
  */
 public class SocketSignalProviderIntegrationTest {
 
-    private static final Logger LOGGER = Logger.getLogger(SocketSignalProviderIntegrationTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProviderIntegrationTest.class);
 
 //    private String sessionKey = "6c20b056-6843-404d-9fb4-b492d54efe75:142584301"; // evo 3d
     private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
@@ -43,8 +39,8 @@ public class SocketSignalProviderIntegrationTest {
 
     @Before
     public void setUp() throws Exception {
-        ApiConnectionConfiguration.API_HOST = ApiConnection.STAGING_HOST;
-        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.STAGING_SIGNALS_HOST;
+        ApiConnectionConfiguration.API_HOST = ApiConnection.DEFAULT_HOST;
+        ApiConnectionConfiguration.SIGNALS_HOST = ApiConnection.DEFAULT_SIGNALS_HOST;
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))

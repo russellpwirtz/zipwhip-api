@@ -1,7 +1,8 @@
 package com.zipwhip.concurrent;
 
 import com.zipwhip.events.ObservableHelper;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -12,7 +13,7 @@ import org.apache.log4j.Logger;
  */
 public class DebugObservableHelper<T> extends ObservableHelperAdapter<T> {
 
-    private static final Logger LOGGER = Logger.getLogger(DebugObservableHelper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DebugObservableHelper.class);
 
     public DebugObservableHelper(ObservableHelper<T> observableHelper) {
         super(observableHelper);

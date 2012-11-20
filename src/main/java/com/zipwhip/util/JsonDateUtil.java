@@ -1,16 +1,18 @@
 package com.zipwhip.util;
 
+import com.zipwhip.format.ISO8601DateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.text.Format;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.log4j.Logger;
-
 public class JsonDateUtil {
 
 	private static final Format GRAILS_DATE_FORMATTER = new ISO8601DateTimeFormat();
-	private static final Logger LOGGER = Logger.getLogger(JsonDateUtil.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonDateUtil.class);
 
 	private static final SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy h:mm:ss aaa");
 
@@ -84,7 +86,7 @@ public class JsonDateUtil {
 				return (Date) GRAILS_DATE_FORMATTER.parseObject(stringDate.toUpperCase());
 			}
 		} catch (ParseException pex) {
-			LOGGER.error(pex);
+			LOGGER.error("Exception:", pex);
 			return null;
 		}
 	}

@@ -9,7 +9,6 @@ import java.io.Serializable;
  * Time: 11:48 AM
  *
  * Simple way to settingsStore and update versions.
- *
  */
 public class VersionMapEntry implements Serializable {
 

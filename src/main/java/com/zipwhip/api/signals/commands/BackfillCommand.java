@@ -1,14 +1,15 @@
 package com.zipwhip.api.signals.commands;
 
-import java.util.List;
-
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
-import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * @author jdinsel
@@ -19,7 +20,7 @@ public class BackfillCommand extends SerializingCommand<Long> {
 
     public static final Action ACTION = Action.BACKFILL; // "backfill";
 
-    private static Logger LOGGER = Logger.getLogger(BackfillCommand.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(BackfillCommand.class);
 
     private String channel;
 
@@ -73,6 +74,10 @@ public class BackfillCommand extends SerializingCommand<Long> {
 
     public void setChannel(String channel) {
         this.channel = channel;
+    }
+
+    public String toString() {
+        return String.format("[Backfill: %s]", serialize());
     }
 
     @Override

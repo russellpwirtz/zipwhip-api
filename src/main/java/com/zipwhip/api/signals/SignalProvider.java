@@ -20,22 +20,6 @@ public interface SignalProvider extends Destroyable {
 
     ConnectionState getConnectionState();
 
-//    /**
-//     * Determines if the state is CONNECTED
-//     *
-//     * @return
-//     */
-//    boolean isConnected();
-//
-//    /**
-//     * Determines if the state is AUTHENTICATED
-//     *
-//     * (isConnected() && has an active clientId)
-//     *
-//     * @return
-//     */
-//    boolean isAuthenticated();
-
     /**
      * The SignalServer uses a separate id to track you, because it's an Id
      * given to a TCP/IP connection, not a user.

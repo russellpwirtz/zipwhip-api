@@ -10,7 +10,8 @@ package com.zipwhip.util;
 //  http://www.DevDaily.com                                   //
 //------------------------------------------------------------//
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -21,7 +22,7 @@ import java.net.URL;
 
 public class DownloadURL {
 
-    private static Logger LOGGER = Logger.getLogger(DownloadURL.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(DownloadURL.class);
 
     public static String get(String url) throws Exception {
         String result = "";
@@ -75,13 +76,13 @@ public class DownloadURL {
 
         } catch (MalformedURLException mue) {
 
-            LOGGER.fatal("Ouch - a MalformedURLException happened.", mue);
+            LOGGER.error("Ouch - a MalformedURLException happened.", mue);
             mue.printStackTrace();
             throw mue;
 
         } catch (IOException ioe) {
 
-            LOGGER.fatal("Oops- an IOException happened.", ioe);
+            LOGGER.error("Oops- an IOException happened.", ioe);
             throw ioe;
 
         } finally {

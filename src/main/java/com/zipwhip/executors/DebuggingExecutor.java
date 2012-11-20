@@ -1,9 +1,8 @@
 package com.zipwhip.executors;
 
 import com.zipwhip.concurrent.ConfiguredFactory;
-import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.util.Factory;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,7 +26,7 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
         }
     };
 
-    private final static Logger LOGGER = Logger.getLogger(DebuggingExecutor.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(DebuggingExecutor.class);
 
     protected final List<Runnable> runnableSet = Collections.synchronizedList(new LinkedList<Runnable>());
 
@@ -40,9 +38,9 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
     public synchronized void execute(final Runnable command) {
         final DebugDurationHelper helper = new DebugDurationHelper(String.format("%s:%s", DebuggingExecutor.this, command.toString()));
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace(String.format("[%s %s queue=%s]", "enqueue", command, runnableSet));
-        }
+//        if (LOGGER.isTraceEnabled()) {
+            LOGGER.debug(String.format("[%s %s queue=%s]", "enqueue", command, runnableSet));
+//        }
         runnableSet.add(command);
 
         super.execute(new Runnable() {
@@ -50,17 +48,22 @@ public class DebuggingExecutor extends ExecutorAdapterBase {
             public void run() {
                 try {
                     runnableSet.remove(command);
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(String.format("[%s %s queue=%s]", "run", command, runnableSet));
-                        LOGGER.trace(helper.start());
-                    }
+//                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.debug(String.format("[%s %s queue=%s]", "run", command, runnableSet));
+                        LOGGER.debug(helper.start());
+//                    }
                     command.run();
                 } finally {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(helper.stop());
-                        LOGGER.trace(String.format("[%s %s queue=%s]", "finish", command, runnableSet));
-                    }
+//                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.debug(helper.stop());
+                        LOGGER.debug(String.format("[%s %s queue=%s]", "finish", command, runnableSet));
+//                    }
                 }
+            }
+
+            @Override
+            public String toString() {
+                return command.toString();
             }
         });
     }

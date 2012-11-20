@@ -8,10 +8,9 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.schedulers.TimerScheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.util.FutureDateUtil;
-import org.apache.log4j.Logger;
-import org.jboss.netty.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -27,7 +26,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(ImportantTaskExecutor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportantTaskExecutor.class);
 
     private final Map<String, ScheduledRequest> queuedRequests = Collections.synchronizedMap(new HashMap<String, ScheduledRequest>());
     private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());
@@ -59,7 +58,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
         return enqueue(executor, request, FutureDateUtil.inFuture(timeoutInSeconds, TimeUnit.SECONDS));
     }
 
-    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, Date expirationDate) {
+    public <T> ObservableFuture<T> enqueue(Executor executor, final Callable<ObservableFuture<T>> request, final Date expirationDate) {
         if (executor == null){
             executor = SimpleExecutor.getInstance();
         }
@@ -115,6 +114,10 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                                         // sync over the requestFuture to the parentFuture.
                                         // ie: if the requestFuture is already done then cascade that over.
                                         NestedObservableFuture.syncState(parentFuture, requestFuture);
+
+                                        if (expirationDate != null) {
+                                            scheduler.cancel(requestId);
+                                        }
                                     }
                                 });
                             }
@@ -134,6 +137,11 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                             LOGGER.debug(String.format("Finished synchronous execution portion for task %s, future: %s", request, parentFuture));
                         }
                     }
+                }
+
+                @Override
+                public String toString() {
+                    return String.format("[ImportantTask: %s]", request.toString());
                 }
             });
 
@@ -305,4 +313,15 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     public String toString() {
         return String.format("[ImportantTaskExecutor: %s", hashCode());
     }
+
+    public static boolean isFailedDueToTimeout(ObservableFuture<?> future) {
+        if (future == null){
+            throw new NullPointerException("future");
+        } else if (!future.isFailed()) {
+            return false;
+        }
+
+        return future.getCause() instanceof TimeoutException;
+    }
+
 }

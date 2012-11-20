@@ -2,15 +2,14 @@ package com.zipwhip.important;
 
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.important.Scheduler;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by IntelliJ IDEA.
@@ -45,6 +44,16 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
     }
 
     @Override
+    public void scheduleRecurring(String requestId, long interval, TimeUnit units) {
+        scheduler.scheduleRecurring(name + requestId, interval, units);
+    }
+
+    @Override
+    public void cancel(String requestId) {
+        scheduler.cancel(name + requestId);
+    }
+
+    @Override
     public void onScheduleComplete(Observer<String> observer) {
         observableHelper.addObserver(observer);
     }
@@ -59,7 +68,9 @@ public class ScopedScheduler extends CascadingDestroyableBase implements Schedul
         String key = item.replace(name, "");
         if (StringUtil.equalsIgnoreCase(key, item)) {
             // no change? return, not for us.
-            LOGGER.debug(String.format("(%s) Ignoring %s because it was not our scope.", this, item));
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace(String.format("(%s) Ignoring %s because it was not our scope.", this, item));
+            }
             return;
         }
 

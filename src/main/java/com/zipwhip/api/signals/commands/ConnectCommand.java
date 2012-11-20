@@ -1,17 +1,17 @@
 package com.zipwhip.api.signals.commands;
 
-import java.util.Collections;
-import java.util.Map;
-
-import org.apache.log4j.Logger;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import com.zipwhip.signals.PresenceUtil;
 import com.zipwhip.signals.message.Action;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA. User: Michael Date: 8/2/11 Time: 11:28 AM
@@ -23,7 +23,7 @@ public class ConnectCommand extends SerializingCommand {
     private static final long serialVersionUID = 1L;
     public static final Action ACTION = Action.CONNECT; // "connect";
 
-    private static Logger LOGGER = Logger.getLogger(ConnectCommand.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(ConnectCommand.class);
 
     private final String clientId;
     private final Map<String, Long> versions;

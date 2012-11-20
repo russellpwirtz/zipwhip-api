@@ -2,11 +2,11 @@ package com.zipwhip.important;
 
 import com.zipwhip.events.Observer;
 import com.zipwhip.important.schedulers.TimerScheduler;
+import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.Timer;
+import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.HashCodeComparator;
-import org.jboss.netty.util.Timeout;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,22 +19,22 @@ import java.util.concurrent.TimeUnit;
  * Date: 9/4/12
  * Time: 12:50 PM
  */
-public class SchedulerTimer implements Timer {
+public class ZipwhipSchedulerTimer implements Timer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerTimer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ZipwhipSchedulerTimer.class);
 
     private Map<String, Timeout> map = Collections.synchronizedMap(new TreeMap<String, Timeout>(HashCodeComparator.getInstance()));
 
     private final Scheduler scheduler;
 
-    public SchedulerTimer(Scheduler scheduler) {
+    public ZipwhipSchedulerTimer(Scheduler scheduler) {
         if (scheduler == null){
             this.scheduler = new TimerScheduler("SchedulerTimer");
         } else {
-            this.scheduler = new ScopedScheduler(scheduler) {
+            this.scheduler = new ScopedScheduler(scheduler, "Z" + UUID.randomUUID().toString()) {
                 @Override
                 public String toString() {
-                    return String.format("[SchedulerTimer: %s]", SchedulerTimer.this.toString());
+                    return String.format("[SchedulerTimer: %s]", ZipwhipSchedulerTimer.this);
                 }
             };
         }
@@ -128,9 +128,8 @@ public class SchedulerTimer implements Timer {
 
         @Override
         public Timer getTimer() {
-            return SchedulerTimer.this;
+            return ZipwhipSchedulerTimer.this;
         }
-
         @Override
         public TimerTask getTask() {
             return task;
@@ -149,6 +148,7 @@ public class SchedulerTimer implements Timer {
         @Override
         public synchronized void cancel() {
             isCancelled = true;
+            scheduler.cancel(this.requestId);
         }
     }
 

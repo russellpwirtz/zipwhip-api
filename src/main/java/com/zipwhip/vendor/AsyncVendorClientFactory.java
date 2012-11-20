@@ -2,7 +2,7 @@ package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.ApiConnectionFactory;
-import com.zipwhip.api.NingApiConnectionFactory;
+import com.zipwhip.api.HttpApiConnectionFactory;
 import com.zipwhip.util.Factory;
 
 /**
@@ -29,8 +29,7 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static AsyncVendorClient createViaApiKey(String apiKey, String secret) throws Exception {
-
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
 
         connectionFactory.setHost(ApiConnection.DEFAULT_SIGNALS_HOST);
         connectionFactory.setApiVersion(API_VERSION);
@@ -54,8 +53,7 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static AsyncVendorClient createViaApiKey(String apiKey, String secret, String host) throws Exception {
-
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
 
         connectionFactory.setHost(host);
         connectionFactory.setApiKey(apiKey);

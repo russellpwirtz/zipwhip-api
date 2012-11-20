@@ -8,7 +8,8 @@ import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -29,7 +30,7 @@ import org.apache.log4j.Logger;
  */
 public class SignalConnectionDelegate extends DestroyableBase {
 
-    private static final Logger LOGGER = Logger.getLogger(SignalConnectionDelegate.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignalConnectionDelegate.class);
 
     protected final SignalConnectionBase signalConnectionBase;
     protected final ConnectionHandle connectionHandle;

@@ -5,7 +5,8 @@ import com.zipwhip.api.signals.Writable;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.Asserts;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,7 +18,7 @@ import org.apache.log4j.Logger;
  */
 public class SignalProviderConnectionHandle extends ConnectionHandleBase implements Writable {
 
-    private static final Logger LOGGER = Logger.getLogger(SignalProviderConnectionHandle.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignalProviderConnectionHandle.class);
 
     private final SignalProviderBase signalProvider;
     public boolean finishedActionConnect = false;

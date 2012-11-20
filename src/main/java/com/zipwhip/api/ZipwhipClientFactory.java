@@ -1,7 +1,9 @@
 package com.zipwhip.api;
 
+import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.SocketSignalProviderFactory;
+import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.util.Factory;
 
@@ -13,19 +15,23 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
     private Factory<ApiConnection> connectionFactory;
     private Factory<SignalProvider> signalProviderFactory;
     private ImportantTaskExecutor importantTaskExecutor;
+    private CommonExecutorFactory executorFactory;
+    private SettingsStore settingsStore;
 
     public ZipwhipClientFactory() {
-        this(null, null, null);
+        this(null, null);
     }
 
     public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory) {
-        this(connectionFactory, signalProviderFactory, null);
+        this(connectionFactory, signalProviderFactory, null, null, null);
     }
 
-    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory, ImportantTaskExecutor importantTaskExecutor) {
+    public ZipwhipClientFactory(ApiConnectionFactory connectionFactory, SocketSignalProviderFactory signalProviderFactory, ImportantTaskExecutor importantTaskExecutor, SettingsStore settingsStore, CommonExecutorFactory executorFactory) {
         this.connectionFactory = connectionFactory;
         this.signalProviderFactory = signalProviderFactory;
         this.importantTaskExecutor = importantTaskExecutor;
+        this.settingsStore = settingsStore;
+        this.executorFactory = executorFactory;
 
         if (this.importantTaskExecutor == null){
             this.importantTaskExecutor = new ImportantTaskExecutor();
@@ -63,7 +69,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaUsername(String username, String password) throws Exception {
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
         connectionFactory.setUsername(username);
         connectionFactory.setPassword(password);
 
@@ -102,7 +108,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      * @throws Exception if an error occurs creating or authenticating the client.
      */
     public static ZipwhipClient createAsyncViaSessionKey(String sessionKey) throws Exception {
-        ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
+        ApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
         connectionFactory.setSessionKey(sessionKey);
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance();
 
@@ -118,9 +124,7 @@ public class ZipwhipClientFactory implements Factory<ZipwhipClient> {
      */
     @Override
     public ZipwhipClient create() {
-        DefaultZipwhipClient client = new DefaultZipwhipClient(null, importantTaskExecutor, connectionFactory.create(), signalProviderFactory.create());
-
-        return client;
+        return new DefaultZipwhipClient(settingsStore, executorFactory == null ? null : executorFactory.create(), importantTaskExecutor, connectionFactory.create(), signalProviderFactory == null ? null : signalProviderFactory.create());
     }
 
 }

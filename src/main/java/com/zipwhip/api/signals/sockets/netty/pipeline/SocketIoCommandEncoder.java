@@ -3,11 +3,12 @@ package com.zipwhip.api.signals.sockets.netty.pipeline;
 import com.zipwhip.api.signals.commands.ConnectCommand;
 import com.zipwhip.api.signals.commands.SerializingCommand;
 import com.zipwhip.signals.server.protocol.SocketIoProtocol;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,7 +18,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  */
 public class SocketIoCommandEncoder extends OneToOneEncoder implements ChannelHandler {
 
-    protected static final Logger LOGGER = Logger.getLogger(SocketIoCommandEncoder.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(SocketIoCommandEncoder.class);
 
     private long messageId = 0l;
 

@@ -37,7 +37,7 @@ public class MockSignalProvider implements SignalProvider {
     private final ObservableHelper<Void> signalVerificationEvent = new ObservableHelper<Void>();
     private final ObservableHelper<VersionMapEntry> newVersionEvent = new ObservableHelper<VersionMapEntry>();
     private final ObservableHelper<Boolean> presenceReceivedEvent = new ObservableHelper<Boolean>();
-    private final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
+    public final ObservableHelper<SubscriptionCompleteCommand> subscriptionCompleteEvent = new ObservableHelper<SubscriptionCompleteCommand>();
     private final ObservableHelper<Command> commandReceivedEvent = new ObservableHelper<Command>();
 
     protected StateManager<ConnectionState> stateManager;

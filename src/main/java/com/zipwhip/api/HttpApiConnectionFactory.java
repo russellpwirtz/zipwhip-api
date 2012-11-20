@@ -1,8 +1,8 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
-import com.zipwhip.concurrent.ConfiguredFactory;
+import com.zipwhip.api.connection.HttpConnection;
+import com.zipwhip.executors.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.lifecycle.DestroyableBase;
 
 import java.util.concurrent.Executor;
@@ -21,38 +21,7 @@ public class HttpApiConnectionFactory extends ApiConnectionFactory {
 
     @Override
     protected ApiConnection createInstance() {
-        Executor bossExecutor = null;
-        if (executorFactory != null) {
-            bossExecutor = executorFactory.create(CommonExecutorTypes.BOSS, "ApiConnection");
-        }
-        Executor workerExecutor = null;
-        if (executorFactory != null) {
-            workerExecutor = executorFactory.create(CommonExecutorTypes.WORKER, "ApiConnection");
-        }
-
-        HttpConnection connection = new HttpConnection(bossExecutor, workerExecutor);
-
-        final Executor finalBossExecutor = bossExecutor;
-        if (finalBossExecutor != null) {
-            connection.link(new DestroyableBase() {
-                @Override
-                protected void onDestroy() {
-                    ((ExecutorService) finalBossExecutor).shutdownNow();
-                }
-            });
-        }
-
-        final Executor finalWorkerExecutor = workerExecutor;
-        if (finalWorkerExecutor != null) {
-            connection.link(new DestroyableBase() {
-                @Override
-                protected void onDestroy() {
-                    ((ExecutorService) finalWorkerExecutor).shutdownNow();
-                }
-            });
-        }
-
-        return connection;
+        return new HttpConnection(executorFactory);
     }
 
     public CommonExecutorFactory getExecutorFactory() {

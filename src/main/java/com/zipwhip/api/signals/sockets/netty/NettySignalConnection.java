@@ -1,35 +1,35 @@
 package com.zipwhip.api.signals.sockets.netty;
 
-import com.zipwhip.api.signals.CommonExecutorFactory;
 import com.zipwhip.api.signals.reconnect.DefaultReconnectStrategy;
 import com.zipwhip.api.signals.reconnect.ReconnectStrategy;
-import com.zipwhip.api.signals.sockets.CommonExecutorTypes;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.api.signals.sockets.ConnectionState;
-import com.zipwhip.concurrent.ConfiguredFactory;
-import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.ObservableHelper;
+import com.zipwhip.executors.CommonExecutorFactory;
+import com.zipwhip.executors.CommonExecutorTypes;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Asserts;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Connects to the SignalServer via Netty over a raw socket
  */
 public class NettySignalConnection extends SignalConnectionBase {
 
-    private static final Logger LOGGER = Logger.getLogger(NettySignalConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettySignalConnection.class);
 
     private final ChannelWrapperFactory channelWrapperFactory;
     private final ChannelFactory channelFactory;
@@ -129,6 +129,11 @@ public class NettySignalConnection extends SignalConnectionBase {
                     }
 
                     throw new IllegalStateException("Not sure! " + type);
+                }
+
+                @Override
+                public ExecutorService create() {
+                    return create(CommonExecutorTypes.BOSS, NettySignalConnection.this.toString());
                 }
             };
         }
