@@ -3,7 +3,6 @@ package com.zipwhip.api.response;
 import com.zipwhip.api.signals.Signal;
 import org.json.JSONArray;
 
-import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +17,8 @@ public class ArrayServerResponse extends ServerResponse {
 
     public JSONArray response;
 
-    public ArrayServerResponse(String raw, boolean success, JSONArray response) {
-        super(new ByteArrayInputStream(raw.getBytes()), success);
-
+    public ArrayServerResponse(String raw, boolean success, JSONArray response, Map<String, Map<String, List<Signal>>> sessions) {
+        super(raw, success, sessions);
         this.response = response;
     }
 

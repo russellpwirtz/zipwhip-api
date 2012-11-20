@@ -39,7 +39,7 @@ public class UrlUtil {
      * @return A Zipwhip URL that is signed.
      * @throws Exception If an error occurs creating or signing the URL.
      */
-    public static String getSignedUrl(String host, String apiVersion, String method, String params, Authenticator authenticator) throws Exception {
+    public static String getSignedUrl(String host, String apiVersion, String method, String params, SignTool authenticator) throws Exception {
         return getSignedUrl(host, apiVersion, method, params, null, authenticator);
     }
 
@@ -55,16 +55,15 @@ public class UrlUtil {
      * @return A Zipwhip URL that is signed.
      * @throws Exception If an error occurs creating or signing the URL.
      */
-    public static String getSignedUrl(String host, String apiVersion, String method, String params, String sessionKey, Authenticator authenticator) throws Exception {
+    public static String getSignedUrl(String host, String apiVersion, String method, String params, String sessionKey, SignTool authenticator) throws Exception {
 
         StringBuilder builder = new StringBuilder();
+        builder.append(params);
 
         String connector = "&";
 
         if (StringUtil.isNullOrEmpty(params)) {
             connector = "?";
-        } else {
-            builder.append(params);
         }
 
         if (StringUtil.exists(sessionKey)) {
@@ -106,7 +105,7 @@ public class UrlUtil {
      * @return The encrypted secret of an empty string.
      * @throws Exception Id an error occurs signing the URL.
      */
-    private static String getSignature(Authenticator authenticator, String url) throws Exception {
+    private static String getSignature(SignTool authenticator, String url) throws Exception {
 
         if (authenticator == null) {
             return StringUtil.EMPTY_STRING;

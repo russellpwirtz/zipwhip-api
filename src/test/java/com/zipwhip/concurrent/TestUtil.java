@@ -64,10 +64,6 @@ public class TestUtil {
         }
 
         assertTrue("future wasn't done!", future.isDone());
-
-        if (future.getCause() != null) {
-            future.getCause().printStackTrace();
-        }
         assertNull(String.format("Future failure was %s", future.getCause()), future.getCause());
         assertFalse("future was cancelled!", future.isCancelled());
         assertTrue("future wasn't successful!", future.isSuccess());

@@ -1,6 +1,5 @@
 package com.zipwhip.vendor;
 
-import com.zipwhip.api.ApiConnection;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -19,7 +18,7 @@ public class AsyncVendorClientFactoryTest {
     @Test
     public void testCreateViaApiKeyHost() throws Exception {
         AsyncVendorClient client = AsyncVendorClientFactory.createViaApiKey(API_KEY, API_SECRET, HOST);
-        Assert.assertEquals(HOST, ((ApiConnection)client.getConnection()).getHost());
+        Assert.assertEquals(HOST, client.getConnection().getHost());
     }
 
 }

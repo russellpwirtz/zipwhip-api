@@ -1,6 +1,5 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.connection.RequestMethod;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
@@ -8,7 +7,8 @@ import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
-import com.zipwhip.events.Observable;
+import com.zipwhip.concurrent.ObservableFuture;
+import com.zipwhip.events.Observer;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
@@ -17,7 +17,7 @@ import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.Executor;
 
@@ -93,10 +93,8 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("fromAddress", "0");
         params.put("advertisement", advertisement);
 
-        return responseParser.parseMessageTokens(executeSync(RequestMethod.GET, MESSAGE_SEND, params));
+        return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
     }
-
-
 
     @Override
     public List<MessageToken> sendMessage(String address, String body, String fromName, String advertisement) throws Exception {
@@ -105,13 +103,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public List<MessageToken> sendMessage(String address, String body, int fromAddress) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("contacts", address);
         params.put("body", body);
         params.put("fromAddress", fromAddress);
 
-        return responseParser.parseMessageTokens(executeSync(RequestMethod.GET, MESSAGE_SEND, params));
+        return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
     }
 
     @Override
@@ -124,7 +123,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("fromAddress", "0");
         params.put("attachment", urls);
 
-        return responseParser.parseMessageTokens(executeSync(RequestMethod.GET, MESSAGE_SEND, params));
+        return responseParser.parseMessageTokens(executeSync(MESSAGE_SEND, params));
     }
 
     @Deprecated
@@ -134,7 +133,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("uuid", uuid);
 
-        return responseParser.parseMessage(executeSync(RequestMethod.GET, MESSAGE_GET, params));
+        return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
     @Override
@@ -143,24 +142,24 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("id", id);
 
-        return responseParser.parseMessage(executeSync(RequestMethod.GET, MESSAGE_GET, params));
+        return responseParser.parseMessage(executeSync(MESSAGE_GET, params));
     }
 
     @Override
     public List<Device> listDevices() throws Exception {
-        return responseParser.parseDevices(executeSync(RequestMethod.GET, DEVICE_LIST, new HashMap<String, Object>()));
+        return responseParser.parseDevices(executeSync(DEVICE_LIST, new HashMap<String, Object>()));
     }
 
     @Override
     public List<Conversation> listConversations() throws Exception {
-        return responseParser.parseConversations(executeSync(RequestMethod.GET, CONVERSATION_LIST, new HashMap<String, Object>()));
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, new HashMap<String, Object>()));
     }
 
     @Override
     public List<Conversation> listConversations(int limit) throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("limit", Integer.toString(limit));
-        return responseParser.parseConversations(executeSync(RequestMethod.GET, CONVERSATION_LIST, params));
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, params));
     }
 
     @Override
@@ -168,12 +167,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("start", Integer.toString(start));
         params.put("limit", Integer.toString(limit));
-        return responseParser.parseConversations(executeSync(RequestMethod.GET, CONVERSATION_LIST, params));
+        return responseParser.parseConversations(executeSync(CONVERSATION_LIST, params));
     }
 
     @Override
     public List<Contact> listContacts() throws Exception {
-        return responseParser.parseContacts(executeSync(RequestMethod.GET, CONTACT_LIST, new HashMap<String, Object>()));
+        return responseParser.parseContacts(executeSync(CONTACT_LIST, new HashMap<String, Object>()));
     }
 
     @Override
@@ -181,7 +180,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("start", Integer.toString(start));
         params.put("limit", Integer.toString(limit));
-        return responseParser.parseContacts(executeSync(RequestMethod.GET, CONTACT_LIST, params));
+        return responseParser.parseContacts(executeSync(CONTACT_LIST, params));
     }
 
     @Override
@@ -193,7 +192,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("fingerprint", fingerprint);
 
-        return success(executeSync(RequestMethod.GET, CONVERSATION_READ, params));
+        return success(executeSync(CONVERSATION_READ, params));
     }
 
     @Override
@@ -205,7 +204,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("fingerprint", fingerprint);
 
-        return success(executeSync(RequestMethod.GET, CONVERSATION_DELETE, params));
+        return success(executeSync(CONVERSATION_DELETE, params));
     }
 
     @Override
@@ -217,7 +216,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("contact", Long.toString(contactId));
 
-        return success(executeSync(RequestMethod.GET, CONTACT_DELETE, params));
+        return success(executeSync(CONTACT_DELETE, params));
     }
 
     @Override
@@ -230,7 +229,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("fingerprint", fingerprint);
 
-        return responseParser.parseMessagesFromConversation(executeSync(RequestMethod.GET, CONVERSATION_GET, params));
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
 
     @Override
@@ -245,7 +244,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("fingerprint", fingerprint);
         params.put("limit", Integer.toString(limit));
 
-        return responseParser.parseMessagesFromConversation(executeSync(RequestMethod.GET, CONVERSATION_GET, params));
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
 
 
@@ -264,12 +263,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("start", Integer.toString(start));
         params.put("limit", Integer.toString(limit));
 
-        return responseParser.parseMessagesFromConversation(executeSync(RequestMethod.GET, CONVERSATION_GET, params));
+        return responseParser.parseMessagesFromConversation(executeSync(CONVERSATION_GET, params));
     }
 
     @Override
     public List<Message> listMessages() throws Exception {
-        return responseParser.parseMessages(executeSync(RequestMethod.GET, MESSAGE_LIST, new HashMap<String, Object>()));
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, new HashMap<String, Object>()));
     }
 
     @Override
@@ -277,7 +276,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("limit", Integer.toString(limit));
 
-        return responseParser.parseMessages(executeSync(RequestMethod.GET, MESSAGE_LIST, params));
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
 
     @Override
@@ -286,7 +285,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("limit", Integer.toString(limit));
         params.put("start", Integer.toString(start));
 
-        return responseParser.parseMessages(executeSync(RequestMethod.GET, MESSAGE_LIST, params));
+        return responseParser.parseMessages(executeSync(MESSAGE_LIST, params));
     }
 
     @Deprecated
@@ -300,11 +299,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("uuid", uuids);
 
-        return success(executeSync(RequestMethod.GET, MESSAGE_READ, params));
+        return success(executeSync(MESSAGE_READ, params));
     }
 
     @Override
     public boolean readMessage(List<Long> ids) throws Exception {
+
         if (CollectionUtil.isNullOrEmpty(ids)) {
             return false;
         }
@@ -312,7 +312,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("message", ids);
 
-        return success(executeSync(RequestMethod.GET, MESSAGE_READ, params));
+        return success(executeSync(MESSAGE_READ, params));
     }
 
     @Deprecated
@@ -326,7 +326,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("uuids", uuids);
 
-        return success(executeSync(RequestMethod.GET, MESSAGE_DELETE, params));
+        return success(executeSync(MESSAGE_DELETE, params));
     }
 
     @Override
@@ -339,7 +339,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("message", ids);
 
-        return success(executeSync(RequestMethod.GET, MESSAGE_DELETE, params));
+        return success(executeSync(MESSAGE_DELETE, params));
     }
 
     @Deprecated
@@ -374,7 +374,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("id", Long.toString(id));
 
-        return responseParser.parseContact(executeSync(RequestMethod.GET, CONTACT_GET, params));
+        return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
     @Override
@@ -384,7 +384,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("mobileNumber", mobileNumber);
 
-        return responseParser.parseContact(executeSync(RequestMethod.GET, CONTACT_GET, params));
+        return responseParser.parseContact(executeSync(CONTACT_GET, params));
     }
 
     @Override
@@ -396,21 +396,28 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("category", category.toString());
         }
 
-        return responseParser.parsePresence(executeSync(RequestMethod.GET, PRESENCE_GET, params));
+        return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
     }
 
     @Override
     public void signalsConnect(String clientId, PresenceCategory category) throws Exception {
         Map<String, Object> params = new HashMap<String, Object>();
 
+        String sessionKey = getConnection().getSessionKey();
+
         params.put("clientId", clientId);
+        params.put("sessions", sessionKey);
+        params.put("session", sessionKey);
+        params.put("subscriptionId", sessionKey);
         params.put("category", category);
         params.put("subscriptionId", connection.getSessionKey());
         params.put("sessions", connection.getSessionKey());
 
-        ServerResponse response = executeSync(RequestMethod.GET, SIGNALS_CONNECT, params);
+        ServerResponse response = executeSync(SIGNALS_CONNECT, params);
 
-        checkAndThrowError(response);
+        if (!response.isSuccess()) {
+            throw new Exception(response.getRaw());
+        }
     }
 
     @Override
@@ -428,15 +435,16 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("channel", channel);
         // send the 3rd party signal.
 
-        executeSync(RequestMethod.GET, SIGNAL_SEND, params);
+        executeSync(SIGNAL_SEND, params);
     }
 
     @Override
     public void sendSignalsVerification(String clientId) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
         params.put("clientId", clientId);
 
-        executeSync(RequestMethod.GET, SIGNALS_VERIFY, params);
+        executeSync(SIGNALS_VERIFY, params);
     }
 
     @Override
@@ -456,7 +464,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("group", groupAddress);
         params.put("mobileNumber", new Address(contactAddress).getAuthority());
 
-        ServerResponse serverResponse = executeSync(RequestMethod.GET, GROUP_ADD_MEMBER, params);
+        ServerResponse serverResponse = executeSync(GROUP_ADD_MEMBER, params);
 
         return responseParser.parseContact(serverResponse);
 
@@ -472,7 +480,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("version", versionCode.toString());
         }
 
-        executeSync(RequestMethod.GET, CARBON_ENABLE, params);
+        executeSync(CARBON_ENABLE, params);
 
     }
 
@@ -487,7 +495,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("version", versionCode.toString());
         }
 
-        ServerResponse response = executeSync(RequestMethod.GET, CARBON_ENABLED, params);
+        ServerResponse response = executeSync(CARBON_ENABLED, params);
 
         if (response instanceof BooleanServerResponse) {
             BooleanServerResponse booleanServerResponse = (BooleanServerResponse) response;
@@ -508,7 +516,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("registrationId", registrationId);
         }
 
-        ServerResponse response = executeSync(RequestMethod.GET, CARBON_REGISTER, params);
+        ServerResponse response = executeSync(CARBON_REGISTER, params);
 //        ServerResponse response = executeSync(CARBON_V2_REGISTER, params);
 
         checkAndThrowError(response);
@@ -520,12 +528,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("messageCount", totalPhoneMessages);
 
-        executeSync(RequestMethod.GET, CARBON_STATS, params);
+        executeSync(CARBON_STATS, params);
     }
 
     @Override
     public boolean acceptedTCs() throws Exception {
-        ServerResponse response = executeSync(RequestMethod.GET, CARBON_ACCEPTED_TCS, null);
+        ServerResponse response = executeSync(CARBON_ACCEPTED_TCS, null);
 
         if (response instanceof BooleanServerResponse) {
             BooleanServerResponse booleanServerResponse = (BooleanServerResponse) response;
@@ -539,12 +547,13 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public String sessionChallenge(String mobileNumber, String portal) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("mobileNumber", mobileNumber);
         params.put("portal", portal);
 
-        ServerResponse response = executeSync(RequestMethod.GET, CHALLENGE_REQUEST, params);
+        ServerResponse response = executeSync(CHALLENGE_REQUEST, params, false);
 
         if (response instanceof StringServerResponse) {
             StringServerResponse stringServerResponse = (StringServerResponse) response;
@@ -554,8 +563,10 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
     }
 
+
     @Override
     public String sessionChallengeConfirm(String clientId, String securityToken, String portal, String arguments, String userAgent) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("clientId", clientId);
@@ -564,7 +575,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("arguments", arguments);
         params.put("userAgent", userAgent);
 
-        ServerResponse response = executeSync(RequestMethod.GET, CHALLENGE_CONFIRM, params);
+        ServerResponse response = executeSync(CHALLENGE_CONFIRM, params, false);
 
         if (response instanceof StringServerResponse) {
             StringServerResponse stringServerResponse = (StringServerResponse) response;
@@ -572,6 +583,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         } else {
             throw new Exception("Unrecognized server response for challenge confirm");
         }
+
     }
 
     @Override
@@ -580,18 +592,18 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         params.put("package", packageName);
 
-        return success(executeSync(RequestMethod.GET, USER_UNENROLL, params));
+        return success(executeSync(USER_UNENROLL, params));
 
     }
 
     @Override
-    public Observable<List<Signal>> getSignalEvent() {
-        return getSignalProvider().getSignalReceivedEvent();
+    public void addSignalObserver(Observer<List<Signal>> observer) {
+        getSignalProvider().getSignalReceivedEvent().addObserver(observer);
     }
 
     @Override
-    public Observable<Boolean> getSignalConnectionChangedEvent() {
-        return getSignalProvider().getConnectionChangedEvent();
+    public void addSignalsConnectionObserver(Observer<Boolean> observer) {
+        getSignalProvider().getConnectionChangedEvent().addObserver(observer);
     }
 
     @Override
@@ -614,7 +626,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("lastName", contact.getLastName());
         params.put("phoneKey", contact.getPhone());
 
-        ServerResponse serverResponse = executeSync(RequestMethod.GET, USER_SAVE, params);
+        ServerResponse serverResponse = executeSync(USER_SAVE, params);
 
         return responseParser.parseContact(serverResponse);
     }
@@ -631,14 +643,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("notes", notes);
         params.put("loc", location);
 
-        executeSync(RequestMethod.GET, USER_SAVE, params);
+        executeSync(USER_SAVE, params);
     }
 
     @Override
     public User getUser() throws Exception {
         final Map<String, Object> params = new HashMap<String, Object>();
 
-        return responseParser.parseUser(executeSync(RequestMethod.GET, USER_GET, params));
+        return responseParser.parseUser(executeSync(USER_GET, params));
     }
 
     @Override
@@ -659,11 +671,12 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("advertisement", advertisement);
         }
 
-        return responseParser.parseContact(executeSync(RequestMethod.GET, GROUP_SAVE, params));
+        return responseParser.parseContact(executeSync(GROUP_SAVE, params));
     }
 
     @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("address", address);
@@ -674,11 +687,13 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("notes", notes);
         }
 
-        executeSync(RequestMethod.GET, CONTACT_SAVE, params);
+        // happens async
+        executeSync(CONTACT_SAVE, params);
     }
 
     @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes, String location, String email) throws Exception {
+
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("address", address);
@@ -698,96 +713,100 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         }
 
         // happens async
-        executeSync(RequestMethod.GET, CONTACT_SAVE, params);
+        executeSync(CONTACT_SAVE, params);
     }
 
-//    @Override
-//    public String getFaceName(String mobileNumber) throws Exception {
-//
-//        final Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("mobileNumber", mobileNumber);
-//
-//        return responseParser.parseFaceName(executeSync(FACE_NAME, params, false));
-//    }
-//
-//    @Override
-//    public byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception {
-//
-//        final Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("mobileNumber", mobileNumber);
-//        params.put("thumbnail", thumbnail);
-//
-//        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
-//
-//        // Block and wait...
-//        binaryResponseFuture.awaitUninterruptibly();
-//        return binaryResponseFuture.getResult();
-//    }
-//
-//    @Override
-//    public byte[] getFaceImage(String mobileNumber, int size) throws Exception {
-//
-//        final Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("mobileNumber", mobileNumber);
-//        params.put("size", size);
-//        params.put("thumbnail", true);
-//
-//        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
-//
-//        // Block and wait...
-//        binaryResponseFuture.awaitUninterruptibly();
-//        return binaryResponseFuture.getResult();
-//    }
-//
-//    @Override
-//    public List<MessageAttachment> listAttachments(Long messageId) throws Exception {
-//
-//        if (messageId == null || messageId <= 0) {
-//            throw new Exception("Missing required parameter: messageId.");
-//        }
-//
-//        final Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("messageId", messageId);
-//
-//        return responseParser.parseAttachments(executeSync(ATTACHMENT_LIST, params));
-//    }
+    @Override
+    public String getFaceName(String mobileNumber) throws Exception {
 
-//    @Override
-//    public byte[] getHostedContent(String storageKey) throws Exception {
-//
-//        if (StringUtil.isNullOrEmpty(storageKey)) {
-//            throw new Exception("Missing required parameter: storageKey");
-//        }
-//
-//        final Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("storageKey", storageKey);
-//
-//        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(HOSTED_CONTENT_GET, params, false);
-//
-//        // Block and wait...
-//        binaryResponseFuture.awaitUninterruptibly();
-//        return binaryResponseFuture.getResult();
-//    }
-//
-//    @Override
-//    public Map<String, String> saveHostedContent(List<File> files) throws Exception {
-//
-//        if (CollectionUtil.isNullOrEmpty(files)) {
-//            throw new Exception("At least one file required.");
-//        }
-//
-//        return responseParser.parseHostedContentSave(executeSync(HOSTED_CONTENT_SAVE, null, files));
-//    }
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+
+        return responseParser.parseFaceName(executeSync(FACE_NAME, params, false));
+    }
+
+    @Override
+    public byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+        params.put("thumbnail", thumbnail);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public byte[] getFaceImage(String mobileNumber, int size) throws Exception {
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumber", mobileNumber);
+        params.put("size", size);
+        params.put("thumbnail", true);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(FACE_IMAGE, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public List<MessageAttachment> listAttachments(Long messageId) throws Exception {
+
+        if (messageId == null || messageId <= 0) {
+            throw new Exception("Missing required parameter: messageId.");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("messageId", messageId);
+
+        return responseParser.parseAttachments(executeSync(ATTACHMENT_LIST, params));
+    }
+
+    @Override
+    public byte[] getHostedContent(String storageKey) throws Exception {
+
+        if (StringUtil.isNullOrEmpty(storageKey)) {
+            throw new Exception("Missing required parameter: storageKey");
+        }
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("storageKey", storageKey);
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(HOSTED_CONTENT_GET, params, false);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public Map<String, String> saveHostedContent(List<File> files) throws Exception {
+
+        if (CollectionUtil.isNullOrEmpty(files)) {
+            throw new Exception("At least one file required.");
+        }
+
+        return responseParser.parseHostedContentSave(executeSync(HOSTED_CONTENT_SAVE, null, files));
+    }
 
     @Override
     public TinyUrl reserveTinyUrl() throws Exception {
-        return responseParser.parseTinyUrl(executeSync(RequestMethod.GET, TINY_URL_RESERVE, null));
+        return responseParser.parseTinyUrl(executeSync(TINY_URL_RESERVE, null));
     }
 
     @Override
-    public boolean saveTinyUrl(String key, String mimeType, InputStream inputStream) throws Exception {
+    public boolean saveTinyUrl(String key, String mimeType, File file) throws Exception {
         if (StringUtil.isNullOrEmpty(key)) {
             throw new IllegalArgumentException("A storage key is required to save.");
+        }
+
+        if (file == null) {
+            throw new IllegalArgumentException("A File is required to save.");
         }
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -797,7 +816,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
             params.put("mimeType", mimeType);
         }
 
-        ServerResponse response = executeSync(RequestMethod.GET, TINY_URL_SAVE, params);
+        ServerResponse response = executeSync(TINY_URL_SAVE, params, Collections.singletonList(file));
 
         return response.isSuccess();
     }

@@ -1,6 +1,8 @@
 package com.zipwhip.vendor;
 
-import com.zipwhip.api.connection.HttpConnection;
+import com.zipwhip.api.HttpConnection;
+import com.zipwhip.concurrent.ObservableFuture;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

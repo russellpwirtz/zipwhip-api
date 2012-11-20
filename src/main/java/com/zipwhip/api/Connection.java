@@ -1,24 +1,21 @@
-package com.zipwhip.api.connection;
+package com.zipwhip.api;
 
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.lifecycle.Destroyable;
 
+import java.io.File;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A connection encapsulates the way to communicate on behalf of user.
  * <p/>
  * A connection needs to be authenticated as a specific user.
  *
- * The purpose of this interface is to allow us to easily transition to sending requests over the Signal Server at
- * a later time. Currently we are only using HTTP for requests, though the vision is to transition to a pure
- * SignalServer socket reuse strategy. Talk is also being made of allowing SMS based transports.
- *
  * @author Michael
  */
 public interface Connection extends Destroyable {
-
-    String getSessionKey();
 
     /**
      * Determines if this connection is authenticated with Zipwhip, if it has the
@@ -38,12 +35,11 @@ public interface Connection extends Destroyable {
     /**
      * Execute a call to the Zipwhip API ASYNCHRONOUSLY.
      *
-     * @param method Each method has a name, example: user/get. See {@link com.zipwhip.api.ZipwhipNetworkSupport} for fields.
-     * @param uri The path to the resource (ie: message/list)
-     * @param body The payload of the request
-     * @return A ObservableFuture task which will return the response body on completion.
+     * @param method Each method has a name, example: user/get. See {@link ZipwhipNetworkSupport} for fields.
+     * @param params Map of query params to append to the method
+     * @return A ObservableFuture task which will return the response body as a String on completion.
      * @throws Exception is an error is encountered communicating with Zipwhip or parsing a response
      */
-    ObservableFuture<InputStream> send(RequestMethod method, String uri, RequestBody body) throws Exception;
+    ObservableFuture<String> send(String method, Map<String, Object> params) throws Exception;
 
 }
