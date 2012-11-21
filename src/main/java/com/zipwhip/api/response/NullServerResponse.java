@@ -2,7 +2,6 @@ package com.zipwhip.api.response;
 
 import com.zipwhip.api.signals.Signal;
 
-import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -15,8 +14,8 @@ import java.util.Map;
  */
 public class NullServerResponse extends ServerResponse {
 
-    public NullServerResponse(String raw, boolean success) {
-        super(new ByteArrayInputStream(raw.getBytes()), success);
+    public NullServerResponse(String raw, boolean success, Map<String, Map<String, List<Signal>>> sessions) {
+        super(raw, success, sessions);
     }
 
 }

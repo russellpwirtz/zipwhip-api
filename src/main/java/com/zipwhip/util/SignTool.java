@@ -8,15 +8,15 @@ import javax.crypto.spec.SecretKeySpec;
  * Date: Jul 18, 2009
  * Time: 4:34:17 PM
  */
-public class Authenticator {
+public class SignTool {
 
     private javax.crypto.Mac mac = null;
     private String apiKey = null;
 
-    public Authenticator() {
+    public SignTool() {
     }
 
-    public Authenticator(String apiKey, String secret) throws Exception {
+    public SignTool(String apiKey, String secret) throws Exception {
         this.setSecret(secret);
         this.setApiKey(apiKey);
     }

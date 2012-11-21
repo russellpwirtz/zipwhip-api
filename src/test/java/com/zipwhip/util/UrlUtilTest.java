@@ -20,11 +20,11 @@ public class UrlUtilTest {
     String apiKey = "123456";
     String apiSecret = "123456asdfasdf123456asdfasdf";
 
-    Authenticator authenticator;
+    SignTool authenticator;
 
     @Before
     public void setUp() throws Exception {
-        authenticator = new Authenticator(apiKey, apiSecret);
+        authenticator = new SignTool(apiKey, apiSecret);
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
-import com.zipwhip.api.connection.Connection;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.dto.EnrollmentResult;
 import com.zipwhip.api.response.MessageListResult;
@@ -21,14 +20,14 @@ public interface AsyncVendorClient {
      *
      * @param connection A transport to Zipwhip.
      */
-    void setConnection(Connection connection);
+    void setConnection(ApiConnection connection);
 
     /**
      * Get the connection to the Zipwhip REST API.
      *
      * @return A transport to Zipwhip.
      */
-    Connection getConnection();
+    ApiConnection getConnection();
 
     /**
      * Enroll a user in Zipwhip. If the user is already enrolled the this call will have no effect.

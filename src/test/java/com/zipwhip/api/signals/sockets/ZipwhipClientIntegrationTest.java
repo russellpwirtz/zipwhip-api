@@ -28,8 +28,7 @@ import java.net.InetSocketAddress;
 public class ZipwhipClientIntegrationTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProviderIntegrationTest.class);
-//    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
-    private String sessionKey = "cf7adca8-25ca-4970-a13a-785bcda26a1a:175141103"; // evo 3d
+    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
 
     ZipwhipClient zipwhipClient;
 
@@ -37,11 +36,11 @@ public class ZipwhipClientIntegrationTest {
     public void setUp() throws Exception {
         HttpApiConnectionFactory connectionFactory = new HttpApiConnectionFactory();
 
-        connectionFactory.setHost(ApiConnection.DEFAULT_HOST);
+        connectionFactory.setHost(ApiConnection.STAGING_HOST);
         connectionFactory.setSessionKey(sessionKey);
 
         SocketSignalProviderFactory signalProviderFactory = SocketSignalProviderFactory.newInstance()
-                .address(new InetSocketAddress(ApiConnection.DEFAULT_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
+                .address(new InetSocketAddress(ApiConnection.STAGING_SIGNALS_HOST, ApiConnection.DEFAULT_SIGNALS_PORT))
                 .reconnectStrategy(new DefaultReconnectStrategy(null, new ExponentialBackoffRetryStrategy(1000, 2.0)))
                 .channelPipelineFactory(new RawSocketIoChannelPipelineFactory(60, 5));
 

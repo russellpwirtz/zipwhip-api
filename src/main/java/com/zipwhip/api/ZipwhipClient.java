@@ -1,21 +1,20 @@
 package com.zipwhip.api;
 
-import com.zipwhip.api.connection.Connection;
 import com.zipwhip.api.dto.*;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.api.signals.sockets.ConnectionHandle;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observable;
+import com.zipwhip.events.Observer;
 import com.zipwhip.lifecycle.Destroyable;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.PresenceCategory;
 
 import java.io.File;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implementations of this class provide a high level way to communicate with the Zipwhip web API.
@@ -560,61 +559,61 @@ public interface ZipwhipClient extends Destroyable {
      */
     boolean userUnenroll(String packageName) throws Exception;
 
-//    /**
-//     * Query Zipwhip Face Ecosystem for a user's preferred profile name.
-//     *
-//     * @param mobileNumber The mobile number of the user you wish to query.
-//     * @return The user's full name if it exists or empty string.
-//     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-//     */
-//    String getFaceName(String mobileNumber) throws Exception;
-//
-//    /**
-//     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
-//     *
-//     * @param mobileNumber The mobile number of the user you wish to query.
-//     * @param thumbnail    true if you want a thumbnail, false for the full image
-//     * @return A byte[] of the user's image.
-//     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
-//     */
-//    byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
-//
-//    /**
-//     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
-//     *
-//     * @param mobileNumber The mobile number of the user you wish to query.
-//     * @param size         the size of thumbnail in pixels
-//     * @return A byte[] of the user's image.
-//     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
-//     */
-//    byte[] getFaceImage(String mobileNumber, int size) throws Exception;
-//
-//    /**
-//     * Query for a message's MMS attachment descriptors.
-//     *
-//     * @param messageId The id of the message to query for attachments.
-//     * @return A list of attachment descriptors or an empty list if no attachments are found,
-//     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
-//     */
-//    List<MessageAttachment> listAttachments(Long messageId) throws Exception;
-//
-//    /**
-//     * Get a single piece of hosted using its storage key. The key is retrieved by calling {@code listAttachments}.
-//     *
-//     * @param storageKey The storage key of the content to query. Retrieved by calling {@code listAttachments}
-//     * @return A byte[] containing the requested content.
-//     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
-//     */
-//    byte[] getHostedContent(String storageKey) throws Exception;
-//
-//    /**
-//     * Upload one or more files into Zipwhip hosted content servers.
-//     *
-//     * @param files A list of files to upload to Zipwhip HostedContent.
-//     * @return A map from file name to the HostedContent storage key.
-//     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
-//     */
-//    Map<String, String> saveHostedContent(List<File> files) throws Exception;
+    /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile name.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @return The user's full name if it exists or empty string.
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    String getFaceName(String mobileNumber) throws Exception;
+
+    /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param thumbnail    true if you want a thumbnail, false for the full image
+     * @return A byte[] of the user's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception;
+
+    /**
+     * Query Zipwhip Face Ecosystem for a user's preferred profile image.
+     *
+     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param size         the size of thumbnail in pixels
+     * @return A byte[] of the user's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
+     * Query for a message's MMS attachment descriptors.
+     *
+     * @param messageId The id of the message to query for attachments.
+     * @return A list of attachment descriptors or an empty list if no attachments are found,
+     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     */
+    List<MessageAttachment> listAttachments(Long messageId) throws Exception;
+
+    /**
+     * Get a single piece of hosted using its storage key. The key is retrieved by calling {@code listAttachments}.
+     *
+     * @param storageKey The storage key of the content to query. Retrieved by calling {@code listAttachments}
+     * @return A byte[] containing the requested content.
+     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
+     */
+    byte[] getHostedContent(String storageKey) throws Exception;
+
+    /**
+     * Upload one or more files into Zipwhip hosted content servers.
+     *
+     * @param files A list of files to upload to Zipwhip HostedContent.
+     * @return A map from file name to the HostedContent storage key.
+     * @throws Exception if an error occurs communicating with Zipwhip or the content is not found.
+     */
+    Map<String, String> saveHostedContent(List<File> files) throws Exception;
 
     /**
      * Reserve a tiny url in the Zipwhip TinyUrl system. The resulting TinyUrl
@@ -633,7 +632,7 @@ public interface ZipwhipClient extends Destroyable {
      * @param file     A file to be uploaded into the tinyUrl.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the result.
      */
-    boolean saveTinyUrl(String key, String mimeType, InputStream inputStream) throws Exception;
+    boolean saveTinyUrl(String key, String mimeType, File file) throws Exception;
 
     /**
      * Connect to Zipwhip Signals if setup.
@@ -698,29 +697,31 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Listen for signals. This is a convenience method
      *
-     * @return Something you can listen on for this event
+     * @param observer An observer object to receive callbacks on
      */
-    Observable<List<Signal>> getSignalEvent();
+    void addSignalObserver(Observer<List<Signal>> observer);
 
     /**
      * Listen for connection changes. This is a convenience method
      * <p/>
      * This observer will be called if:
      * We lose our TCP/IP connection to the SignalServer
+     *
+     * @param observer An observer object to receive callbacks on
      */
-    Observable<Boolean> getSignalConnectionChangedEvent();
+    void addSignalsConnectionObserver(Observer<Boolean> observer);
 
     /**
      * A connection to Zipwhip over a medium.
      *
      * @return the current connection
      */
-    Connection getConnection();
+    ApiConnection getConnection();
 
     /**
      * @param connection the connection to use
      */
-    void setConnection(Connection connection);
+    void setConnection(ApiConnection connection);
 
     /**
      * Getter for the SignalProvider. SignalProvider manages the connection to the SignalServer
