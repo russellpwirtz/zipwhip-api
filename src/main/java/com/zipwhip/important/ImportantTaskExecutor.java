@@ -182,6 +182,10 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
 
         @Override
         public void notify(Object sender, String requestId) {
+            if (!queuedRequests.containsKey(requestId)) {
+                return; // wasn't our timer
+            }
+
             synchronized (ImportantTaskExecutor.this) {
                 if (isDestroyed()) {
                     LOGGER.error("We were destroyed, but the onTimerScheduleComplete hit. Did you forget to shut down the executor?");

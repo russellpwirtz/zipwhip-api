@@ -75,10 +75,13 @@ public class ZipwhipSchedulerTimer implements Timer {
     private final Observer<String> onTimeoutComplete = new Observer<String>() {
         @Override
         public void notify(Object sender, String requestId) {
-
             if (map == null) {
                 LOGGER.error("SchedulerTimer map was null!");
                 return;
+            }
+
+            if (!map.containsKey(requestId)) {
+                return; // not our timer
             }
 
             synchronized (this) {
