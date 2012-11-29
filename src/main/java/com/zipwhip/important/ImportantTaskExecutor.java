@@ -29,7 +29,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportantTaskExecutor.class);
 
     private final Map<String, ScheduledRequest> queuedRequests = Collections.synchronizedMap(new HashMap<String, ScheduledRequest>());
-    private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());
+//    private final Set<String> executingRequests = Collections.synchronizedSet(new HashSet<String>());
 
     private Scheduler scheduler;
 
@@ -161,7 +161,9 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
             scheduledRequest = new ScheduledRequest(requestId, request, parentFuture, expirationDate);
 
             // in case it times out
+            LOGGER.debug("Before queuedRequests.put");
             queuedRequests.put(requestId, scheduledRequest);
+            LOGGER.debug("After queuedRequests.put");
 
             scheduler.schedule(requestId, expirationDate);
         }
@@ -263,7 +265,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
     @Override
     protected void onDestroy() {
         queuedRequests.clear();
-        executingRequests.clear();
+//        executingRequests.clear();
     }
 
     /**
