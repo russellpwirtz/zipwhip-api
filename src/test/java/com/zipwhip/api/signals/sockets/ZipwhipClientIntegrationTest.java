@@ -12,6 +12,7 @@ import com.zipwhip.concurrent.TestUtil;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,17 +51,20 @@ public class ZipwhipClientIntegrationTest {
         zipwhipClient = client;
     }
 
+    @Ignore
     @Test
     public void testConnect() throws Exception {
         TestUtil.awaitAndAssertSuccess(zipwhipClient.connect());
     }
 
+    @Ignore
     @Test
     public void testConnectDisconnect() throws Exception {
         TestUtil.awaitAndAssertSuccess(zipwhipClient.connect());
         TestUtil.awaitAndAssertSuccess(zipwhipClient.disconnect());
     }
 
+    @Ignore
     @Test
     public void testConnectDisconnectConnect() throws Exception {
         TestUtil.awaitAndAssertSuccess(zipwhipClient.connect());

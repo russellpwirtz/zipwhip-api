@@ -12,6 +12,7 @@ import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -41,6 +42,7 @@ public class SocketSignalProviderIntegrationTest {
         signalProvider = (SocketSignalProvider)signalProviderFactory.create();
     }
 
+    @Ignore
     @Test
     public void testBasicConnect() throws Exception {
         final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
@@ -89,6 +91,7 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
 
+    @Ignore
     @Test
     public void testBasicConnect2() throws Exception {
 
@@ -143,6 +146,7 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
 
+    @Ignore
     @Test
     public void testConnectDisconnect() throws Exception {
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();
