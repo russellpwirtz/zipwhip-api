@@ -6,11 +6,11 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import com.zipwhip.reliable.retry.RetryStrategy;
+import com.zipwhip.timers.HashedWheelTimer;
+import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.Timer;
+import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FutureDateUtil;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timeout;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
