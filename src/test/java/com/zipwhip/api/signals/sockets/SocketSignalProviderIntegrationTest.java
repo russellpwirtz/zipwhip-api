@@ -12,9 +12,8 @@ import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -28,12 +27,6 @@ import static junit.framework.Assert.*;
  * Time: 1:51 PM
  */
 public class SocketSignalProviderIntegrationTest {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SocketSignalProviderIntegrationTest.class);
-
-//    private String sessionKey = "6c20b056-6843-404d-9fb4-b492d54efe75:142584301"; // evo 3d
-    private String sessionKey = "fc3890ba-a2c7-4449-a4c7-c80f57af228b:142584301"; // evo 3d
-//    private String host = "http://network.zipwhip.com";
 
     SocketSignalProvider signalProvider;
 
@@ -49,45 +42,7 @@ public class SocketSignalProviderIntegrationTest {
         signalProvider = (SocketSignalProvider)signalProviderFactory.create();
     }
 
-//    @Test
-//    public void testConnectAndVerify() throws Exception {
-//        ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
-//        assertFalse("connecting returned null?", connectionHandle.isDestroyed());
-//
-////        String sessionKey = ((SocketSignalProvider)signalProvider).getConnection().getSessionKey();
-//        assertTrue(signalProvider.getClientId() != null);
-//        assertTrue(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
-//
-//        final String requestId = UUID.randomUUID().toString();
-//        int index = new Random().nextInt();
-//
-//        final CountDownLatch latch = new CountDownLatch(1);
-//
-//        final Signal[] verifySignal = new Signal[1];
-//
-//        signalProvider.getSignalReceivedEvent().addObserver(new Observer<List<Signal>>() {
-//            @Override
-//            public void notify(Object sender, List<Signal> item) {
-//                for (Signal signal : item) {
-//                    if (requestId.equals(signal.getType())) {
-//                        verifySignal[0] = signal;
-//                    }
-//                }
-//                latch.countDown();
-//            }
-//        });
-//
-//        assertTrue(signalProvider.getClientId() != null);
-//        assertTrue(signalProvider.getConnectionState() == ConnectionState.AUTHENTICATED);
-//
-//        LOGGER.debug(DownloadURL.get("http://staging.zipwhip.com/mvc/signals/signal?session=" + sessionKey + "&requestId=" + requestId + "&type=" + requestId + "&scope=" + index));
-//
-//        assertTrue("Latch didn't finish?", latch.await(5, TimeUnit.SECONDS));
-//
-//        assertNotNull(verifySignal[0]);
-//    }
-
-
+    @Ignore
     @Test
     public void testBasicConnect() throws Exception {
         final ConnectionHandle connectionHandle = TestUtil.awaitAndAssertSuccess(signalProvider.connect());
@@ -136,6 +91,7 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
 
+    @Ignore
     @Test
     public void testBasicConnect2() throws Exception {
 
@@ -190,6 +146,7 @@ public class SocketSignalProviderIntegrationTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
     }
 
+    @Ignore
     @Test
     public void testConnectDisconnect() throws Exception {
         ObservableFuture<ConnectionHandle> future = signalProvider.connect();

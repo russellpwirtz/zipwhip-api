@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.reconnect;
 
 import com.zipwhip.reliable.retry.ExponentialBackoffRetryStrategy;
-import org.jboss.netty.util.Timer;
+import com.zipwhip.timers.Timer;
 
 /**
  * Created with IntelliJ IDEA.

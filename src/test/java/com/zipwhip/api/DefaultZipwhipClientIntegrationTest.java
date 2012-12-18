@@ -10,6 +10,7 @@ import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.util.Factory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ public class DefaultZipwhipClientIntegrationTest {
 
     }
 
+    @Ignore
     @Test
     public void testConnectExpectingSubscriptionCompleteCommand() throws Exception {
         Factory<ZipwhipClient> factory = new AndroidZipwhipClientFactory();

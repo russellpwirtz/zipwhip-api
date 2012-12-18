@@ -21,7 +21,7 @@ public class DisconnectCommand extends Command {
      *
      * @param host           Host to reconnect to. Empty string indicates no change.
      * @param port           Port to reconnect to. Empty string indicates no change.
-     * @param reconnectDelay Milliseconds to wait before reconnecting.
+     * @param reconnectDelay Seconds to wait before reconnecting.
      * @param stop           If true do not reconnect.
      * @param ban            If true the server will refuse reconnect attempts with the same clientId.
      */
