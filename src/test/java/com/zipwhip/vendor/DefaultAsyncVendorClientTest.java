@@ -47,8 +47,8 @@ public class DefaultAsyncVendorClientTest {
 
     @Before
     public void setUp() throws Exception {
-        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
-//        client = new DefaultAsyncVendorClient();
+//        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+        client = new DefaultAsyncVendorClient();
         client.setConnection(new MockApiConnection());
         client.enrollUser(deviceAddress);
     }
