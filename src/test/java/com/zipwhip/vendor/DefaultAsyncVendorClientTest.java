@@ -2,7 +2,10 @@ package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
 import com.zipwhip.api.ZipwhipNetworkSupport;
-import com.zipwhip.api.dto.*;
+import com.zipwhip.api.dto.Contact;
+import com.zipwhip.api.dto.Conversation;
+import com.zipwhip.api.dto.EnrollmentResult;
+import com.zipwhip.api.dto.MessageToken;
 import com.zipwhip.api.response.MessageListResult;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
@@ -44,7 +47,8 @@ public class DefaultAsyncVendorClientTest {
 
     @Before
     public void setUp() throws Exception {
-        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+//        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+        client = new DefaultAsyncVendorClient();
         client.setConnection(new MockApiConnection());
         client.enrollUser(deviceAddress);
     }

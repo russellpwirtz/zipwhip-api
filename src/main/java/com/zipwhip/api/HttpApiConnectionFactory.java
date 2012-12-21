@@ -4,19 +4,27 @@ import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.lifecycle.DestroyableBase;
 
+import java.net.NoRouteToHostException;
+import java.net.Proxy;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 /**
-* Created with IntelliJ IDEA.
-* User: Michael
-* Date: 9/11/12
-* Time: 5:23 PM
-* To change this template use File | Settings | File Templates.
-*/
+ * User: Michael
+ * Date: 9/11/12
+ * Time: 5:23 PM
+ */
 public class HttpApiConnectionFactory extends ApiConnectionFactory {
 
     private CommonExecutorFactory executorFactory;
+
+    public HttpApiConnectionFactory() throws NoRouteToHostException {
+        super();
+    }
+
+    public HttpApiConnectionFactory(Proxy proxy) throws NoRouteToHostException {
+        super(proxy);
+    }
 
     @Override
     protected ApiConnection createInstance() {

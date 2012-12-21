@@ -235,8 +235,8 @@ public class Contact extends BasicDto {
         toStringBuilder.append("\nThread: ").append(thread);
         toStringBuilder.append("\nFwd: ").append(fwd);
         toStringBuilder.append("\nChannel: ").append(channel);
-        toStringBuilder.append("\nLast Updated: ").append(city);
-        toStringBuilder.append("\nLast Updated: ").append(state);
+        toStringBuilder.append("\nCity: ").append(city);
+        toStringBuilder.append("\nState: ").append(state);
         toStringBuilder.append("\nDeleted: ").append(deleted);
 
         return toStringBuilder.toString();

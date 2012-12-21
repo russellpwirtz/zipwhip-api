@@ -1,9 +1,6 @@
 package com.zipwhip.api;
 
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Part;
-import com.ning.http.client.Response;
+import com.ning.http.client.*;
 import com.ning.http.multipart.FilePart;
 import com.zipwhip.api.request.RequestBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
@@ -22,7 +19,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 /**
  * Provides a persistent connection to a User on Zipwhip.
@@ -43,40 +39,19 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
     private String sessionKey;
     private SignTool authenticator;
 
-    private AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
-    private Executor workerExecutor = Executors.newFixedThreadPool(10);
-
-    /**
-     * Create a new {@code NingHttpConnection} with a default configuration.
-     */
-    public NingHttpConnection() {
-        super();
-    }
+    private AsyncHttpClient asyncHttpClient = null;
+    private Executor workerExecutor = null;
+    private ProxyServer proxyServer = null;
 
     /**
      * Create a new {@code NingHttpConnection}
      *
      * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
      *                       because we have no idea how slow your code will be.
-     * @param authenticator  A {@code SignTool} to use for signing request URLs.
+     * @throws IllegalArgumentException if workerExecutor is null
      */
-    public NingHttpConnection(Executor workerExecutor, SignTool authenticator) {
-        this();
-        this.workerExecutor = workerExecutor;
-        this.authenticator = authenticator;
-    }
-
-    /**
-     * Create a new {@code NingHttpConnection}
-     *
-     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
-     *                       because we have no idea how slow your code will be.
-     */
-    public NingHttpConnection(Executor workerExecutor) {
-        this();
-        if (workerExecutor != null) {
-            this.workerExecutor = workerExecutor;
-        }
+    public NingHttpConnection(final Executor workerExecutor) {
+        this(workerExecutor, (ProxyServer) null);
     }
 
     /**
@@ -86,18 +61,57 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
      * @param secret Used by a {@code SignTool} to sign request URLs.
      * @throws Exception If an error is encountered creating the {@code SignTool}.
      */
-    public NingHttpConnection(String apiKey, String secret) throws Exception {
-        this(new SignTool(apiKey, secret));
+    public NingHttpConnection(final Executor workerExecutor, final String apiKey, final String secret) throws Exception {
+        this(workerExecutor, new SignTool(apiKey, secret));
     }
 
     /**
      * Create a new {@code NingHttpConnection}
      *
-     * @param authenticator A {@code SignTool} to use for signing request URLs.
+     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
+     *                       because we have no idea how slow your code will be.
+     * @param authenticator  A {@code SignTool} to use for signing request URLs.
+     * @throws IllegalArgumentException if workerExecutor is null
      */
-    public NingHttpConnection(SignTool authenticator) {
-        this();
-        this.setAuthenticator(authenticator);
+    public NingHttpConnection(final Executor workerExecutor, final SignTool authenticator) {
+        this(workerExecutor, null, authenticator);
+    }
+
+    /**
+     * Create a new {@code NingHttpConnection}
+     *
+     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
+     *                       because we have no idea how slow your code will be.
+     * @throws IllegalArgumentException if workerExecutor is null
+     */
+    public NingHttpConnection(final Executor workerExecutor, final ProxyServer proxyServer) {
+        this(workerExecutor, proxyServer, (SignTool) null);
+    }
+
+    /**
+     * Create a new {@code NingHttpConnection}
+     *
+     * @param workerExecutor This importantTaskExecutor is what your code will execute in. Our recommendation is that it's large
+     *                       because we have no idea how slow your code will be.
+     * @param authenticator  A {@code SignTool} to use for signing request URLs.
+     * @throws IllegalArgumentException if workerExecutor is null
+     */
+    public NingHttpConnection(final Executor workerExecutor, final ProxyServer proxyServer, final SignTool authenticator) {
+        if (workerExecutor == null) throw new IllegalArgumentException("workerExecutor cannot be null");
+
+        this.workerExecutor = workerExecutor;
+        this.proxyServer = proxyServer;
+        this.authenticator = authenticator;
+
+        // init the http client
+        init();
+    }
+
+    private void init() {
+        final AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
+        if (getProxyServer() != null) builder.setProxyServer(getProxyServer());
+        builder.setConnectionTimeoutInMs(2000);
+        asyncHttpClient = new AsyncHttpClient(builder.build());
     }
 
     @Override
@@ -307,5 +321,12 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
         asyncHttpClient.close();
     }
 
+    public ProxyServer getProxyServer() {
+        return proxyServer;
+    }
+
+//    public void setProxyServer(ProxyServer proxyServer) {
+//        this.proxyServer = proxyServer;
+//    }
 }
 
