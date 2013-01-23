@@ -13,6 +13,7 @@ import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
+import org.jboss.netty.util.CharsetUtil;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 import org.slf4j.Logger;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
  * User: Michael
  * Date: 8/21/12
  * Time: 4:01 PM
- *
+ * <p/>
  * The pipeline for raw sockets.
  */
 public class RawSocketIoChannelPipelineFactory extends DestroyableBase implements ChannelPipelineFactory {
@@ -35,9 +36,9 @@ public class RawSocketIoChannelPipelineFactory extends DestroyableBase implement
     public static final int DEFAULT_PONG_TIMEOUT_SECONDS = 30; // when to disconnect if a ping was not ponged by this time
 
     private final IdleStateHandler idleStateHandler;
-    private final StringDecoder stringDecoder = new StringDecoder();
-    private final StringEncoder stringEncoder = new StringEncoder();
-    private final SocketIoCommandDecoder socketIoCommandDecoder = new SocketIoCommandDecoder();
+    private final StringDecoder stringDecoder;
+    private final StringEncoder stringEncoder;
+    private final SocketIoCommandDecoder socketIoCommandDecoder;
     private final Timer idleChannelTimer;
 
     public RawSocketIoChannelPipelineFactory() {
@@ -62,6 +63,10 @@ public class RawSocketIoChannelPipelineFactory extends DestroyableBase implement
         }
         this.idleChannelTimer = idleChannelTimer;
         idleStateHandler = new SocketIdleStateHandler(idleChannelTimer, pingIntervalSeconds, pongTimeoutSeconds);
+
+        stringDecoder = new StringDecoder(CharsetUtil.UTF_8);
+        stringEncoder = new StringEncoder(CharsetUtil.UTF_8);
+        socketIoCommandDecoder = new SocketIoCommandDecoder();
     }
 
     /*
