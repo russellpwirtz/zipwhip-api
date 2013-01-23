@@ -10,7 +10,7 @@
 
     <groupId>com.zipwhip</groupId>
     <artifactId>zipwhip-api</artifactId>
-    <version>1.25-SNAPSHOT</version>
+    <version>1.26-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>zipwhip-api</name>
@@ -149,26 +149,28 @@
                 </configuration>
             </plugin>
             <!-- Uncomment the block below if you want to build the main artifact 'zipwhip-api*-SNAPSHOT.jar' with dependencies included. -->
-            <!--<plugin>-->
-            <!--<groupId>org.apache.maven.plugins</groupId>-->
-            <!--<artifactId>maven-shade-plugin</artifactId>-->
-            <!--<version>1.5</version>-->
-            <!--<configuration>-->
-            <!--<artifactSet>-->
-            <!--<includes>-->
-            <!--<include>**</include>-->
-            <!--</includes>-->
-            <!--</artifactSet>-->
-            <!--</configuration>-->
-            <!--<executions>-->
-            <!--<execution>-->
-            <!--<phase>package</phase>-->
-            <!--<goals>-->
-            <!--<goal>shade</goal>-->
-            <!--</goals>-->
-            <!--</execution>-->
-            <!--</executions>-->
-            <!--</plugin>-->
+            <!--
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-shade-plugin</artifactId>
+                            <version>1.5</version>
+                            <configuration>
+                                <artifactSet>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </artifactSet>
+                            </configuration>
+                            <executions>
+                                <execution>
+                                    <phase>package</phase>
+                                    <goals>
+                                        <goal>shade</goal>
+                                    </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+            -->
         </plugins>
     </build>
 </project>
