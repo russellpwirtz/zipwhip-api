@@ -72,7 +72,7 @@ public interface ApiConnection extends Connection {
      */
     public static final int PORT_8080 = 8080;
 
-    public static final int DEFAULT_SIGNALS_PORT = PORT_3000;
+    public static final int DEFAULT_SIGNALS_PORT = PORT_443;
 
     /**
      * The default Zipwhip API version
@@ -102,18 +102,21 @@ public interface ApiConnection extends Connection {
 
     /**
      * Get the host to connect to. The default is {@code DEFAULT_HOST}.
+     *
      * @return The host to connect to. The default is {@code DEFAULT_HOST}.
      */
     public String getHost();
 
     /**
      * Get the Zipwhip API version to be used in web calls.
+     *
      * @param apiVersion The Zipwhip API version to be used in web calls.
      */
     void setApiVersion(String apiVersion);
 
     /**
      * Set the Zipwhip API version to be used in web calls.
+     *
      * @return The Zipwhip API version to be used in web calls.
      */
     String getApiVersion();
