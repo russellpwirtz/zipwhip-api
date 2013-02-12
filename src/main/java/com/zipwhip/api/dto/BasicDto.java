@@ -41,21 +41,21 @@ public class BasicDto implements Serializable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BasicDto)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
         BasicDto basicDto = (BasicDto) o;
 
         if (version != basicDto.version) return false;
-        if (!dateCreated.equals(basicDto.dateCreated)) return false;
-        if (!lastUpdated.equals(basicDto.lastUpdated)) return false;
+        if (dateCreated != null ? !dateCreated.equals(basicDto.dateCreated) : basicDto.dateCreated != null) return false;
+        if (lastUpdated != null ? !lastUpdated.equals(basicDto.lastUpdated) : basicDto.lastUpdated != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = dateCreated.hashCode();
-        result = 31 * result + lastUpdated.hashCode();
+        int result = dateCreated != null ? dateCreated.hashCode() : 0;
+        result = 31 * result + (lastUpdated != null ? lastUpdated.hashCode() : 0);
         result = 31 * result + (int) (version ^ (version >>> 32));
         return result;
     }
