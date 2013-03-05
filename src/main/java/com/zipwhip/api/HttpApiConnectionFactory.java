@@ -4,8 +4,6 @@ import com.zipwhip.executors.CommonExecutorFactory;
 import com.zipwhip.executors.CommonExecutorTypes;
 import com.zipwhip.lifecycle.DestroyableBase;
 
-import java.net.NoRouteToHostException;
-import java.net.Proxy;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
@@ -18,12 +16,8 @@ public class HttpApiConnectionFactory extends ApiConnectionFactory {
 
     private CommonExecutorFactory executorFactory;
 
-    public HttpApiConnectionFactory() throws NoRouteToHostException {
+    public HttpApiConnectionFactory() {
         super();
-    }
-
-    public HttpApiConnectionFactory(Proxy proxy) throws NoRouteToHostException {
-        super(proxy);
     }
 
     @Override

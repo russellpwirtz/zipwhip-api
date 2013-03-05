@@ -10,7 +10,7 @@
 
     <groupId>com.zipwhip</groupId>
     <artifactId>zipwhip-api</artifactId>
-    <version>1.27-SNAPSHOT</version>
+    <version>1.28-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>zipwhip-api</name>
@@ -47,7 +47,7 @@
         <dependency>
             <groupId>com.zipwhip</groupId>
             <artifactId>zipwhip-common-util</artifactId>
-            <version>1.60.5-SNAPSHOT</version>
+            <version>1.60.6-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
@@ -148,29 +148,27 @@
                     </archive>
                 </configuration>
             </plugin>
-            <!-- Uncomment the block below if you want to build the main artifact 'zipwhip-api*-SNAPSHOT.jar' with dependencies included. -->
-            <!--
-                        <plugin>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-shade-plugin</artifactId>
-                            <version>1.5</version>
-                            <configuration>
-                                <artifactSet>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </artifactSet>
-                            </configuration>
-                            <executions>
-                                <execution>
-                                    <phase>package</phase>
-                                    <goals>
-                                        <goal>shade</goal>
-                                    </goals>
-                                </execution>
-                            </executions>
-                        </plugin>
-            -->
+
+
+            <!--Generate a version that includes all its dependencies: classifier=all-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>1.7.1</version>
+                <executions>
+                    <execution>
+                        <id>all</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
