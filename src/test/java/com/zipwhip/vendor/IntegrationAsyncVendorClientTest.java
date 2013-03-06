@@ -1,11 +1,8 @@
 package com.zipwhip.vendor;
 
+import com.zipwhip.api.HttpConnection;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.net.NoRouteToHostException;
-
-import static org.junit.Assert.fail;
 
 /**
  * Created by IntelliJ IDEA.
@@ -25,14 +22,8 @@ public class IntegrationAsyncVendorClientTest {
 
     @Before
     public void setUp() throws Exception {
-        AsyncVendorClient client = null;
-        try {
-            client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
-            fail("Should have thrown a NoRouteToHostException. since hudson does not allow access to network.zipwhip.com");
-        } catch (NoRouteToHostException e) {
-            //This is the expected behavior until we fix the routing issue in super hudson
-        }
-//        client.setConnection(new HttpConnection(apiKey, secret));
+        client = AsyncVendorClientFactory.createViaApiKey(apiKey, secret);
+        client.setConnection(new HttpConnection(apiKey, secret));
     }
 
     @Test
