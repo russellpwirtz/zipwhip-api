@@ -72,7 +72,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     private int step = 1;
 
     // How long to wait for holes to fill in
-    private int holeTimeoutMillis = 500;
+    private int holeTimeoutMillis = 5000;
 
     /**
      * Construct a SlidingWindow with a default window size and eviction time.
@@ -406,7 +406,6 @@ public class SlidingWindow<P> extends DestroyableBase {
      * Will calculate inclusive ranges. For example, if 0 and 2 are holes, then it would return [0,0;2,2]
      * If 0 2 3 were holes, it would return [0,0;2,3]
      *
-     *
      * @param existingHoles
      * @return
      */
@@ -511,7 +510,7 @@ public class SlidingWindow<P> extends DestroyableBase {
     }
 
     protected static Long getNextValueAfter(Iterator<Long> iterator, long index) {
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             long next = iterator.next();
             if (next > index) {
                 return next;
