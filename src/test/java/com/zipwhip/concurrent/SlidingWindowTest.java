@@ -572,7 +572,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(0, results.size());
         results.clear();
 
-        Thread.sleep(2000); // Wait so that we will stop trying to fill the hole
+        Thread.sleep(20000); // Wait so that we will stop trying to fill the hole
 
         Assert.assertNotNull(holeTimeoutObserver.hole);
         Assert.assertEquals(3L, holeTimeoutObserver.hole.start);
@@ -612,8 +612,8 @@ public class SlidingWindowTest {
         Assert.assertEquals(0, results.size());
         results.clear();
 
-        assertTrue(holeTimeoutObserver.latch.await(4, TimeUnit.SECONDS));
-        assertTrue(packetsReleasedObserver.latch.await(4, TimeUnit.SECONDS));
+        assertTrue(holeTimeoutObserver.latch.await(10, TimeUnit.SECONDS));
+        assertTrue(packetsReleasedObserver.latch.await(20, TimeUnit.SECONDS));
 
         Assert.assertNotNull(holeTimeoutObserver.hole);
         Assert.assertEquals(2L, holeTimeoutObserver.hole.start);

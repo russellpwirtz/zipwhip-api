@@ -151,7 +151,7 @@ public class SocketSignalProviderTest {
 
         assertSame(connectionHandle1, connectionHandle2);
 
-        assertNull(((SocketSignalProvider)provider).getCurrentConnectionHandle());
+        assertNull(((SocketSignalProvider) provider).getCurrentConnectionHandle());
         assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
         assertTrue(connectionHandle1.isDestroyed());
         assertTrue(connectionHandle1.getDisconnectFuture().isSuccess());
@@ -209,11 +209,11 @@ public class SocketSignalProviderTest {
             }
         });
 
-        ((ChannelWrapperConnectionHandle)((SignalProviderConnectionHandle) connectionHandle1).getConnectionHandle()).channelWrapper.channel.disconnect();
+        ((ChannelWrapperConnectionHandle) ((SignalProviderConnectionHandle) connectionHandle1).getConnectionHandle()).channelWrapper.channel.disconnect();
 
         latch.await(50, TimeUnit.SECONDS);
 
-        assertNull("Current connection should notice", ((SocketSignalProvider)provider).getCurrentConnectionHandle());
+        assertNull("Current connection should notice", ((SocketSignalProvider) provider).getCurrentConnectionHandle());
         assertTrue(provider.getConnectionState() == ConnectionState.DISCONNECTED);
         assertTrue(connectionHandle1.isDestroyed());
         assertTrue(connectionHandle1.getDisconnectFuture().isSuccess());
@@ -422,7 +422,7 @@ public class SocketSignalProviderTest {
         assertEquals(1, signalObserver.signalReceivedCount);
         assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
 
-        Thread.sleep(3000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(20000); // Wait more than (3 * retry) seconds so that we will stop trying to fill the hole
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
         assertEquals(3, signalObserver.signalReceivedCount);
@@ -478,7 +478,7 @@ public class SocketSignalProviderTest {
         assertEquals(1, signalObserver.signalReceivedCount);
         assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
 
-        Thread.sleep(3000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(20000); // Wait more than (3 * retry) seconds so that we will stop trying to fill the hole
         assertTrue(signalObserver.isSignalReceived());
         assertTrue(signalCommandObserver.isSignalCommandReceived());
         assertEquals(2, signalObserver.signalReceivedCount);
@@ -522,7 +522,7 @@ public class SocketSignalProviderTest {
         assertEquals(0, signalObserver.signalReceivedCount);
         assertEquals(0, signalCommandObserver.signalCommandReceivedCount);
 
-        Thread.sleep(4000); // Wait more than 1.5 seconds so that we will stop trying to fill the hole
+        Thread.sleep(20000); // Wait more than (3 * retry) seconds so that we will stop trying to fill the hole
         assertEquals(1, signalObserver.signalReceivedCount);
         assertEquals(1, signalCommandObserver.signalCommandReceivedCount);
 
