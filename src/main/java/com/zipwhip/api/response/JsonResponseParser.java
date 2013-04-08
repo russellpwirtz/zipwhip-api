@@ -341,8 +341,8 @@ public class JsonResponseParser implements ResponseParser {
         JSONObject response = raw.optJSONObject("response");
         JSONArray result = response.getJSONArray("result");
 
-        if (result.length() != 1) {
-            throw new Exception("More than one result array for this presence category.");
+        if (result.length() > 1) {
+            throw new Exception(String.format("More than one result array for this presence category. %s", result));
         }
         return PresenceUtil.getInstance().parse(result.optJSONObject(0).optJSONArray("presenceList"));
     }
