@@ -40,7 +40,7 @@ public interface ApiConnection extends Connection {
     /**
      * Signal Server staging host
      */
-    public static final String DEFAULT_SIGNALS_HOST = "74.209.177.242";
+    public static final String DEFAULT_SIGNALS_HOST = "push.zipwhip.com";
 
     /**
      * Signal Server test host
