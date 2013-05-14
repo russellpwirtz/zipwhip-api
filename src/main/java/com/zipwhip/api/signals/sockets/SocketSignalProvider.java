@@ -1060,8 +1060,7 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
                     LOGGER.debug("Reidentifying our presence object");
                 }
 
-                connection.write(new PresenceCommand(Collections.singletonList(presence)));
-
+//                connection.write(new PresenceCommand(Collections.singletonList(presence)));
             } else {
                 LOGGER.debug("Our presence object was empty, so we didn't share it");
             }
