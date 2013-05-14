@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.Writable;
+import com.zipwhip.concurrent.NestedObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.util.Asserts;

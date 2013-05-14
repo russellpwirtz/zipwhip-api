@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals.sockets;
 
-import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.PingEvent;
 import com.zipwhip.api.signals.SignalConnection;
 import com.zipwhip.api.signals.SignalProvider;

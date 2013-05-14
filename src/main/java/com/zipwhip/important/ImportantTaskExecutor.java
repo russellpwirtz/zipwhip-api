@@ -1,6 +1,6 @@
 package com.zipwhip.important;
 
-import com.zipwhip.api.NestedObservableFuture;
+import com.zipwhip.concurrent.NestedObservableFuture;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FakeFailingObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;

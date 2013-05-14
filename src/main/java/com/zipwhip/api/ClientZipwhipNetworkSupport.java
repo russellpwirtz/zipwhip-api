@@ -533,7 +533,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
         }
 
         private void selfDestructOnComplete() {
-            resultFuture.addObserver(new DestroyOnComplete<ObservableFuture<ConnectionHandle>>(ConnectViaSignalProviderTask.this));
+            resultFuture.addObserver(new DestroyOnCompleteObserver<ObservableFuture<ConnectionHandle>>(ConnectViaSignalProviderTask.this));
         }
 
         /**
@@ -634,7 +634,7 @@ public abstract class ClientZipwhipNetworkSupport extends ZipwhipNetworkSupport 
 
                             // when done, copy it over.
                             signalsConnectFuture.addObserver(
-                                    new CopyFutureStatusToNestedFutureWithCustomResult<SubscriptionCompleteCommand, ConnectionHandle>(
+                                    new CopyFutureStatusToNestedFutureWithCustomResultObserver<SubscriptionCompleteCommand, ConnectionHandle>(
                                             resultFuture, signalProviderConnectionHandle));
                         }
                     }

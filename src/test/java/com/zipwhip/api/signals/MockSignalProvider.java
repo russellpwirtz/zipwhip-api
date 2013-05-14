@@ -1,6 +1,5 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.api.NestedObservableFuture;
 import com.zipwhip.api.signals.commands.Command;
 import com.zipwhip.api.signals.commands.SignalCommand;
 import com.zipwhip.api.signals.commands.SubscriptionCompleteCommand;
@@ -9,12 +8,13 @@ import com.zipwhip.api.signals.sockets.ConnectionHandleBase;
 import com.zipwhip.api.signals.sockets.ConnectionState;
 import com.zipwhip.api.signals.sockets.ConnectionStateManagerFactory;
 import com.zipwhip.concurrent.DefaultObservableFuture;
-import com.zipwhip.executors.NamedThreadFactory;
+import com.zipwhip.concurrent.FakeObservableFuture;
+import com.zipwhip.concurrent.NestedObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
-import com.zipwhip.concurrent.FakeObservableFuture;
+import com.zipwhip.executors.NamedThreadFactory;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.util.StateManager;
 

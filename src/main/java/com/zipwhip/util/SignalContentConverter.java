@@ -15,13 +15,8 @@ public class SignalContentConverter<T> implements Converter<Signal, T>{
     private static final SignalContentConverter INSTANCE = new SignalContentConverter();
 
     @Override
-    public T convert(Signal signal) throws Exception {
+    public T convert(Signal signal) throws DataConversionException {
         return (T)signal.getContent();
-    }
-
-    @Override
-    public Signal restore(T t) throws Exception {
-        return null;
     }
 
     public static SignalContentConverter getInstance() {
