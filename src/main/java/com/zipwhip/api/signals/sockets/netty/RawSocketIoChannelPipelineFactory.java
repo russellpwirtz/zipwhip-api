@@ -77,12 +77,12 @@ public class RawSocketIoChannelPipelineFactory extends DestroyableBase implement
     @Override
     public ChannelPipeline getPipeline() {
         return Channels.pipeline(
+                idleStateHandler,
                 new DelimiterBasedFrameDecoder(DEFAULT_FRAME_SIZE, Delimiters.lineDelimiter()),
                 stringDecoder,
                 socketIoCommandDecoder,
                 stringEncoder,
-                new SocketIoCommandEncoder(),
-                idleStateHandler
+                new SocketIoCommandEncoder()
         );
     }
 
