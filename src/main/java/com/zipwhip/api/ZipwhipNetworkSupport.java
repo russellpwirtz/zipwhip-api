@@ -53,6 +53,8 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String CONTACT_SAVE = "contact/save";
     public static final String CONTACT_GET = "contact/get";
 
+    public static final String GROUP_GET = "group/get";
+
     public static final String MESSAGE_SEND = "message/send";
     public static final String MESSAGE_LIST = "message/list";
     public static final String MESSAGE_READ = "message/read";
@@ -147,12 +149,12 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
             connection = new HttpConnection();
         }
 
-        if (callbackExecutor == null){
+        if (callbackExecutor == null) {
             callbackExecutor = ExecutorFactory.newInstance("ZipwhipNetworkSupport-callbacks");
             this.link(new DestroyableBase() {
                 @Override
                 protected void onDestroy() {
-                    ((ExecutorService)ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
+                    ((ExecutorService) ZipwhipNetworkSupport.this.callbackExecutor).shutdownNow();
                 }
             });
         }
@@ -273,7 +275,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
                 }
 
                 try {
-                    if (businessLogic != null){
+                    if (businessLogic != null) {
                         businessLogic.run(new ParsableServerResponse<T>(result, serverResponse));
                     } else {
                         result.setSuccess(null);

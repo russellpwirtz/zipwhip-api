@@ -1,25 +1,15 @@
 package com.zipwhip.api.response;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.zipwhip.api.dto.*;
+import com.zipwhip.util.JsonDateUtil;
+import com.zipwhip.util.Parser;
+import com.zipwhip.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.zipwhip.api.dto.BasicDto;
-import com.zipwhip.api.dto.CarbonEvent;
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
-import com.zipwhip.api.dto.Device;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageAttachment;
-import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.api.dto.TransmissionState;
-import com.zipwhip.api.dto.User;
-import com.zipwhip.util.JsonDateUtil;
-import com.zipwhip.util.Parser;
-import com.zipwhip.util.StringUtil;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -30,6 +20,8 @@ import com.zipwhip.util.StringUtil;
  * Centralizes the act of parsing DTO's from JSON.
  */
 public class JsonDtoParser {
+    private static final long DEFAULT_LONG = 0l;
+    private static final int DEFAULT_INT = 0;
 
     public final Parser<JSONObject, Message> MESSAGE_PARSER = new Parser<JSONObject, Message>() {
         @Override
@@ -111,6 +103,44 @@ public class JsonDtoParser {
         contact.setDeleted(content.optBoolean("deleted"));
 
         return contact;
+    }
+
+    /**
+     * Parse a Group from a JSONObject if the object contains it.
+     *
+     * @param content JSONObject to be parsed.
+     * @return A Group object parsed from the JSON content.
+     * @throws JSONException If an error is encountered while parsing
+     */
+    public Group parseGroup(JSONObject content) throws JSONException {
+        if (content == null) {
+            return null;
+        }
+
+        final JSONObject jsonGroup = content.optJSONObject("group");
+        if (jsonGroup == null) {
+            return null;
+        }
+
+        final Group group = parseBasicDto(new Group(), content);
+
+        group.setAddress(jsonGroup.optString("address"));
+        group.setCachedContactsCount(jsonGroup.optInt("cachedContactsCount", DEFAULT_INT));
+        group.setChannel(jsonGroup.optString("channel"));
+        group.setDeviceId(jsonGroup.optLong("deviceId", DEFAULT_LONG));
+        group.setDisplayName(jsonGroup.optString("displayName"));
+        group.setDtoParentId(jsonGroup.optLong("dtoParentId", DEFAULT_LONG));
+        group.setId(jsonGroup.optLong("id", DEFAULT_LONG));
+        group.setLinkedDeviceId(jsonGroup.optLong("linkedDeviceId", DEFAULT_LONG));
+        group.setNewGroup(jsonGroup.optBoolean("new", false));
+        group.setPhoneKey(jsonGroup.optString("phoneKey"));
+        group.setTextline(jsonGroup.optString("textline"));
+        group.setThread(jsonGroup.optString("thread"));
+        group.setType(jsonGroup.optString("type"));
+        group.setUserId(jsonGroup.optLong("userId", DEFAULT_LONG));
+        group.setUuid(jsonGroup.optString("uuid"));
+
+        return group;
     }
 
     /**
