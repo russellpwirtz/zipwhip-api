@@ -734,6 +734,22 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public byte[] getGroupImage(final String address, final int size) throws Exception {
+        if (StringUtil.isNullOrEmpty(address)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("address", address);
+        if (size > 0) params.put("size", size);
+        params.put("time", System.currentTimeMillis());//Do not cache
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(GROUP_IMAGE, params, true);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
     public byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();

@@ -54,6 +54,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
     public static final String CONTACT_GET = "contact/get";
 
     public static final String GROUP_GET = "group/get";
+    public static final String GROUP_IMAGE = "group/image/view";
 
     public static final String MESSAGE_SEND = "message/send";
     public static final String MESSAGE_LIST = "message/list";

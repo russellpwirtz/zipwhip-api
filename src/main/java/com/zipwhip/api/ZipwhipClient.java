@@ -761,4 +761,13 @@ public interface ZipwhipClient extends Destroyable {
      */
     void setSettingsStore(SettingsStore store);
 
+    /**
+     * Query Group image by address.
+     *
+     * @param address group address.
+     * @param size    thumbnail size.
+     * @return A byte[] of the group's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getGroupImage(String address, int size) throws Exception;
 }
