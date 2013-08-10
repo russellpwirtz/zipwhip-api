@@ -278,7 +278,7 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
                 public Object onCompleted(Response response) throws Exception {
 
                     // TODO Remove this once zipwhip uses real HTTP codes
-                    if (response.getContentType().contains("json")) {
+                    if (response.getContentType() != null && response.getContentType().contains("json")) {
                         responseFuture.setFailure(new Exception("404 - Resource not found"));
                         return response;
                     }
