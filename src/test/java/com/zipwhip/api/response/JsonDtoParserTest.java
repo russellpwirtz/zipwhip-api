@@ -39,28 +39,28 @@ public class JsonDtoParserTest {
         Contact dto = parser.parseContact(new JSONObject(CONTACT).optJSONObject("content"));
         Assert.assertNotNull(dto);
 
-        Assert.assertEquals(dto.getAddress(), "ptn:/2069308934");
-        Assert.assertEquals(dto.getCarrier(), "Tmo");
-        Assert.assertEquals(dto.getChannel(), "");
-        Assert.assertEquals(dto.getCity(), "");
+        Assert.assertEquals("ptn:/2069308934", dto.getAddress());
+        Assert.assertEquals("Tmo", dto.getCarrier());
+        Assert.assertEquals("", dto.getChannel());
+        Assert.assertEquals("", dto.getCity());
         Assert.assertNotNull(dto.getDateCreated());
-        Assert.assertEquals(dto.getDeviceId(), 132961202);
-        Assert.assertEquals(dto.getEmail(), "");
-        Assert.assertEquals(dto.getFirstName(), "Ted");
-        Assert.assertEquals(dto.getFwd(), "");
-        Assert.assertEquals(dto.getId(), 306322502);
-        Assert.assertEquals(dto.getLastName(), "Hoffenator");
+        Assert.assertEquals(132961202l, dto.getDeviceId());
+        Assert.assertEquals("", dto.getEmail());
+        Assert.assertEquals("Ted", dto.getFirstName());
+        Assert.assertEquals("", dto.getFwd());
+        Assert.assertEquals(306322502l, dto.getId());
+        Assert.assertEquals("Hoffenator", dto.getLastName());
         Assert.assertNotNull(dto.getLastUpdated());
-        Assert.assertEquals(dto.getLatlong(), "");
-        Assert.assertEquals(dto.getMobileNumber(), "2069308999");
-        Assert.assertEquals(dto.getMoCount(), 0);
-        Assert.assertEquals(dto.getNotes(), "");
-        Assert.assertEquals(dto.getPhoneKey(), "");
-        Assert.assertEquals(dto.getState(), "");
-        Assert.assertEquals(dto.getThread(), "");
-        Assert.assertEquals(dto.getVersion(), 33);
-        Assert.assertEquals(dto.getZipcode(), "");
-        Assert.assertEquals(dto.getZoCount(), 0);
+        Assert.assertEquals("", dto.getLatlong());
+        Assert.assertEquals("2069308999", dto.getMobileNumber());
+        Assert.assertEquals(0, dto.getMoCount());
+        Assert.assertEquals("", dto.getNotes());
+        Assert.assertEquals("", dto.getPhoneKey());
+        Assert.assertEquals("", dto.getState());
+        Assert.assertEquals("", dto.getThread());
+        Assert.assertEquals(33, dto.getVersion());
+        Assert.assertEquals("", dto.getZipcode());
+        Assert.assertEquals(0, dto.getZoCount());
     }
 
     @Test
@@ -97,36 +97,35 @@ public class JsonDtoParserTest {
 
         Assert.assertNotNull(dto.getTransmissionState());
         TransmissionState state = dto.getTransmissionState();
-        Assert.assertEquals(state.toString(), "QUEUED");
-
+        Assert.assertEquals(TransmissionState.QUEUED, state);
         Assert.assertNotNull(dto.getDateCreated());
         Assert.assertNotNull(dto.getLastUpdated());
-        Assert.assertEquals(dto.getMessageType(), "ZO");
-        Assert.assertEquals(dto.getAddress(), "ptn:/2069308934");
-        Assert.assertEquals(dto.getAdvertisement(), "Sent via T-Mobile Messaging");
-        Assert.assertEquals(dto.getBcc(), "");
-        Assert.assertEquals(dto.getBody(), "Hello World");
-        Assert.assertEquals(dto.getCarrier(), "Tmo");
-        Assert.assertEquals(dto.getCc(), "");
-        Assert.assertEquals(dto.getChannel(), "");
-        Assert.assertEquals(dto.getContactDeviceId(), 132961202);
-        Assert.assertEquals(dto.getContactId(), 306322502);
-        Assert.assertEquals(dto.getDestinationAddress(), "2069308934");
-        Assert.assertEquals(dto.getDeviceId(), 132961202);
-        Assert.assertEquals(dto.getFingerprint(), "2216445311");
-        Assert.assertEquals(dto.getFirstName(), "");
-        Assert.assertEquals(dto.getFwd(), "");
-        Assert.assertEquals(dto.getLastName(), "");
-        Assert.assertEquals(dto.getMessageType(), "ZO");
-        Assert.assertEquals(dto.getMobileNumber(), "2069308934");
-        Assert.assertEquals(dto.getSourceAddress(), "2063758020");
-        Assert.assertEquals(dto.getStatusCode(), 1);
-        Assert.assertEquals(dto.getStatusDesc(), "");
-        Assert.assertEquals(dto.getSubject(), "");
-        Assert.assertEquals(dto.getThread(), "");
-        Assert.assertEquals(dto.getTo(), "");
-        Assert.assertEquals(dto.getUuid(), "86cd1738-ef9b-4695-ae5f-b4e93f7b5eb9");
-        Assert.assertEquals(dto.getVersion(), 3);
+        Assert.assertEquals("ZO", dto.getMessageType());
+        Assert.assertEquals("ptn:/2069308934", dto.getAddress());
+        Assert.assertEquals("Sent via T-Mobile Messaging", dto.getAdvertisement());
+        Assert.assertEquals("", dto.getBcc());
+        Assert.assertEquals("Hello World", dto.getBody());
+        Assert.assertEquals("Tmo", dto.getCarrier());
+        Assert.assertEquals("", dto.getCc());
+        Assert.assertEquals("", dto.getChannel());
+        Assert.assertEquals(132961202l, dto.getContactDeviceId());
+        Assert.assertEquals(306322502l, dto.getContactId());
+        Assert.assertEquals("2069308934", dto.getDestinationAddress());
+        Assert.assertEquals(132961202l, dto.getDeviceId());
+        Assert.assertEquals("2216445311", dto.getFingerprint());
+        Assert.assertEquals("", dto.getFirstName());
+        Assert.assertEquals("", dto.getFwd());
+        Assert.assertEquals("", dto.getLastName());
+        Assert.assertEquals("ZO", dto.getMessageType());
+        Assert.assertEquals("2069308934", dto.getMobileNumber());
+        Assert.assertEquals("2063758020", dto.getSourceAddress());
+        Assert.assertEquals(1, dto.getStatusCode());
+        Assert.assertEquals("", dto.getStatusDesc());
+        Assert.assertEquals("", dto.getSubject());
+        Assert.assertEquals("", dto.getThread());
+        Assert.assertEquals("", dto.getTo());
+        Assert.assertEquals("86cd1738-ef9b-4695-ae5f-b4e93f7b5eb9", dto.getUuid());
+        Assert.assertEquals(3, dto.getVersion());
     }
 
     @Test
@@ -143,17 +142,17 @@ public class JsonDtoParserTest {
         Assert.assertEquals(dto.getBcc(), "");
         Assert.assertEquals(dto.getCc(), "");
         Assert.assertEquals(dto.getDeviceAddress(), "device:/2063758020/0");
-        Assert.assertEquals(dto.getDeviceId(), 132961202);
+        Assert.assertEquals(132961202l, dto.getDeviceId());
         Assert.assertEquals(dto.getFingerprint(), "2216445311");
-        Assert.assertEquals(dto.getId(), 292476202);
+        Assert.assertEquals(292476202l, dto.getId());
         Assert.assertEquals(dto.getLastContactFirstName(), "Ted");
         Assert.assertEquals(dto.getLastContactLastName(), "Hoffenator");
-        Assert.assertEquals(dto.getLastContactDeviceId(), 0);
+        Assert.assertEquals(0, dto.getLastContactDeviceId());
         Assert.assertEquals(dto.getUnreadCount(), 0);
-        Assert.assertEquals(dto.getLastContactId(), 306322502);
+        Assert.assertEquals(306322502l, dto.getLastContactId());
         Assert.assertEquals(dto.getLastContactMobileNumber(), "2069308934");
         Assert.assertEquals(dto.getLastMessageBody(), "Hello World");
-        Assert.assertEquals(dto.getVersion(), 59);
+        Assert.assertEquals(59, dto.getVersion());
     }
 
     @Test
@@ -164,8 +163,8 @@ public class JsonDtoParserTest {
 
         Assert.assertNotNull(dto.getDateCreated());
         Assert.assertNotNull(dto.getLastUpdated());
-        Assert.assertEquals(128918006, dto.getDeviceId());
-        Assert.assertEquals(160557406, dto.getId());
+        Assert.assertEquals(128918006l, dto.getDeviceId());
+        Assert.assertEquals(160557406l, dto.getId());
         Assert.assertEquals(0, dto.getVersion());
         Assert.assertEquals("a011eacf-83a5-4b79-8999-81c0858591bd", dto.getStorageKey());
         Assert.assertEquals(194919298488344576L, dto.getMessageId());
