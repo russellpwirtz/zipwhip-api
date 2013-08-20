@@ -1,13 +1,6 @@
 package com.zipwhip.signals.address;
 
-import com.zipwhip.signals.message.MessageSerializer;
-import com.zipwhip.signals.util.EncoderUtil;
-import com.zipwhip.signals.util.SignalsFactory;
-import com.zipwhip.signals.util.SignalsSerializer;
-import com.zipwhip.util.CollectionUtil;
-import com.zipwhip.util.StringUtil;
-
-import java.util.Map;
+import java.io.Serializable;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,18 +10,20 @@ import java.util.Map;
  * <p/>
  * To all consumers of a given channel.
  */
-public class ChannelAddress extends AddressBase implements OneToManyAddress, SignalsFactory<ChannelAddress>, SignalsSerializer<ChannelAddress> {
+public class ChannelAddress extends AddressBase implements Serializable {
 
-	private static final long serialVersionUID = 1L;
-	private static final String CHANNEL_KEY = "channel";
+    private static final long serialVersionUID = 6712566321988288131L;
 
 	private String channel;
-	private String toString = null;
+	private String string = null;
 
 	public ChannelAddress() {
+
 	}
 
 	public ChannelAddress(String channel) {
+        this();
+
 		this.channel = channel;
 	}
 
@@ -57,29 +52,11 @@ public class ChannelAddress extends AddressBase implements OneToManyAddress, Sig
 
 	@Override
 	public String toString() {
-		if (toString == null) {
-			toString = StringUtil.join("{class:", getClass().getSimpleName(), ",channel:", channel, "}");
+		if (string == null) {
+            string = "{\"channel\":\"" + string + channel + "\"}";
 		}
 
-		return toString;
-	}
-
-	@Override
-	public ChannelAddress create(Map<String, Object> properties)
-	{
-		return new ChannelAddress(CollectionUtil.getString(properties, CHANNEL_KEY));
-	}
-
-	@Override
-	public Map<String, Object> serialize(ChannelAddress item) {
-		Map<String, Object> map = EncoderUtil.serialize(item);
-		map.put(CHANNEL_KEY, item.channel);
-		return map;
-	}
-
-	@Override
-	public Map<String, Object> serialize(MessageSerializer serializer, ChannelAddress item) {
-		return serialize(item);
+		return string;
 	}
 
 	public String getChannel() {
@@ -87,7 +64,7 @@ public class ChannelAddress extends AddressBase implements OneToManyAddress, Sig
 	}
 
 	public void setChannel(String channel) {
+        this.string = null;
 		this.channel = channel;
-		toString = null;
 	}
 }

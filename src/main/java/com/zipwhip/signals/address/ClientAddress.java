@@ -8,7 +8,7 @@ import com.zipwhip.util.StringUtil;
  * Date: Dec 11, 2010
  * Time: 5:50:25 PM
  */
-public class ClientAddress extends ClientAddressBase {
+public class ClientAddress extends AddressBase {
 
 	private static final long serialVersionUID = 6712566321988288130L;
 

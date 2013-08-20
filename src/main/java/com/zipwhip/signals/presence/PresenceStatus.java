@@ -11,5 +11,7 @@ import java.io.Serializable;
  * This is for GUI use, not an ON/OFF flag
  */
 public enum PresenceStatus implements Serializable {
-    ONLINE, AWAY, BUSY, INVISIBLE, OFFLINE
+
+    AVAILABLE, BUSY
+
 }

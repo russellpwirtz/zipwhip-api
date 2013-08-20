@@ -5,13 +5,11 @@ import com.zipwhip.api.response.BooleanServerResponse;
 import com.zipwhip.api.response.ServerResponse;
 import com.zipwhip.api.response.StringServerResponse;
 import com.zipwhip.api.settings.SettingsStore;
-import com.zipwhip.api.signals.Signal;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.events.Observer;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.PresenceCategory;
+import com.zipwhip.signals.presence.UserAgentCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
@@ -379,7 +377,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
     @Override
     public Contact getContact(String mobileNumber) throws Exception {
-
         final Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("mobileNumber", mobileNumber);
@@ -388,36 +385,9 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
-    public List<Presence> getPresence(PresenceCategory category) throws Exception {
-
-        Map<String, Object> params = new HashMap<String, Object>();
-
-        if (!category.equals(PresenceCategory.NONE)) {
-            params.put("category", category.toString());
-        }
-
-        return responseParser.parsePresence(executeSync(PRESENCE_GET, params));
-    }
-
-    @Override
-    public void signalsConnect(String clientId, PresenceCategory category) throws Exception {
-        Map<String, Object> params = new HashMap<String, Object>();
-
-        String sessionKey = getConnection().getSessionKey();
-
-        params.put("clientId", clientId);
-        params.put("sessions", sessionKey);
-        params.put("session", sessionKey);
-        params.put("subscriptionId", sessionKey);
-        params.put("category", category);
-        params.put("subscriptionId", connection.getSessionKey());
-        params.put("sessions", connection.getSessionKey());
-
-        ServerResponse response = executeSync(SIGNALS_CONNECT, params);
-
-        if (!response.isSuccess()) {
-            throw new Exception(response.getRaw());
-        }
+    public List<Presence> getPresence(UserAgentCategory category) throws Exception {
+        // TODO:!
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
@@ -594,16 +564,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
 
         return success(executeSync(USER_UNENROLL, params));
 
-    }
-
-    @Override
-    public void addSignalObserver(Observer<List<Signal>> observer) {
-        getSignalProvider().getSignalReceivedEvent().addObserver(observer);
-    }
-
-    @Override
-    public void addSignalsConnectionObserver(Observer<Boolean> observer) {
-        getSignalProvider().getConnectionChangedEvent().addObserver(observer);
     }
 
     @Override

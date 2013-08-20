@@ -8,8 +8,6 @@ package com.zipwhip.signals.address;
  */
 public abstract class AddressBase implements Address, Comparable<Address> {
 
-	private static final long serialVersionUID = 5008442304425705645L;
-
 	/*
 	 * Old, incorrect comparator
 	 * 
@@ -26,10 +24,10 @@ public abstract class AddressBase implements Address, Comparable<Address> {
 	 * is less than, equal to, or greater than the specified object.
 	 */
 	@Override
-	public int compareTo(Address o)
-	{
+	public int compareTo(Address o) {
 		int hc1 = this.hashCode();
 		int hc2 = o.hashCode();
+
 		return hc1 < hc2 ? -1 : (hc1 == hc2 ? 0 : 1);
 	}
 }
