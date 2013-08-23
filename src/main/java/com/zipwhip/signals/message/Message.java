@@ -18,7 +18,6 @@ public class Message implements Serializable {
     private static final long serialVersionUID = 9130714327015373270L;
 
     private Address address;
-    private String[] subscriptionIds;
     private long timestamp;
     private String id;
     private String type;
@@ -34,16 +33,8 @@ public class Message implements Serializable {
         return address;
     }
 
-    public String[] getSubscriptionIds() {
-        return subscriptionIds;
-    }
-
     public void setAddress(Address address) {
         this.address = address;
-    }
-
-    public void setSubscriptionIds(String[] subscriptionIds) {
-        this.subscriptionIds = subscriptionIds;
     }
 
     public long getTimestamp() {

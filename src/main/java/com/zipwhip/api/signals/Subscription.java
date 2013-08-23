@@ -19,7 +19,7 @@ public class Subscription {
     private Set<String> channels;
     private boolean bound;
 
-    private DefaultObservableFuture<SubscriptionCompleteCommand> subscriptionCompleteFuture;
+    private DefaultObservableFuture<SubscribeCompleteContent> subscriptionCompleteFuture;
     private DefaultObservableFuture<Void> innerConnectFuture;
 
     public String getSessionKey() {
@@ -62,11 +62,11 @@ public class Subscription {
         this.bound = bound;
     }
 
-    public DefaultObservableFuture<SubscriptionCompleteCommand> getSubscriptionCompleteFuture() {
+    public DefaultObservableFuture<SubscribeCompleteContent> getSubscriptionCompleteFuture() {
         return subscriptionCompleteFuture;
     }
 
-    public void setSubscriptionCompleteFuture(DefaultObservableFuture<SubscriptionCompleteCommand> future) {
+    public void setSubscriptionCompleteFuture(DefaultObservableFuture<SubscribeCompleteContent> future) {
         this.subscriptionCompleteFuture = future;
     }
 

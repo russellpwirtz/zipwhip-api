@@ -1,12 +1,10 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.signals.message.Message;
-import com.zipwhip.signals.presence.Presence;
-
-import java.util.Set;
+import com.zipwhip.signals.presence.UserAgent;
 
 /**
  * Date: 5/7/13
@@ -22,14 +20,45 @@ public interface SignalProvider extends Destroyable {
 
     /**
      * Tell it to connect. This call is idempotent, so if multiple calls to
-     * a connection provider will have no effect.
+     * a connection provider (if already connected) will have no effect.
      *
-     * If you do not have a presence object set on this
+     * If you do not have a presence object set on this, it will fail.
      *
+     * You must have UserAgent information defined. If you call this method without userAgent information, it will crash.
+     *
+     * @throws IllegalStateException If you do not have userAgent information previously defined.
      * @return a ObservableFuture task indicating if the connection was successful.
      * @throws Exception if an error is encountered when connecting
      */
-    ObservableFuture<Void> connect();
+    ObservableFuture<Void> connect() throws IllegalStateException;
+
+    /**
+     * Tell it to connect. This call is idempotent, so if multiple calls to
+     * a connection provider (if already connected) will have no effect.
+     *
+     * If you do not have a presence object set on this, it will fail.
+     *
+     * You must have UserAgent information defined.
+     *
+     * @throws IllegalStateException If you do not have userAgent information defined.
+     * @return a ObservableFuture task indicating if the connection was successful.
+     * @throws Exception if an error is encountered when connecting
+     */
+    ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException;
+
+    /**
+     * Tell it to connect. This call is idempotent, so if multiple calls to
+     * a connection provider (if already connected) will have no effect.
+     *
+     * If you do not have a presence object set on this, it will fail.
+     *
+     * You must have UserAgent information defined.
+     *
+     * @throws IllegalStateException If you do not have userAgent information defined.
+     * @return a ObservableFuture task indicating if the connection was successful.
+     * @throws Exception if an error is encountered when connecting
+     */
+    ObservableFuture<Void> connect(UserAgent userAgent, String clientId) throws IllegalStateException;
 
     /**
      * Tell it to disconnect. Will not reconnect. Equivalent to .disconnect(false);
@@ -59,7 +88,7 @@ public interface SignalProvider extends Destroyable {
      * @param subscriptionId
      * @return
      */
-    ObservableFuture<SubscriptionCompleteCommand> bind(String sessionKey, String subscriptionId);
+    ObservableFuture<SubscribeResult> subscribe(String sessionKey, String subscriptionId);
 
     /**
      *
@@ -67,7 +96,7 @@ public interface SignalProvider extends Destroyable {
      * @param subscriptionId
      * @return
      */
-    ObservableFuture<Void> unbind(String subscriptionId);
+    ObservableFuture<SubscribeResult> unsubscribe(String sessionKey, String subscriptionId);
 
     /**
      * Will reset the state, followed by a disconnect, followed by an immediate reconnect.
@@ -76,20 +105,18 @@ public interface SignalProvider extends Destroyable {
      */
     ObservableFuture<Void> resetDisconnectAndConnect();
 
-    Observable<Void> getNewClientIdReceivedEvent();
+    Observable<SubscribeResult> getSubscribeEvent();
 
-    Observable<Throwable> getExceptionEvent();
+    Observable<SubscribeResult> getUnsubscribeEvent();
 
-    Observable<SubscriptionResult> getBindEvent();
-
-    Observable<Message> getMessageReceivedEvent();
+    Observable<DeliveredMessage> getMessageReceivedEvent();
 
     /**
-     * Get the current Presence object or null
+     * The presence information that this client is conveying to cloud.
      *
-     * @return The current Presence object or null
+     * @return
      */
-    Presence getPresence();
+    UserAgent getUserAgent();
 
     /**
      * The SignalServer uses a separate id to track you, because it's an Id
@@ -100,14 +127,5 @@ public interface SignalProvider extends Destroyable {
      * @return the id that the SignalServer has for us
      */
     String getClientId();
-
-    /**
-     * Immutable set of subscriptions.
-     *
-     * To modify this list, call the bind() or unbind() methods.
-     *
-     * @return
-     */
-    Set<Subscription> getSubscriptions();
 
 }

@@ -1,5 +1,6 @@
 package com.zipwhip.api.signals;
 
+import java.io.Serializable;
 import java.util.Set;
 
 /**
@@ -9,19 +10,12 @@ import java.util.Set;
  * @author Michael
  * @version 1
  */
-public class SubscriptionCompleteCommand {
+public class SubscribeCompleteContent implements Serializable {
 
-    private String sessionKey;
+    private static final long serialVersionUID = 4976833416056269393L;
+
     private String subscriptionId;
     private Set<String> addresses;
-
-    public String getSessionKey() {
-        return sessionKey;
-    }
-
-    public void setSessionKey(String sessionKey) {
-        this.sessionKey = sessionKey;
-    }
 
     public String getSubscriptionId() {
         return subscriptionId;
