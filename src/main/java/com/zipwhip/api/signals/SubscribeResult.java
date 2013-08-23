@@ -17,6 +17,7 @@ public class SubscribeResult {
     private Set<String> channels;
 
     public SubscribeResult() {
+
     }
 
     public SubscribeResult(String sessionKey, String subscriptionId, Throwable cause) {

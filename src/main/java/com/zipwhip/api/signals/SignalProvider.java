@@ -18,6 +18,8 @@ import com.zipwhip.signals.presence.UserAgent;
  */
 public interface SignalProvider extends Destroyable {
 
+    boolean isConnected();
+
     /**
      * Tell it to connect. This call is idempotent, so if multiple calls to
      * a connection provider (if already connected) will have no effect.
@@ -61,22 +63,12 @@ public interface SignalProvider extends Destroyable {
     ObservableFuture<Void> connect(UserAgent userAgent, String clientId) throws IllegalStateException;
 
     /**
-     * Tell it to disconnect. Will not reconnect. Equivalent to .disconnect(false);
+     * Tell it to disconnect. Will not reconnect.
      *
      * @return A future that can be observed
      * @throws Exception if an I/O happens while disconnecting
      */
     ObservableFuture<Void> disconnect();
-
-    /**
-     * Tell it to disconnect. Call this with false is equivalent to calling {@code disconnect()}.
-     * Calling it with true will cause the connection to go into reconnect mode once the disconnect happens.
-     *
-     * @param causedByNetwork If the network state caused the disconnect
-     * @return an event that tells you its complete
-     * @throws Exception if an I/O happens while disconnecting
-     */
-    ObservableFuture<Void> disconnect(boolean causedByNetwork);
 
     /**
      * Bind a sessionKey+subscriptionId to a clientId. The server will respond with a SubscriptionCompleteCommand.
@@ -96,7 +88,7 @@ public interface SignalProvider extends Destroyable {
      * @param subscriptionId
      * @return
      */
-    ObservableFuture<SubscribeResult> unsubscribe(String sessionKey, String subscriptionId);
+    ObservableFuture<Void> unsubscribe(String sessionKey, String subscriptionId);
 
     /**
      * Will reset the state, followed by a disconnect, followed by an immediate reconnect.

@@ -9,11 +9,13 @@ import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.message.Message;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
 import io.socket.IOAcknowledge;
 import io.socket.IOCallback;
@@ -24,10 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * Date: 7/24/13
@@ -56,6 +55,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private String url = "http://localhost:23123";
     private Presence presence = new Presence();
     private SignalsSubscribeActor signalsSubscribeActor;
+    private ImportantTaskExecutor importantTaskExecutor = new ImportantTaskExecutor();
 
     private Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
@@ -119,11 +119,15 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     }
 
     @Override
-    public synchronized ObservableFuture<Void> disconnect(boolean causedByNetwork) {
+    public ObservableFuture<Void> disconnect() {
         if (disconnectFuture != null) {
             return disconnectFuture;
+        } else if (!socketIO.isConnected()) {
+            // Already disconnected
+            return new FakeObservableFuture<Void>(SignalProviderImpl.this, null);
         }
 
+        // The socketIO callback will
         MutableObservableFuture<Void> result = disconnectFuture = future();
 
         socketIO.disconnect();
@@ -146,91 +150,31 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             subscriptionId = sessionKey;
         }
 
+
+        //
+        // Make sure that any previous requests get cancelled.
+        //
+        SubscriptionRequest request = pendingSubscriptionRequests.remove(subscriptionId);
+        if (request != null) {
+            request.getFuture().cancel();
+        }
+
         //
         // Nest the future within our result. The subscribe is a multi-step process. We need to make the webcall and then
         // wait until we receive a SubscriptionCompleteCommand.
         //
-        SubscriptionRequest request = pendingSubscriptionRequests.get(subscriptionId);
-        MutableObservableFuture<SubscribeResult> result = request == null ? null : request.getFuture();
-
-        // I do the ".isDone()" check to prevent stale requests from clogging the processor.
-        if (result == null || result.isDone()) {
-            result = future();
-
-            // we need to wait for a SubscriptionCompleteCommand to come in as a message.
-            request = new SubscriptionRequest(subscriptionId, sessionKey, result);
-            pendingSubscriptionRequests.put(subscriptionId, request);
-        }
-
-        // Make the call to the server (async).
-        ObservableFuture<Void> future = signalsSubscribeActor.subscribe(getClientId(), sessionKey, subscriptionId, getUserAgent());
-
-        // We ONLY want to cascade the failure.
-        // The success will come later when the SubscriptionCompleteCommand comes in.
-        future.addObserver(new CascadeFailureObserver<Void>(result));
-
-        // Clean up the pending request map.
-        final String finalSubscriptionId = subscriptionId;
-        final SubscriptionRequest finalRequest = request;
-        future.addObserver(new Observer<ObservableFuture<Void>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<Void> item) {
-                if (item.isSuccess()) {
-                    // We only want to clean up after failed requests.
-                    // Otherwise, the SubscriptionComplete will clean up later.
-                    return;
-                }
-
-                synchronized (SignalProviderImpl.this) {
-                    SubscriptionRequest request1 = pendingSubscriptionRequests.get(finalSubscriptionId);
-
-                    // Only remove if it's the same one.
-                    if (request1 == finalRequest) {
-                        pendingSubscriptionRequests.remove(finalSubscriptionId);
-
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug(String.format("Removed \"%s\" from pendingSubscriptionRequests", finalSubscriptionId));
-                        }
-                    }
-                }
-            }
-        });
-
-        return result;
+        return importantTaskExecutor.enqueue(executor,
+                new SignalSubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in1Second());
     }
 
     @Override
-    public ObservableFuture<SubscribeResult> unsubscribe(final String sessionKey, final String subscriptionId) {
+    public ObservableFuture<Void> unsubscribe(final String sessionKey, final String subscriptionId) {
         if (!socketIO.isConnected()) {
-            return new FakeFailingObservableFuture<SubscribeResult>(this, new IllegalStateException("Not connected"));
+            return new FakeFailingObservableFuture<Void>(this, new IllegalStateException("Not connected"));
         }
 
-        // NOTE: the connected state is not something that is able to stay constant.
-        // For example, we just checked isConnected() but it might have changed a nanosecond after we checked it!
-
-        // If the server hasn't fully processed your subscription (and sent a SubscriptionCompleteCommand) then
-        // we're making a noop call here. It's ok. I don't mind the extra call to the web.
-        ObservableFuture<Void> future = signalsSubscribeActor.unsubscribe(getClientId(), sessionKey, subscriptionId);
-
-        // If disconnected successfully, remove from local list.
-        future.addObserver(new Observer<ObservableFuture<Void>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<Void> item) {
-                if (item.isFailed()) {
-                    subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId, item.getCause()));
-                    return;
-                }
-
-                if (item.isCancelled()) {
-                    subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId, new CancellationException()));
-                    return;
-                }
-
-                subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId));
-            }
-        });
-
-        return null;
+        return importantTaskExecutor.enqueue(executor,
+                new SignalUnsubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in30Seconds());
     }
 
     private IOCallback callback = new IOCallback() {
@@ -339,11 +283,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     }
 
     @Override
-    public ObservableFuture<Void> disconnect() {
-        return disconnect(false);
-    }
-
-    @Override
     public synchronized ObservableFuture<Void> resetDisconnectAndConnect() {
         // TODO: protect threading (what happens if the connection cycles during this process)
         final MutableObservableFuture<Void> result = future();
@@ -407,6 +346,135 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     public SignalsSubscribeActor getSignalsSubscribeActor() {
         return signalsSubscribeActor;
+    }
+
+    @Override
+    public boolean isConnected() {
+        return socketIO.isConnected();
+    }
+
+    private class SignalUnsubscribeCallback implements Callable<ObservableFuture<Void>> {
+
+        private final String sessionKey;
+        private final String subscriptionId;
+
+        private SignalUnsubscribeCallback(String sessionKey, String subscriptionId) {
+            this.sessionKey = sessionKey;
+            this.subscriptionId = subscriptionId;
+        }
+
+        @Override
+        public ObservableFuture<Void> call() throws Exception {
+            // NOTE: the connected state is not something that is able to stay constant.
+            // For example, we just checked isConnected() but it might have changed a nanosecond after we checked it!
+
+            // If the server hasn't fully processed your subscription (and sent a SubscriptionCompleteCommand) then
+            // we're making a noop call here. It's ok. I don't mind the extra call to the web.
+            ObservableFuture<Void> future = signalsSubscribeActor.unsubscribe(getClientId(), sessionKey, subscriptionId);
+
+            // If disconnected successfully, remove from local list.
+            future.addObserver(new Observer<ObservableFuture<Void>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<Void> item) {
+                    if (item.isFailed()) {
+                        subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId, item.getCause()));
+                        return;
+                    }
+
+                    if (item.isCancelled()) {
+                        subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId, new CancellationException()));
+                        return;
+                    }
+
+                    subscribeEvent.notifyObservers(SignalProviderImpl.this, new SubscribeResult(sessionKey, subscriptionId));
+                }
+            });
+
+            return future;
+        }
+    }
+
+    private class SignalSubscribeCallback implements Callable<ObservableFuture<SubscribeResult>> {
+
+        private final String sessionKey;
+        private final String subscriptionId;
+
+        private SignalSubscribeCallback(String sessionKey, String subscriptionId) {
+            this.sessionKey = sessionKey;
+            this.subscriptionId = subscriptionId;
+        }
+
+        @Override
+        public ObservableFuture<SubscribeResult> call() throws Exception {
+            MutableObservableFuture<SubscribeResult> result = future();
+            final SubscriptionRequest request = new SubscriptionRequest(subscriptionId, sessionKey, result);
+
+            // Make sure we're the only request that's processing.
+            if (!addRequest(request)) {
+                result.cancel();
+
+                return result;
+            }
+
+            // Make the call to the server (async).
+            ObservableFuture<Void> future = signalsSubscribeActor.subscribe(getClientId(), sessionKey, subscriptionId, getUserAgent());
+
+            // We ONLY want to cascade the failure.
+            // The success will come later when the SubscriptionCompleteCommand comes in.
+            future.addObserver(new CascadeFailureObserver<Void>(result));
+
+            // Clean up the pending request map.
+            final String finalSubscriptionId = subscriptionId;
+            future.addObserver(new Observer<ObservableFuture<Void>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<Void> item) {
+                    if (item.isSuccess()) {
+                        // We only want to clean up after failed requests.
+                        // Otherwise, the SubscriptionComplete will clean up later.
+                        return;
+                    }
+
+                    synchronized (SignalProviderImpl.this) {
+                        SubscriptionRequest request1 = pendingSubscriptionRequests.get(finalSubscriptionId);
+
+                        // Only remove if it's the same one.
+                        if (request1 == request) {
+                            pendingSubscriptionRequests.remove(finalSubscriptionId);
+
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug(String.format("Removed \"%s\" from pendingSubscriptionRequests", finalSubscriptionId));
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Finished requesting /signal/subscribe. Now we're waiting for a SubscriptionComplete to come down the wire!");
+            }
+
+            return result;
+        }
+
+        private boolean addRequest(SubscriptionRequest request) {
+            //
+            // Make sure we're the only request that's being processed right now.
+            //
+            synchronized (SignalProviderImpl.this) {
+                SubscriptionRequest existingSubscriptionRequest = pendingSubscriptionRequests.get(subscriptionId);
+
+                if (existingSubscriptionRequest != null) {
+                    // Something is already cooking. Cancel ours.
+                    request.getFuture().cancel();
+
+                    return false;
+                }
+
+                pendingSubscriptionRequests.put(subscriptionId, request);
+            }
+
+            return true;
+        }
     }
 
     private static class CascadeFailureObserver<T> implements Observer<ObservableFuture<T>> {

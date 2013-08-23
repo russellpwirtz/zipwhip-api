@@ -35,6 +35,14 @@ public class SignalProviderTest {
     }
 
     @Test
+    public void testDisconnectWhileAlreadyDisconnected() {
+        assertFalse(signalProvider.isDestroyed());
+        assertFalse(signalProvider.isConnected());
+        assertTrue(signalProvider.disconnect().isDone());
+        assertTrue(signalProvider.disconnect().isSuccess());
+    }
+
+    @Test
     public void testConnect() throws Exception {
         final String sessionKey = "sessionKey";
         final String subscriptionId = "subscriptionId";
