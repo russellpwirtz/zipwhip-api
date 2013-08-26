@@ -109,6 +109,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         MutableObservableFuture<Void> result = connectFuture = future();
 
         try {
+            socketIO.addHeader("sessionId", clientId);
+
             socketIO.connect(url, callback);
         } catch (MalformedURLException e) {
             connectFuture.setFailure(e);
@@ -164,7 +166,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         // wait until we receive a SubscriptionCompleteCommand.
         //
         return importantTaskExecutor.enqueue(executor,
-                new SignalSubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in1Second());
+                new SignalSubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in30Seconds());
     }
 
     @Override
@@ -205,6 +207,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         @Override
         public void onMessage(String message, IOAcknowledge ack) {
             // parse the message, detect the type, throw the appropriate event
+
+            ack.ack();
         }
 
         @Override
@@ -214,26 +218,30 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
         @Override
         public void onMessage(JsonElement element, IOAcknowledge ack) {
-            // parse the message, detect the type, throw the appropriate event
-            DeliveredMessage deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-            Message message = deliveredMessage.getMessage();
+            try {
+                // parse the message, detect the type, throw the appropriate event
+                DeliveredMessage deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
+                Message message = deliveredMessage.getMessage();
 
-            if (message == null) {
-                LOGGER.error("Received a null message from " + element);
-                return;
-            }
-
-            if (StringUtil.equalsIgnoreCase(message.getType(), "command")) {
-                processCommand(message);
-            } else if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
-
-                if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
-                    handleSubscribeComplete(deliveredMessage.getMessage());
-                } else {
-                    throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
+                if (message == null) {
+                    LOGGER.error("Received a null message from " + element);
+                    return;
                 }
-            } else {
-                messageReceivedEvent.notifyObservers(this, deliveredMessage);
+
+                if (StringUtil.equalsIgnoreCase(message.getType(), "command")) {
+                    processCommand(message);
+                } else if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
+
+                    if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
+                        handleSubscribeComplete(deliveredMessage.getMessage());
+                    } else {
+                        throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
+                    }
+                } else {
+                    messageReceivedEvent.notifyObservers(this, deliveredMessage);
+                }
+            } finally {
+                ack.ack();
             }
         }
 
@@ -257,7 +265,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
         @Override
         public void on(String s, IOAcknowledge ack, Object... objects) {
-            // parse the message, detect the type, throw the appropriate event
+            ack.ack();
+
         }
 
         @Override
