@@ -7,6 +7,8 @@ import com.zipwhip.signals.presence.UserAgent;
 import com.zipwhip.util.StringUtil;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +24,8 @@ import static org.junit.Assert.*;
  * @version 1
  */
 public class SignalProviderTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignalProviderTest.class);
 
     SignalProviderImpl signalProvider;
     NingSignalsSubscribeActor actor = new NingSignalsSubscribeActor();
@@ -51,7 +55,7 @@ public class SignalProviderTest {
 
         assertTrue(StringUtil.isNullOrEmpty(signalProvider.getClientId()));
 
-        ObservableFuture<Void> future = signalProvider.connect(new UserAgent(), clientId);
+        ObservableFuture<Void> future = signalProvider.connect(new UserAgent());
 
         await(future);
 
@@ -81,6 +85,8 @@ public class SignalProviderTest {
         assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
         assertEquals(signalSubscribeResult.getSubscriptionId(), subscriptionId);
         assertEquals(2, signalSubscribeResult.getChannels().size());
+
+        LOGGER.debug("Everything looks good, starting the wait cycle to allow messages to be received!");
 
         // we need to wait to consume messages
         Thread.sleep(500000);

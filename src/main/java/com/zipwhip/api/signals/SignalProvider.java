@@ -26,20 +26,6 @@ public interface SignalProvider extends Destroyable {
      *
      * If you do not have a presence object set on this, it will fail.
      *
-     * You must have UserAgent information defined. If you call this method without userAgent information, it will crash.
-     *
-     * @throws IllegalStateException If you do not have userAgent information previously defined.
-     * @return a ObservableFuture task indicating if the connection was successful.
-     * @throws Exception if an error is encountered when connecting
-     */
-    ObservableFuture<Void> connect() throws IllegalStateException;
-
-    /**
-     * Tell it to connect. This call is idempotent, so if multiple calls to
-     * a connection provider (if already connected) will have no effect.
-     *
-     * If you do not have a presence object set on this, it will fail.
-     *
      * You must have UserAgent information defined.
      *
      * @throws IllegalStateException If you do not have userAgent information defined.
@@ -47,20 +33,6 @@ public interface SignalProvider extends Destroyable {
      * @throws Exception if an error is encountered when connecting
      */
     ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException;
-
-    /**
-     * Tell it to connect. This call is idempotent, so if multiple calls to
-     * a connection provider (if already connected) will have no effect.
-     *
-     * If you do not have a presence object set on this, it will fail.
-     *
-     * You must have UserAgent information defined.
-     *
-     * @throws IllegalStateException If you do not have userAgent information defined.
-     * @return a ObservableFuture task indicating if the connection was successful.
-     * @throws Exception if an error is encountered when connecting
-     */
-    ObservableFuture<Void> connect(UserAgent userAgent, String clientId) throws IllegalStateException;
 
     /**
      * Tell it to disconnect. Will not reconnect.
@@ -97,6 +69,18 @@ public interface SignalProvider extends Destroyable {
      */
     ObservableFuture<Void> resetDisconnectAndConnect();
 
+    /**
+     * A "bind" event occurs when the sessionId is bound to the clientId
+     *
+     * @return
+     */
+    Observable<BindResult> getBindEvent();
+
+    /**
+     * A "subscribe" event occurs when the sessionKey is bound to a clientId
+     *
+     * @return
+     */
     Observable<SubscribeResult> getSubscribeEvent();
 
     Observable<SubscribeResult> getUnsubscribeEvent();

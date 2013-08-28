@@ -3,6 +3,7 @@ package com.zipwhip.api.signals;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.zipwhip.api.signals.dto.*;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
@@ -15,6 +16,7 @@ import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.message.Message;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
 import io.socket.IOAcknowledge;
@@ -25,15 +27,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.*;
 
 /**
  * Date: 7/24/13
  * Time: 5:28 PM
- *
+ * <p/>
  * SignalProvider is responsible for clientId. It is not responsible for executing a /signals/connect
- *
+ * <p/>
  * Because the caller needs to execute a /signals/connect (and then cancel/reset) we need to use the ConnectionHandle
  * metaphor.
  *
@@ -49,6 +52,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private final ObservableHelper<Throwable> exceptionEvent;
     private final ObservableHelper<Void> connectionChangedEvent;
     private final ObservableHelper<DeliveredMessage> messageReceivedEvent;
+    private final ObservableHelper<BindResult> bindEvent;
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private Executor eventExecutor = SimpleExecutor.getInstance();
@@ -62,12 +66,22 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             .registerTypeHierarchyAdapter(Message.class, new MessageTypeAdapter())
             .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
             .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
+            .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())
             .create();
 
     private volatile SocketIO socketIO;
-    private volatile MutableObservableFuture<Void> connectFuture;
-    private volatile MutableObservableFuture<Void> disconnectFuture;
+
     private final Map<String, SubscriptionRequest> pendingSubscriptionRequests = new ConcurrentHashMap<String, SubscriptionRequest>();
+
+    private volatile ObservableFuture<Void> externalConnectFuture;
+    private volatile MutableObservableFuture<Void> connectFuture;
+
+    private volatile MutableObservableFuture<Void> disconnectFuture;
+
+    private volatile String clientId;
+    private volatile String token;
+    private volatile BindRequest bindRequest;
+
 
     public SignalProviderImpl() {
         connectionChangedEvent = new ObservableHelper<Void>("ConnectionChangedEvent", eventExecutor);
@@ -75,25 +89,17 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         subscribeEvent = new ObservableHelper<SubscribeResult>("SubscribeEvent", eventExecutor);
         unsubscribeEvent = new ObservableHelper<SubscribeResult>("UnsubscribeEvent", eventExecutor);
         messageReceivedEvent = new ObservableHelper<DeliveredMessage>("MessageReceivedEvent", eventExecutor);
+        bindEvent = new ObservableHelper<BindResult>("BindEvent", eventExecutor);
 
         socketIO = new SocketIO();
         socketIO.setGson(gson);
     }
 
     @Override
-    public ObservableFuture<Void> connect() throws IllegalStateException {
-        return connect(getUserAgent(), getClientId());
-    }
-
-    @Override
-    public ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException {
-        return connect(userAgent, getClientId());
-    }
-
-    @Override
-    public synchronized ObservableFuture<Void> connect(UserAgent userAgent, String clientId) throws IllegalStateException {
-        if (connectFuture != null) {
-            return connectFuture;
+    public synchronized ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException {
+        // allow multiple connect attempts to reuse the same future.
+        if (externalConnectFuture != null) {
+            return externalConnectFuture;
         }
 
         if (userAgent == null) {
@@ -106,18 +112,23 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         // Everything else is defined from the server.
         presence.setUserAgent(userAgent);
 
-        MutableObservableFuture<Void> result = connectFuture = future();
+        connectFuture = future();
 
-        try {
-            socketIO.addHeader("sessionId", clientId);
+        // The reason to use the "importantTaskExecutor" this way is so the future can be timed out.
+        // If we issue a connect request and it doesn't come back for 1 minute, we need to be able to
+        // time it out/cancel it.
+        ObservableFuture<Void> futureThatSupportsTimeout = importantTaskExecutor.enqueue(executor,
+                new ConnectTask(connectFuture),
+                FutureDateUtil.in1Minute());
 
-            socketIO.connect(url, callback);
-        } catch (MalformedURLException e) {
-            connectFuture.setFailure(e);
-            connectFuture = null;
-        }
+        // The external one supports timeout. (but is not mutable)
+        // The internal one does not timeout.
+        externalConnectFuture = futureThatSupportsTimeout;
 
-        return result;
+        // Clean up the future.
+        futureThatSupportsTimeout.addObserver(RESET_CONNECT_FUTURE);
+
+        return externalConnectFuture;
     }
 
     @Override
@@ -152,7 +163,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             subscriptionId = sessionKey;
         }
 
-
         //
         // Make sure that any previous requests get cancelled.
         //
@@ -165,7 +175,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         // Nest the future within our result. The subscribe is a multi-step process. We need to make the webcall and then
         // wait until we receive a SubscriptionCompleteCommand.
         //
-        return importantTaskExecutor.enqueue(executor,
+        return executeWithTimeout(
                 new SignalSubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in30Seconds());
     }
 
@@ -175,18 +185,116 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             return new FakeFailingObservableFuture<Void>(this, new IllegalStateException("Not connected"));
         }
 
-        return importantTaskExecutor.enqueue(executor,
+        return executeWithTimeout(
                 new SignalUnsubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in30Seconds());
+    }
+
+    private Observer<ObservableFuture<Void>> RESET_CONNECT_FUTURE = new Observer<ObservableFuture<Void>>() {
+
+        @Override
+        public void notify(Object sender, ObservableFuture<Void> item) {
+            // Clean up the variables.
+            synchronized (SignalProviderImpl.this) {
+                if (connectFuture != item) {
+                    LOGGER.debug(String.format("The futures did not match, so decided not to clear it out. %s/%s", connectFuture, item));
+                    return;
+                }
+
+                externalConnectFuture = null;
+                connectFuture = null;
+            }
+        }
+    };
+
+    @Override
+    public synchronized ObservableFuture<Void> resetDisconnectAndConnect() {
+        // TODO: protect threading (what happens if the connection cycles during this process)
+        final MutableObservableFuture<Void> result = future();
+
+        disconnect().addObserver(new Observer<ObservableFuture<Void>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<Void> item) {
+                if (item.isSuccess()) {
+                    result.setSuccess(null);
+                } else if (item.isCancelled()) {
+                    result.cancel();
+                } else if (item.isFailed()) {
+                    result.setFailure(item.getCause());
+                }
+
+                throw new IllegalStateException("Not sure what state this is " + result);
+            }
+        });
+
+        return result;
+    }
+
+    @Override
+    public Observable<BindResult> getBindEvent() {
+        return bindEvent;
     }
 
     private IOCallback callback = new IOCallback() {
         @Override
         public void onConnect() {
-            synchronized (SignalProviderImpl.this) {
-                if (connectFuture != null) {
-                    connectFuture.setSuccess(null);
-                    connectFuture = null;
+            if (connectFuture == null) {
+                // this must be a reconnect scenario
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("The connectFuture was null. I think this is a reconnect scenario. No bind needed?");
+                    return;
                 }
+            }
+
+            synchronized (SignalProviderImpl.this) {
+                final MutableObservableFuture<Void> _connectFuture = connectFuture;
+
+                // Our socket is connected, now we need to issue a bind request
+                String _clientId = getClientId();
+                String _token = calculateToken(clientId);
+                final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
+
+                ObservableFuture<BindResult> future = executeWithTimeout(
+                        new BindCallback(socketIO, _bindRequest, eventExecutor, gson),
+                        FutureDateUtil.in30Seconds());
+
+                // When this future is successful, we need to save the details
+                future.addObserver(new Observer<ObservableFuture<BindResult>>() {
+                    @Override
+                    public void notify(Object sender, ObservableFuture<BindResult> item) {
+                        synchronized (SignalProviderImpl.this) {
+                            if (_bindRequest != bindRequest) {
+                                LOGGER.error(String.format("Not the same bindRequest object. So quitting. %s/%s", _bindRequest, bindRequest));
+                                return;
+                            }
+
+                            if (item.isFailed()) {
+                                LOGGER.error("Bind future not successful! " + item);
+                                if (_connectFuture != null) {
+                                    _connectFuture.setFailure(new Exception("The bindFuture was not successful", item.getCause()));
+                                }
+
+                                return;
+                            } else if (item.isCancelled()) {
+                                LOGGER.error("Bind future cancelled! " + item);
+                                if (_connectFuture != null) {
+                                    _connectFuture.cancel();
+                                }
+
+                                return;
+                            }
+
+                            BindResult response = item.getResult();
+
+                            setClientId(response.getClientId(), response.getToken());
+
+                            if (_connectFuture != null) {
+                                _connectFuture.setSuccess(null);
+                            }
+
+                            bindRequest = null;
+                        }
+                    }
+                });
             }
 
             connectionChangedEvent.notifyObservers(SignalProviderImpl.this, null);
@@ -275,6 +383,24 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
     };
 
+    private void setClientId(String clientId, String token) {
+        this.clientId = clientId;
+        this.token = token;
+    }
+
+    private <T> ObservableFuture<T> executeWithTimeout(Callable<ObservableFuture<T>> task, Date date) {
+        return importantTaskExecutor.enqueue(executor, task, date);
+    }
+
+    private String calculateToken(String clientId) {
+        // TODO: figure out how to do this
+        if (StringUtil.isNullOrEmpty(clientId)) {
+            return null;
+        }
+
+        return clientId;
+    }
+
     private void processCommand(Message message) {
 
     }
@@ -289,29 +415,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     private <T> MutableObservableFuture<T> future() {
         return new DefaultObservableFuture<T>(this, eventExecutor);
-    }
-
-    @Override
-    public synchronized ObservableFuture<Void> resetDisconnectAndConnect() {
-        // TODO: protect threading (what happens if the connection cycles during this process)
-        final MutableObservableFuture<Void> result = future();
-
-        disconnect().addObserver(new Observer<ObservableFuture<Void>>() {
-            @Override
-            public void notify(Object sender, ObservableFuture<Void> item) {
-                if (item.isSuccess()) {
-                    result.setSuccess(null);
-                } else if (item.isCancelled()) {
-                    result.cancel();
-                } else if (item.isFailed()) {
-                    result.setFailure(item.getCause());
-                }
-
-                throw new IllegalStateException("Not sure what state this is " + result);
-            }
-        });
-
-        return result;
     }
 
 
@@ -336,7 +439,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     @Override
     public String getClientId() {
-        return socketIO.getSessionId();
+        return clientId;
     }
 
     @Override
@@ -504,5 +607,68 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                 NestedObservableFuture.syncFailure(item, result);
             }
         }
+    }
+
+    private class ConnectTask implements Callable<ObservableFuture<Void>> {
+
+        private final MutableObservableFuture<Void> future;
+
+        public ConnectTask(MutableObservableFuture<Void> future) {
+            this.future = future;
+        }
+
+        @Override
+        public ObservableFuture<Void> call() throws Exception {
+            synchronized (SignalProviderImpl.this) {
+                try {
+                    socketIO.connect(url, callback);
+                } catch (MalformedURLException e) {
+                    future.setFailure(e);
+                }
+            }
+
+            return future;
+        }
+    }
+
+    /**
+     * This BindCallback allows us to wrap the event in a cancellable future.
+     */
+    private static class BindCallback implements Callable<ObservableFuture<BindResult>> {
+
+        private final BindRequest request;
+        private final SocketIO socketIO;
+        private final MutableObservableFuture<BindResult> result;
+        private final Gson gson;
+
+        private BindCallback(SocketIO socketIO, BindRequest request, Executor executor, Gson gson) {
+            this.request = request;
+            this.socketIO = socketIO;
+            this.result = new DefaultObservableFuture<BindResult>(this, executor);
+            this.gson = gson;
+        }
+
+        @Override
+        public ObservableFuture<BindResult> call() throws Exception {
+            socketIO.emit("bind", ack, request);
+
+            return result;
+        }
+
+        private final IOAcknowledge ack = new IOAcknowledge() {
+            @Override
+            public void ack(Object... args) {
+                if (CollectionUtil.isNullOrEmpty(args)) {
+                    result.setFailure(new Exception("No bind response received"));
+                    return;
+                }
+
+                JsonObject object = (JsonObject) args[0];
+                // TODO: Detect and handle failure
+                BindResult response = gson.fromJson(object, BindResult.class);
+
+                result.setSuccess(response);
+            }
+        };
     }
 }
