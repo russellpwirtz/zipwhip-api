@@ -145,6 +145,14 @@ public interface ZipwhipClient extends Destroyable {
     Contact saveGroup(String type, String advertisement) throws Exception;
 
     /**
+     * Returns the Group for the provided device address
+     *
+     * @param address - the group address
+     * @return
+     */
+    Group getGroup(String address) throws Exception;
+
+    /**
      * Create a new group.
      *
      * @return A {@link Contact} representing the new group.
@@ -645,16 +653,16 @@ public interface ZipwhipClient extends Destroyable {
 
     /**
      * Connect to Zipwhip Signals if setup.
-     *
+     * <p/>
      * Will connect to the SignalServer via the SignalProvider and then execute a /signals/connect
      * webcall to Zipwhip (if needed). Will only unblock when 5 events happen (with timeout)
-     *
+     * <p/>
      * 1. Connect to SignalsServer
      * 2. Write a {action:connect} to SignalServer
      * 3. Receive a {action:connect} back from SignalServer
      * 4. POST /signals/connect to ZipwhipCloud
      * 5. Receive a SubscriptionCompleteCommand from SignalServer
-     *
+     * <p/>
      * This means your TCP connection is "bound" to your sessionKey.
      *
      * @return so you can wait until login succeeds
@@ -753,4 +761,13 @@ public interface ZipwhipClient extends Destroyable {
      */
     void setSettingsStore(SettingsStore store);
 
+    /**
+     * Query Group image by address.
+     *
+     * @param address group address.
+     * @param size    thumbnail size.
+     * @return A byte[] of the group's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getGroupImage(String address, int size) throws Exception;
 }

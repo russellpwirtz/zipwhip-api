@@ -31,6 +31,8 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     Contact parseContact(ServerResponse serverResponse) throws Exception;
 
+    Group parseGroup(ServerResponse serverResponse) throws Exception;
+
     Contact parseUserAsContact(ServerResponse serverResponse) throws Exception;
 
     User parseUser(ServerResponse serverResponse) throws Exception;

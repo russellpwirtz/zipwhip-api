@@ -47,7 +47,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
-     * @param executor The executor that's used for aynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
+     * @param executor       The executor that's used for aynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
      */
     public DefaultZipwhipClient(SettingsStore store, Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
         super(store, executor, importantTaskExecutor, connection, signalProvider);
@@ -675,6 +675,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public Group getGroup(final String address) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("address", address);
+
+        return responseParser.parseGroup(executeSync(GROUP_GET, params));
+    }
+
+    @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -723,6 +731,22 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         params.put("mobileNumber", mobileNumber);
 
         return responseParser.parseFaceName(executeSync(FACE_NAME, params, false));
+    }
+
+    @Override
+    public byte[] getGroupImage(final String address, final int size) throws Exception {
+        if (StringUtil.isNullOrEmpty(address)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("address", address);
+        if (size > 0) params.put("size", size);
+        params.put("time", System.currentTimeMillis());//Do not cache
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(GROUP_IMAGE, params, true);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
     }
 
     @Override

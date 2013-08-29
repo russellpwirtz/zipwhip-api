@@ -220,6 +220,14 @@ public class JsonResponseParser implements ResponseParser {
         }
     }
 
+    @Override
+    public Group parseGroup(ServerResponse serverResponse) throws Exception {
+        if (serverResponse instanceof ObjectServerResponse) {
+            return parser.parseGroup(((ObjectServerResponse) serverResponse).response);
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
+        }
+    }
 
     @Override
     public User parseUser(ServerResponse serverResponse) throws Exception {
