@@ -291,6 +291,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                                 _connectFuture.setSuccess(null);
                             }
 
+                            bindEvent.notifyObservers(SignalProviderImpl.this, response);
+
                             bindRequest = null;
                         }
                     }
