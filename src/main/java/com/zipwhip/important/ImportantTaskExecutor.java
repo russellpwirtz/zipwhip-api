@@ -134,6 +134,7 @@ public class ImportantTaskExecutor extends CascadingDestroyableBase {
                                 scheduledRequest.setRequestFuture(requestFuture);
                             }
                         } catch (Exception e) {
+                            LOGGER.error("ImportantTask error!", e);
                             parentFuture.setFailure(e);
                         } finally {
                             LOGGER.debug(String.format("Finished synchronous execution portion for task %s, future: %s", request, parentFuture));
