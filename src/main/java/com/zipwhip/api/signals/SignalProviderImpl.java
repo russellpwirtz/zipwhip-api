@@ -1,9 +1,6 @@
 package com.zipwhip.api.signals;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import com.zipwhip.api.signals.dto.*;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
@@ -13,7 +10,8 @@ import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.signals.address.Address;
-import com.zipwhip.signals.message.BasicMessage;
+import com.zipwhip.signals.message.DefaultMessage;
+import com.zipwhip.signals.message.Message;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
 import com.zipwhip.util.CollectionUtil;
@@ -26,6 +24,7 @@ import io.socket.SocketIOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.Map;
@@ -63,10 +62,20 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     private Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
-            .registerTypeHierarchyAdapter(BasicMessage.class, new MessageTypeAdapter())
+            .registerTypeHierarchyAdapter(DefaultMessage.class, new MessageTypeAdapter())
             .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
             .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
             .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())
+
+            // We support dates in the System.currentTimeMillis() format.
+            // I wonder how to support BOTH the string format AND the millis format.
+            .registerTypeHierarchyAdapter(Date.class, new JsonDeserializer<Date>() {
+                @Override
+                public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                    return new Date(json.getAsJsonPrimitive().getAsLong());
+                }
+            })
+//            .registerTypeHierarchyAdapter(Presence.class, new PresenceTypeAdapter())
             .create();
 
     private volatile SocketIO socketIO;
@@ -331,22 +340,16 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             try {
                 // parse the message, detect the type, throw the appropriate event
                 DeliveredMessage deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-                BasicMessage message = deliveredMessage.getMessage();
+                DefaultMessage message = (DefaultMessage) deliveredMessage.getMessage();
 
                 if (message == null) {
                     LOGGER.error("Received a null message from " + element);
                     return;
                 }
 
-                if (StringUtil.equalsIgnoreCase(message.getType(), "command")) {
-                    processCommand(message);
-                } else if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
-
-                    if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
-                        handleSubscribeComplete(deliveredMessage.getMessage());
-                    } else {
-                        throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
-                    }
+                // first check for system commands
+                if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
+                    handleSubscribeCommand(message);
                 } else {
                     messageReceivedEvent.notifyObservers(this, deliveredMessage);
                 }
@@ -355,7 +358,20 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             }
         }
 
-        private void handleSubscribeComplete(BasicMessage message) {
+        private void handleSubscribeCommand(Message message) {
+            if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
+
+                handleSubscribeComplete(message);
+            } else {
+                throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
+            }
+        }
+
+        private void handleSubscribeComplete(Message message) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Got SubscriptionComplete: " + message);
+            }
+
             // the message is delivered directly to us.
             // Therefore the 'subscriptionIds' field will be null.
             SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
@@ -406,10 +422,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
 
         return clientId;
-    }
-
-    private void processCommand(BasicMessage message) {
-
     }
 
     private <T> ObservableFuture<T> fail(Throwable throwable) {

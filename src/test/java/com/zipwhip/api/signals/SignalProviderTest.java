@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -73,6 +74,7 @@ public class SignalProviderTest {
         assertTrue(StringUtil.exists(signalProvider.getClientId()));
 
         assertNotNull(signalProvider.getUserAgent());
+        final CountDownLatch subscribeCountDownLatch = new CountDownLatch(1);
 
         signalProvider.getSubscribeEvent().addObserver(new Observer<SubscribeResult>() {
             @Override
@@ -82,6 +84,7 @@ public class SignalProviderTest {
                 assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
                 assertEquals(signalSubscribeResult.getSubscriptionId(), subscriptionId);
                 assertEquals(2, signalSubscribeResult.getChannels().size());
+                subscribeCountDownLatch.countDown();
             }
         });
 
@@ -96,6 +99,8 @@ public class SignalProviderTest {
 
         SubscribeResult signalSubscribeResult = await(future1);
 
+        await(subscribeCountDownLatch);
+
         assertNotNull(signalSubscribeResult);
         assertFalse(signalSubscribeResult.isFailed());
         assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
@@ -106,6 +111,11 @@ public class SignalProviderTest {
 
         // we need to wait to consume messages
         Thread.sleep(500000);
+    }
+
+    private void await(CountDownLatch countDownLatch) throws InterruptedException {
+        assertNotNull(countDownLatch);
+        assertTrue(countDownLatch.await(50, TimeUnit.SECONDS));
     }
 
     @Test

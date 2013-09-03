@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.dto;
 
 import com.google.gson.*;
-import com.zipwhip.signals.message.BasicMessage;
+import com.zipwhip.signals.message.DefaultMessage;
 
 import java.lang.reflect.Type;
 import java.util.Set;
@@ -22,7 +22,7 @@ public class DeliveredMessageTypeAdapter implements JsonSerializer<DeliveredMess
 
         DeliveredMessage message = new DeliveredMessage();
 
-        message.setMessage(context.<BasicMessage>deserialize(object.get("message"), BasicMessage.class));
+        message.setMessage(context.<DefaultMessage>deserialize(object.get("message"), DefaultMessage.class));
 
         JsonArray array = object.getAsJsonArray("subscriptionIds");
         if (array != null && !array.isJsonNull() && array.size() > 0) {
