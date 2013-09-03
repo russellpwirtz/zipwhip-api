@@ -13,7 +13,7 @@ import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.signals.address.Address;
-import com.zipwhip.signals.message.Message;
+import com.zipwhip.signals.message.BasicMessage;
 import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
 import com.zipwhip.util.CollectionUtil;
@@ -63,7 +63,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     private Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
-            .registerTypeHierarchyAdapter(Message.class, new MessageTypeAdapter())
+            .registerTypeHierarchyAdapter(BasicMessage.class, new MessageTypeAdapter())
             .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
             .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
             .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())
@@ -331,7 +331,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             try {
                 // parse the message, detect the type, throw the appropriate event
                 DeliveredMessage deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-                Message message = deliveredMessage.getMessage();
+                BasicMessage message = deliveredMessage.getMessage();
 
                 if (message == null) {
                     LOGGER.error("Received a null message from " + element);
@@ -355,7 +355,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             }
         }
 
-        private void handleSubscribeComplete(Message message) {
+        private void handleSubscribeComplete(BasicMessage message) {
             // the message is delivered directly to us.
             // Therefore the 'subscriptionIds' field will be null.
             SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
@@ -381,6 +381,11 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
         @Override
         public void onError(SocketIOException e) {
+            if (connectFuture != null) {
+                connectFuture.setFailure(e);
+                return;
+            }
+
             exceptionEvent.notifyObservers(SignalProviderImpl.this, e);
         }
     };
@@ -403,7 +408,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return clientId;
     }
 
-    private void processCommand(Message message) {
+    private void processCommand(BasicMessage message) {
 
     }
 

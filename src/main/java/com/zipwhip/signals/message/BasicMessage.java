@@ -13,7 +13,7 @@ import java.io.Serializable;
  * A basic class that is sent between actors. Every message must have a command and an address that
  * dictates who the message is destined for.
  */
-public class Message implements Serializable {
+public class BasicMessage implements Message {
 
     private static final long serialVersionUID = 9130714327015373270L;
 

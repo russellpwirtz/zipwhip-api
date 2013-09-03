@@ -36,6 +36,6 @@ public class AddressTypeConverter implements JsonSerializer<Address>, JsonDeseri
 
     @Override
     public JsonElement serialize(Address src, Type typeOfSrc, JsonSerializationContext context) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return null;
     }
 }

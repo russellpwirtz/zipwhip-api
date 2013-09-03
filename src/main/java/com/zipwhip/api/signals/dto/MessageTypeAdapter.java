@@ -3,6 +3,7 @@ package com.zipwhip.api.signals.dto;
 import com.google.gson.*;
 import com.zipwhip.api.signals.SubscribeCompleteContent;
 import com.zipwhip.signals.address.Address;
+import com.zipwhip.signals.message.BasicMessage;
 import com.zipwhip.signals.message.Message;
 import com.zipwhip.util.StringUtil;
 
@@ -21,7 +22,7 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
     public Message deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject object = (JsonObject)json;
 
-        Message message = new Message();
+        BasicMessage message = new BasicMessage();
 
         message.setAddress((Address) context.deserialize(object.getAsJsonObject("address"), Address.class));
         message.setTimestamp(getLong(object.get("timestamp")));
