@@ -195,7 +195,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         public void notify(Object sender, ObservableFuture<Void> item) {
             // Clean up the variables.
             synchronized (SignalProviderImpl.this) {
-                if (connectFuture != item) {
+                if (externalConnectFuture != item) {
                     LOGGER.debug(String.format("The futures did not match, so decided not to clear it out. %s/%s", connectFuture, item));
                     return;
                 }

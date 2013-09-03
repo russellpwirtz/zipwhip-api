@@ -4,6 +4,7 @@ import com.ning.http.client.AsyncHttpClient;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.signals.presence.UserAgentCategory;
 import com.zipwhip.util.StringUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +56,14 @@ public class SignalProviderTest {
 
         assertTrue(StringUtil.isNullOrEmpty(signalProvider.getClientId()));
 
-        ObservableFuture<Void> future = signalProvider.connect(new UserAgent());
+        UserAgent userAgent = new UserAgent();
+
+        userAgent.setCategory(UserAgentCategory.Phone);
+        userAgent.setMakeModel("example-makeModel");
+        userAgent.setVersion("2.3.3b");
+        userAgent.setBuild("34-build");
+
+        ObservableFuture<Void> future = signalProvider.connect(userAgent);
 
         await(future);
 
