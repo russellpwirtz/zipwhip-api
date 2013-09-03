@@ -1,6 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.ning.http.client.AsyncHttpClient;
+import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.signals.presence.UserAgent;
@@ -86,6 +87,13 @@ public class SignalProviderTest {
 
         ObservableFuture<SubscribeResult> future1 = signalProvider.subscribe(sessionKey, subscriptionId);
 
+        signalProvider.getMessageReceivedEvent().addObserver(new Observer<DeliveredMessage>() {
+            @Override
+            public void notify(Object sender, DeliveredMessage item) {
+                LOGGER.debug(String.format("Received a signal for subscriptionId(%s) and address (%s) : %s", item.getSubscriptionIds(), item.getMessage().getAddress(), item.getMessage().getContent()));
+            }
+        });
+
         SubscribeResult signalSubscribeResult = await(future1);
 
         assertNotNull(signalSubscribeResult);
@@ -98,7 +106,6 @@ public class SignalProviderTest {
 
         // we need to wait to consume messages
         Thread.sleep(500000);
-
     }
 
     @Test
@@ -232,7 +239,7 @@ public class SignalProviderTest {
     }
 
     private <T> T await(ObservableFuture <T> future) throws ExecutionException, InterruptedException {
-        assertTrue(future.await(50, TimeUnit.SECONDS));
+        assertTrue("Didn't finish in time", future.await(50, TimeUnit.SECONDS));
 
         if (future.isFailed()) {
             if (future.getCause() == null) {
