@@ -4,8 +4,11 @@ import com.ning.http.client.AsyncHttpClient;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.signals.address.ClientAddress;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
 import com.zipwhip.signals.presence.UserAgentCategory;
+import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,11 +57,11 @@ public class SignalProviderTest {
     public void testConnect() throws Exception {
         final String sessionKey = "sessionKey";
         final String subscriptionId = "subscriptionId";
-        final String clientId = "6022c6a0-ce28-4f73-bef5-b3df96898d5f";
+        final String clientId;
 
         assertTrue(StringUtil.isNullOrEmpty(signalProvider.getClientId()));
 
-        UserAgent userAgent = new UserAgent();
+        final UserAgent userAgent = new UserAgent();
 
         userAgent.setCategory(UserAgentCategory.Phone);
         userAgent.setMakeModel("example-makeModel");
@@ -72,9 +75,27 @@ public class SignalProviderTest {
         assertTrue(future.isSuccess());
 
         assertTrue(StringUtil.exists(signalProvider.getClientId()));
+        clientId = signalProvider.getClientId();
 
         assertNotNull(signalProvider.getUserAgent());
         final CountDownLatch subscribeCountDownLatch = new CountDownLatch(1);
+        final CountDownLatch presenceCountDownLatch = new CountDownLatch(1);
+
+        signalProvider.getPresenceChangedEvent().addObserver(new Observer<Event<Presence>>() {
+            @Override
+            public void notify(Object sender, Event<Presence> item) {
+                assertNotNull(item);
+                assertTrue(CollectionUtil.exists(item.getSubscriptionIds()));
+                assertEquals(1, item.getSubscriptionIds().size());
+                assertEquals(subscriptionId, item.getSubscriptionIds().iterator().next());
+
+                assertEquals(new ClientAddress(clientId), item.getData().getAddress());
+                assertEquals(Boolean.TRUE, item.getData().getConnected());
+                assertEquals(userAgent, item.getData().getUserAgent());
+
+                presenceCountDownLatch.countDown();
+            }
+        });
 
         signalProvider.getSubscribeEvent().addObserver(new Observer<SubscribeResult>() {
             @Override
@@ -84,6 +105,7 @@ public class SignalProviderTest {
                 assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
                 assertEquals(signalSubscribeResult.getSubscriptionId(), subscriptionId);
                 assertEquals(2, signalSubscribeResult.getChannels().size());
+
                 subscribeCountDownLatch.countDown();
             }
         });
@@ -100,6 +122,7 @@ public class SignalProviderTest {
         SubscribeResult signalSubscribeResult = await(future1);
 
         await(subscribeCountDownLatch);
+        await(presenceCountDownLatch);
 
         assertNotNull(signalSubscribeResult);
         assertFalse(signalSubscribeResult.isFailed());

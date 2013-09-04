@@ -4,6 +4,7 @@ import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
+import com.zipwhip.signals.presence.Presence;
 import com.zipwhip.signals.presence.UserAgent;
 
 /**
@@ -33,6 +34,7 @@ public interface SignalProvider extends Destroyable {
      * @throws Exception if an error is encountered when connecting
      */
     ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException;
+    ObservableFuture<Void> connect(UserAgent userAgent, String clientId, String token) throws IllegalStateException;
 
     /**
      * Tell it to disconnect. Will not reconnect.
@@ -84,6 +86,16 @@ public interface SignalProvider extends Destroyable {
     Observable<SubscribeResult> getSubscribeEvent();
 
     Observable<SubscribeResult> getUnsubscribeEvent();
+
+    /**
+     * Fires when ANY presence changes for ANY clientId associated with your channels.
+     *
+     * For example, clientId1 and clientId2 both are associated with user1. Both clients will hear each others presence
+     * change events.
+     *
+     * @return
+     */
+    Observable<Event<Presence>> getPresenceChangedEvent();
 
     Observable<DeliveredMessage> getMessageReceivedEvent();
 

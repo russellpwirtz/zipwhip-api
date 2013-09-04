@@ -51,6 +51,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private final ObservableHelper<Throwable> exceptionEvent;
     private final ObservableHelper<Void> connectionChangedEvent;
     private final ObservableHelper<DeliveredMessage> messageReceivedEvent;
+    private final ObservableHelper<Event<Presence>> presenceChangedEvent;
     private final ObservableHelper<BindResult> bindEvent;
 
     private Executor executor = Executors.newSingleThreadExecutor();
@@ -99,6 +100,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         unsubscribeEvent = new ObservableHelper<SubscribeResult>("UnsubscribeEvent", eventExecutor);
         messageReceivedEvent = new ObservableHelper<DeliveredMessage>("MessageReceivedEvent", eventExecutor);
         bindEvent = new ObservableHelper<BindResult>("BindEvent", eventExecutor);
+        presenceChangedEvent = new ObservableHelper<Event<Presence>>("PresenceChangedEvent", eventExecutor);
 
         socketIO = new SocketIO();
         socketIO.setGson(gson);
@@ -106,6 +108,10 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     @Override
     public synchronized ObservableFuture<Void> connect(UserAgent userAgent) throws IllegalStateException {
+        return connect(userAgent, null, null);
+    }
+
+    public synchronized ObservableFuture<Void> connect(UserAgent userAgent, String clientId, String token) throws IllegalStateException {
         // allow multiple connect attempts to reuse the same future.
         if (externalConnectFuture != null) {
             return externalConnectFuture;
@@ -122,6 +128,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         presence.setUserAgent(userAgent);
 
         connectFuture = future();
+        setClientId(clientId, token);
 
         // The reason to use the "importantTaskExecutor" this way is so the future can be timed out.
         // If we issue a connect request and it doesn't come back for 1 minute, we need to be able to
@@ -350,6 +357,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                 // first check for system commands
                 if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
                     handleSubscribeCommand(message);
+                } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
+                    presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence)message.getContent()));
                 } else {
                     messageReceivedEvent.notifyObservers(this, deliveredMessage);
                 }
@@ -377,7 +386,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
             SubscriptionRequest request = pendingSubscriptionRequests.remove(result.getSubscriptionId());
             MutableObservableFuture<SubscribeResult> future = request.getFuture();
-
             SubscribeResult subscribeResult = new SubscribeResult();
 
             subscribeResult.setSubscriptionId(result.getSubscriptionId());
@@ -392,7 +400,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         @Override
         public void on(String s, IOAcknowledge ack, Object... objects) {
             ack.ack();
-
         }
 
         @Override
@@ -436,6 +443,10 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return new DefaultObservableFuture<T>(this, eventExecutor);
     }
 
+    @Override
+    public Observable<Event<Presence>> getPresenceChangedEvent() {
+        return presenceChangedEvent;
+    }
 
     @Override
     public Observable<DeliveredMessage> getMessageReceivedEvent() {
