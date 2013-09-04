@@ -1,7 +1,7 @@
 package com.zipwhip.api.response;
 
 import com.zipwhip.api.dto.*;
-import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.presence.Presence;
 import com.zipwhip.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONException;

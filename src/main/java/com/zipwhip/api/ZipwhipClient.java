@@ -4,8 +4,8 @@ import com.zipwhip.api.dto.*;
 import com.zipwhip.api.settings.SettingsStore;
 import com.zipwhip.api.signals.SignalProvider;
 import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.UserAgentCategory;
+import com.zipwhip.presence.Presence;
+import com.zipwhip.presence.UserAgentCategory;
 
 import java.io.File;
 import java.util.Collection;

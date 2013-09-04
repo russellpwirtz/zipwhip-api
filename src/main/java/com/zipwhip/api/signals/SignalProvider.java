@@ -4,8 +4,8 @@ import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
-import com.zipwhip.signals.presence.Presence;
-import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.presence.Presence;
+import com.zipwhip.presence.UserAgent;
 
 /**
  * Date: 5/7/13

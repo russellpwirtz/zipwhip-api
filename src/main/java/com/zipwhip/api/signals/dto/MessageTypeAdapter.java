@@ -5,7 +5,7 @@ import com.zipwhip.api.signals.SubscribeCompleteContent;
 import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.message.DefaultMessage;
 import com.zipwhip.signals.message.Message;
-import com.zipwhip.signals.presence.Presence;
+import com.zipwhip.presence.Presence;
 import com.zipwhip.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

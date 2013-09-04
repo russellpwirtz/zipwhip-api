@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.concurrent.ObservableFuture;
-import com.zipwhip.signals.presence.UserAgent;
+import com.zipwhip.presence.UserAgent;
 
 /**
  * Date: 7/30/13
