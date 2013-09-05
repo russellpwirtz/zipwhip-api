@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals.dto;
 
-import com.zipwhip.presence.UserAgent;
+import com.zipwhip.signals2.presence.UserAgent;
 
 import java.io.Serializable;
 

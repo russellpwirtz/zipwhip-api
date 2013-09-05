@@ -1,8 +1,8 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.signals.address.ClientAddress;
-import com.zipwhip.presence.Presence;
-import com.zipwhip.presence.UserAgent;
+import com.zipwhip.signals2.address.ClientAddress;
+import com.zipwhip.signals2.presence.Presence;
+import com.zipwhip.signals2.presence.UserAgent;
 
 /**
  * Created by IntelliJ IDEA.

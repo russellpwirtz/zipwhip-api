@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals;
 
 import com.zipwhip.events.Observable;
-import com.zipwhip.signals.timeline.TimelineEvent;
+import com.zipwhip.signals2.timeline.TimelineEvent;
 
 /**
  * Date: 9/4/13

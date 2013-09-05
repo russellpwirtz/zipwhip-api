@@ -7,7 +7,7 @@ import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.MutableObservableFuture;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.executors.SimpleExecutor;
-import com.zipwhip.presence.UserAgent;
+import com.zipwhip.signals2.presence.UserAgent;
 import org.apache.commons.lang.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

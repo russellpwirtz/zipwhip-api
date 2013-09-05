@@ -2,7 +2,7 @@ package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
-import com.zipwhip.signals.message.DefaultMessage;
+import com.zipwhip.signals2.message.DefaultMessage;
 
 import java.lang.reflect.Type;
 import java.util.Set;

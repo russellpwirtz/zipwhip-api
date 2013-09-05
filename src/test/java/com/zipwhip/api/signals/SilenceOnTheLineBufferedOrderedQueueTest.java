@@ -2,7 +2,7 @@ package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.events.Observer;
-import com.zipwhip.signals.message.DefaultMessage;
+import com.zipwhip.signals2.message.DefaultMessage;
 import com.zipwhip.timers.HashedWheelTimer;
 import org.junit.Test;
 

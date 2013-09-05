@@ -2,9 +2,9 @@ package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
 import com.zipwhip.gson.GsonUtil;
-import com.zipwhip.signals.address.Address;
-import com.zipwhip.signals.address.ChannelAddress;
-import com.zipwhip.signals.address.ClientAddress;
+import com.zipwhip.signals2.address.Address;
+import com.zipwhip.signals2.address.ChannelAddress;
+import com.zipwhip.signals2.address.ClientAddress;
 import com.zipwhip.util.StringUtil;
 
 import java.lang.reflect.Type;

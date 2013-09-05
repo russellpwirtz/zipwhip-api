@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals;
 
-import com.zipwhip.signals.timeline.TimelineEvent;
+import com.zipwhip.signals2.timeline.TimelineEvent;
 
 import java.io.Serializable;
 import java.util.Set;

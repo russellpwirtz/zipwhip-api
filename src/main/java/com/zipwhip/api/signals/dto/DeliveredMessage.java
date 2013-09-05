@@ -1,7 +1,7 @@
 package com.zipwhip.api.signals.dto;
 
-import com.zipwhip.signals.message.Message;
-import com.zipwhip.signals.timeline.TimelineEvent;
+import com.zipwhip.signals2.message.Message;
+import com.zipwhip.signals2.timeline.TimelineEvent;
 
 import java.util.Set;
 

@@ -5,7 +5,7 @@ import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
 import com.zipwhip.lifecycle.DestroyableBase;
-import com.zipwhip.signals.timeline.TimelineEvent;
+import com.zipwhip.signals2.timeline.TimelineEvent;
 import com.zipwhip.timers.HashedWheelTimer;
 import com.zipwhip.timers.Timer;
 import com.zipwhip.util.BufferedRunnable;
