@@ -2,6 +2,7 @@ package com.zipwhip.api.signals;
 
 import com.google.gson.*;
 import com.zipwhip.api.signals.dto.*;
+import com.zipwhip.api.signals.dto.json.*;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
@@ -9,11 +10,11 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.presence.Presence;
+import com.zipwhip.presence.UserAgent;
 import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.message.DefaultMessage;
 import com.zipwhip.signals.message.Message;
-import com.zipwhip.presence.Presence;
-import com.zipwhip.presence.UserAgent;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
@@ -59,7 +60,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private String url = "http://localhost:23123";
     private Presence presence = new Presence();
     private SignalsSubscribeActor signalsSubscribeActor;
-    private ImportantTaskExecutor importantTaskExecutor = new ImportantTaskExecutor();
+    private ImportantTaskExecutor importantTaskExecutor;
+    private BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue;
 
     private Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
@@ -92,8 +94,11 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private volatile String token;
     private volatile BindRequest bindRequest;
 
-
     public SignalProviderImpl() {
+        this(SimpleExecutor.getInstance());
+    }
+
+    public SignalProviderImpl(Executor eventExecutor) {
         connectionChangedEvent = new ObservableHelper<Void>("ConnectionChangedEvent", eventExecutor);
         exceptionEvent = new ObservableHelper<Throwable>("ExceptionEvent", eventExecutor);
         subscribeEvent = new ObservableHelper<SubscribeResult>("SubscribeEvent", eventExecutor);
@@ -250,7 +255,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return bindEvent;
     }
 
-    private IOCallback callback = new IOCallback() {
+    private final IOCallback callback = new IOCallback() {
+
         @Override
         public void onConnect() {
             if (connectFuture == null) {
@@ -334,6 +340,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         public void onMessage(String message, IOAcknowledge ack) {
             // parse the message, detect the type, throw the appropriate event
 
+            LOGGER.error("Received weird string message: " + message);
+
             ack.ack();
         }
 
@@ -345,56 +353,25 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         @Override
         public void onMessage(JsonElement element, IOAcknowledge ack) {
             try {
-                // parse the message, detect the type, throw the appropriate event
-                DeliveredMessage deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-                DefaultMessage message = (DefaultMessage) deliveredMessage.getMessage();
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug(String.format("Parsing into json %s", element));
+                }
 
-                if (message == null) {
-                    LOGGER.error("Received a null message from " + element);
+                DeliveredMessage deliveredMessage;
+
+                try {
+                    // parse the message, detect the type, throw the appropriate event
+                    deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
+                } catch (Exception e){
+                    LOGGER.error("Failed to parse json", e);
+                    exceptionEvent.notifyObservers(SignalProviderImpl.this, new JsonParseException(element.toString(), e));
                     return;
                 }
 
-                // first check for system commands
-                if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
-                    handleSubscribeCommand(message);
-                } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
-                    presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence)message.getContent()));
-                } else {
-                    messageReceivedEvent.notifyObservers(this, deliveredMessage);
-                }
+                bufferedOrderedQueue.append(deliveredMessage);
             } finally {
                 ack.ack();
             }
-        }
-
-        private void handleSubscribeCommand(Message message) {
-            if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
-
-                handleSubscribeComplete(message);
-            } else {
-                throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
-            }
-        }
-
-        private void handleSubscribeComplete(Message message) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Got SubscriptionComplete: " + message);
-            }
-
-            // the message is delivered directly to us.
-            // Therefore the 'subscriptionIds' field will be null.
-            SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
-            SubscriptionRequest request = pendingSubscriptionRequests.remove(result.getSubscriptionId());
-            MutableObservableFuture<SubscribeResult> future = request.getFuture();
-            SubscribeResult subscribeResult = new SubscribeResult();
-
-            subscribeResult.setSubscriptionId(result.getSubscriptionId());
-            subscribeResult.setSessionKey(request.getSessionKey());
-            subscribeResult.setChannels(result.getAddresses());
-
-            future.setSuccess(subscribeResult);
-
-            subscribeEvent.notifyObservers(SignalProviderImpl.this, subscribeResult);
         }
 
         @Override
@@ -412,6 +389,52 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             exceptionEvent.notifyObservers(SignalProviderImpl.this, e);
         }
     };
+
+    public final Observer<DeliveredMessage> releaseMessageObserver = new Observer<DeliveredMessage>() {
+        @Override
+        public void notify(Object sender, DeliveredMessage deliveredMessage) {
+            Message message = deliveredMessage.getMessage();
+
+            // first check for system commands
+            if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
+                handleSubscribeCommand(message);
+            } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
+                presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence)message.getContent()));
+            } else {
+                messageReceivedEvent.notifyObservers(this, deliveredMessage);
+            }
+        }
+    };
+
+    private void handleSubscribeCommand(Message message) {
+        if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
+
+            handleSubscribeComplete(message);
+        } else {
+            throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
+        }
+    }
+
+    private void handleSubscribeComplete(Message message) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Got SubscriptionComplete: " + message);
+        }
+
+        // the message is delivered directly to us.
+        // Therefore the 'subscriptionIds' field will be null.
+        SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
+        SubscriptionRequest request = pendingSubscriptionRequests.remove(result.getSubscriptionId());
+        MutableObservableFuture<SubscribeResult> future = request.getFuture();
+        SubscribeResult subscribeResult = new SubscribeResult();
+
+        subscribeResult.setSubscriptionId(result.getSubscriptionId());
+        subscribeResult.setSessionKey(request.getSessionKey());
+        subscribeResult.setChannels(result.getAddresses());
+
+        future.setSuccess(subscribeResult);
+
+        subscribeEvent.notifyObservers(SignalProviderImpl.this, subscribeResult);
+    }
 
     private void setClientId(String clientId, String token) {
         this.clientId = clientId;
@@ -454,8 +477,37 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     }
 
     @Override
+    public Observable<Throwable> getExceptionEvent() {
+        return exceptionEvent;
+    }
+
+    @Override
     public Observable<SubscribeResult> getSubscribeEvent() {
         return subscribeEvent;
+    }
+
+    public ImportantTaskExecutor getImportantTaskExecutor() {
+        return importantTaskExecutor;
+    }
+
+    public void setImportantTaskExecutor(ImportantTaskExecutor importantTaskExecutor) {
+        this.importantTaskExecutor = importantTaskExecutor;
+    }
+
+    public BufferedOrderedQueue<DeliveredMessage> getBufferedOrderedQueue() {
+        return bufferedOrderedQueue;
+    }
+
+    public void setBufferedOrderedQueue(BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue) {
+        if (this.bufferedOrderedQueue != null) {
+            this.bufferedOrderedQueue.getItemEvent().removeObserver(releaseMessageObserver);
+        }
+
+        this.bufferedOrderedQueue = bufferedOrderedQueue;
+
+        if (this.bufferedOrderedQueue != null) {
+            this.bufferedOrderedQueue.getItemEvent().addObserver(releaseMessageObserver);
+        }
     }
 
     @Override
@@ -701,4 +753,59 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             }
         };
     }
+
+
+    /**
+     * Date: 8/22/13
+     * Time: 3:42 PM
+     *
+     * @author Michael
+     * @version 1
+     */
+    public static class SubscriptionRequest {
+
+        private MutableObservableFuture<SubscribeResult> future;
+        private String sessionKey;
+        private String subscriptionId;
+
+        public SubscriptionRequest(String subscriptionId, String sessionKey, MutableObservableFuture<SubscribeResult> future) {
+            this.subscriptionId = subscriptionId;
+            this.sessionKey = sessionKey;
+            this.future = future;
+        }
+
+        public MutableObservableFuture<SubscribeResult> getFuture() {
+            return future;
+        }
+
+        public void setFuture(MutableObservableFuture<SubscribeResult> future) {
+            this.future = future;
+        }
+
+        public String getSessionKey() {
+            return sessionKey;
+        }
+
+        public void setSessionKey(String sessionKey) {
+            this.sessionKey = sessionKey;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof SubscriptionRequest)) return false;
+
+            SubscriptionRequest request = (SubscriptionRequest) o;
+
+            if (!subscriptionId.equals(request.subscriptionId)) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return subscriptionId.hashCode();
+        }
+    }
+
 }

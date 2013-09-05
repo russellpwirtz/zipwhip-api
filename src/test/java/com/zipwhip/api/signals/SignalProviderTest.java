@@ -2,8 +2,10 @@ package com.zipwhip.api.signals;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
+import com.zipwhip.api.signals.dto.SubscribeResult;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
+import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.signals.address.ClientAddress;
 import com.zipwhip.presence.Presence;
 import com.zipwhip.presence.UserAgent;
@@ -40,6 +42,8 @@ public class SignalProviderTest {
     public void setUp() throws Exception {
         signalProvider = new SignalProviderImpl();
         signalProvider.setSignalsSubscribeActor(actor);
+        signalProvider.setBufferedOrderedQueue(new SilenceOnTheLineBufferedOrderedQueue<DeliveredMessage>());
+        signalProvider.setImportantTaskExecutor(new ImportantTaskExecutor());
 
         actor.setUrl("http://localhost:8080/signal/subscribe");
         actor.setClient(new AsyncHttpClient());

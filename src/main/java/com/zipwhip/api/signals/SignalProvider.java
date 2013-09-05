@@ -1,6 +1,8 @@
 package com.zipwhip.api.signals;
 
+import com.zipwhip.api.signals.dto.BindResult;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
+import com.zipwhip.api.signals.dto.SubscribeResult;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observable;
 import com.zipwhip.lifecycle.Destroyable;
@@ -100,10 +102,20 @@ public interface SignalProvider extends Destroyable {
     Observable<DeliveredMessage> getMessageReceivedEvent();
 
     /**
-     * The presence information that this client is conveying to cloud.
+     * If any parsing exception occurs, or connection exception. Should generally test for the exception type
+     *
+     * JsonParseException - json exception
+     * SocketIOException - connectivity exception
      *
      * @return
      */
+    Observable<Throwable> getExceptionEvent();
+
+        /**
+         * The presence information that this client is conveying to cloud.
+         *
+         * @return
+         */
     UserAgent getUserAgent();
 
     /**
