@@ -1,7 +1,8 @@
-package com.zipwhip.api.signals.dto;
+package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
-import com.zipwhip.api.signals.SubscribeCompleteContent;
+import com.zipwhip.api.signals.dto.SubscribeCompleteContent;
+import com.zipwhip.gson.GsonUtil;
 import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.message.DefaultMessage;
 import com.zipwhip.signals.message.Message;
@@ -37,6 +38,9 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
 
         JsonElement content = object.get("content");
 
+        //
+        // Try to parse some WELL KNOWN commands
+        //
         if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
             if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
                 message.setContent(context.<SubscribeCompleteContent>deserialize(content, SubscribeCompleteContent.class));
@@ -45,6 +49,9 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
             message.setContent(context.<Presence>deserialize(content, Presence.class));
         }
 
+        //
+        //
+        //
         if (message.getContent() == null && !GsonUtil.isNull(content)) {
             Object _content = GsonUtil.getDefaultValue(getClass().getClassLoader(), context, content);
 

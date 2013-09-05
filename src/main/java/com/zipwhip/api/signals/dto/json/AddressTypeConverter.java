@@ -1,6 +1,7 @@
-package com.zipwhip.api.signals.dto;
+package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
+import com.zipwhip.gson.GsonUtil;
 import com.zipwhip.signals.address.Address;
 import com.zipwhip.signals.address.ChannelAddress;
 import com.zipwhip.signals.address.ClientAddress;

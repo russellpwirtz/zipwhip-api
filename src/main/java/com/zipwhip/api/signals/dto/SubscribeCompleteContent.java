@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.dto;
 
 import java.io.Serializable;
 import java.util.Set;

@@ -1,4 +1,4 @@
-package com.zipwhip.api.signals.dto;
+package com.zipwhip.gson;
 
 import com.google.gson.*;
 import com.zipwhip.util.StringUtil;

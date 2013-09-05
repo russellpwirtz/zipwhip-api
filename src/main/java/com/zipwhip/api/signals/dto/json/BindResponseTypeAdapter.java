@@ -1,6 +1,7 @@
-package com.zipwhip.api.signals;
+package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
+import com.zipwhip.api.signals.dto.BindResult;
 
 import java.lang.reflect.Type;
 
