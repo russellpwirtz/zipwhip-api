@@ -119,7 +119,7 @@ public class DefaultAsyncVendorClientTest {
         result.await();
         Assert.assertTrue(result.isSuccess());
         Assert.assertNotNull(result.getResult());
-        Assert.assertEquals(result.getResult().get(0).getMessage(), "7373193f-cb64-4e37-9ed6-a79d57fab524");
+        Assert.assertEquals(result.getResult().get(0).getMessageId(), "7373193f-cb64-4e37-9ed6-a79d57fab524");
     }
 
     @Test

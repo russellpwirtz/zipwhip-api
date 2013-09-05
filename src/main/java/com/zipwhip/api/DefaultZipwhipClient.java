@@ -340,31 +340,6 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         return success(executeSync(MESSAGE_DELETE, params));
     }
 
-    @Deprecated
-    @Override
-    public MessageStatus getMessageStatus(String uuid) throws Exception {
-
-        Message message = getMessage(uuid);
-
-        if (message == null) {
-            return null;
-        }
-
-        return new MessageStatus(message);
-    }
-
-    @Override
-    public MessageStatus getMessageStatus(Long id) throws Exception {
-
-        Message message = getMessage(id);
-
-        if (message == null) {
-            return null;
-        }
-
-        return new MessageStatus(message);
-    }
-
     @Override
     public Contact getContact(long id) throws Exception {
 

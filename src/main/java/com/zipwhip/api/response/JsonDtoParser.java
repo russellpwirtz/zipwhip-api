@@ -1,25 +1,15 @@
 package com.zipwhip.api.response;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.zipwhip.api.dto.*;
+import com.zipwhip.util.JsonDateUtil;
+import com.zipwhip.util.Parser;
+import com.zipwhip.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.zipwhip.api.dto.BasicDto;
-import com.zipwhip.api.dto.CarbonEvent;
-import com.zipwhip.api.dto.Contact;
-import com.zipwhip.api.dto.Conversation;
-import com.zipwhip.api.dto.Device;
-import com.zipwhip.api.dto.Message;
-import com.zipwhip.api.dto.MessageAttachment;
-import com.zipwhip.api.dto.MessageToken;
-import com.zipwhip.api.dto.TransmissionState;
-import com.zipwhip.api.dto.User;
-import com.zipwhip.util.JsonDateUtil;
-import com.zipwhip.util.Parser;
-import com.zipwhip.util.StringUtil;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -210,18 +200,18 @@ public class JsonDtoParser {
     public List<MessageToken> parseMessageTokens(JSONObject baseResponse, JSONArray array) throws JSONException {
 
         List<MessageToken> result = new ArrayList<MessageToken>();
-        String rootMessageID = baseResponse.optString("root");
+        long rootMessageID = Long.valueOf(baseResponse.optString("root"));
         int len = array.length();
         for (int i = 0; i < len; i++) {
 
             JSONObject json = array.getJSONObject(i);
             MessageToken token = new MessageToken();
 
-            token.setMessage(json.optString("message"));
+            token.setMessageId(Long.valueOf(json.optString("message")));
             token.setDeviceId(parseLong(json.optString("device"))); // will be 0 if it is a self message
             token.setContactId(parseLong(json.optString("contact"))); // will be 0 if it is a self message
             token.setFingerprint(json.optString("fingerprint"));
-            token.setRootMessage(rootMessageID);
+            token.setRootMessageId(rootMessageID);
 
             result.add(token);
         }

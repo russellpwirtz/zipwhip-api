@@ -356,25 +356,6 @@ public interface ZipwhipClient extends Destroyable {
     boolean deleteMessage(List<Long> ids) throws Exception;
 
     /**
-     * Returns a MessageStatus object
-     *
-     * @param uuid - message uuid
-     * @return A MessageStatus DTO matching the uuid.
-     * @throws Exception if an error occurs communicating with Zipwhip
-     * @deprecated use {@code getMessageStatus(Long id)}
-     */
-    MessageStatus getMessageStatus(String uuid) throws Exception;
-
-    /**
-     * Returns a MessageStatus object
-     *
-     * @param id - message id
-     * @return A MessageStatus DTO matching the id.
-     * @throws Exception if an error occurs communicating with Zipwhip
-     */
-    MessageStatus getMessageStatus(Long id) throws Exception;
-
-    /**
      * Returns the contact for the provided contact id.
      *
      * @param id The id of the contact.
