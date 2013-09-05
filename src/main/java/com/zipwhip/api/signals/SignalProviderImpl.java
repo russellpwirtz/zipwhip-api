@@ -1,8 +1,10 @@
 package com.zipwhip.api.signals;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.zipwhip.api.signals.dto.*;
-import com.zipwhip.api.signals.dto.json.*;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
@@ -10,23 +12,15 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
+import com.zipwhip.signals2.message.Message;
 import com.zipwhip.signals2.presence.Presence;
 import com.zipwhip.signals2.presence.UserAgent;
-import com.zipwhip.signals2.address.Address;
-import com.zipwhip.signals2.message.DefaultMessage;
-import com.zipwhip.signals2.message.Message;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
-import io.socket.IOAcknowledge;
-import io.socket.IOCallback;
-import io.socket.SocketIO;
-import io.socket.SocketIOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
-import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -57,31 +51,12 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private Executor eventExecutor = SimpleExecutor.getInstance();
-    private String url = "http://localhost:23123";
     private Presence presence = new Presence();
     private SignalsSubscribeActor signalsSubscribeActor;
     private ImportantTaskExecutor importantTaskExecutor;
     private BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue;
-
-    private Gson gson = new GsonBuilder()
-            .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
-            .registerTypeHierarchyAdapter(DefaultMessage.class, new MessageTypeAdapter())
-            .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
-            .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
-            .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())
-
-            // We support dates in the System.currentTimeMillis() format.
-            // I wonder how to support BOTH the string format AND the millis format.
-            .registerTypeHierarchyAdapter(Date.class, new JsonDeserializer<Date>() {
-                @Override
-                public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-                    return new Date(json.getAsJsonPrimitive().getAsLong());
-                }
-            })
-//            .registerTypeHierarchyAdapter(Presence.class, new PresenceTypeAdapter())
-            .create();
-
-    private volatile SocketIO socketIO;
+    private Gson gson;
+    private SignalConnection signalConnection;
 
     private final Map<String, SubscriptionRequest> pendingSubscriptionRequests = new ConcurrentHashMap<String, SubscriptionRequest>();
 
@@ -106,9 +81,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         messageReceivedEvent = new ObservableHelper<DeliveredMessage>("MessageReceivedEvent", eventExecutor);
         bindEvent = new ObservableHelper<BindResult>("BindEvent", eventExecutor);
         presenceChangedEvent = new ObservableHelper<Event<Presence>>("PresenceChangedEvent", eventExecutor);
-
-        socketIO = new SocketIO();
-        socketIO.setGson(gson);
     }
 
     @Override
@@ -124,7 +96,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
         if (userAgent == null) {
             throw new IllegalStateException("The userAgent cannot be null");
-        } else if (socketIO.isConnected()) {
+        } else if (signalConnection.isConnected()) {
             return fail("Already connected!");
         }
 
@@ -153,25 +125,17 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     }
 
     @Override
-    public ObservableFuture<Void> disconnect() {
-        if (disconnectFuture != null) {
-            return disconnectFuture;
-        } else if (!socketIO.isConnected()) {
-            // Already disconnected
-            return new FakeObservableFuture<Void>(SignalProviderImpl.this, null);
+    public synchronized ObservableFuture<Void> disconnect() {
+        if (connectFuture != null) {
+            connectFuture.cancel();
         }
 
-        // The socketIO callback will
-        MutableObservableFuture<Void> result = disconnectFuture = future();
-
-        socketIO.disconnect();
-
-        return result;
+        return signalConnection.disconnect();
     }
 
     @Override
     public synchronized ObservableFuture<SubscribeResult> subscribe(String sessionKey, String subscriptionId) {
-        if (!socketIO.isConnected()) {
+        if (!signalConnection.isConnected()) {
             return fail("Not connected");
         }
 
@@ -202,7 +166,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     @Override
     public ObservableFuture<Void> unsubscribe(final String sessionKey, final String subscriptionId) {
-        if (!socketIO.isConnected()) {
+        if (!signalConnection.isConnected()) {
             return new FakeFailingObservableFuture<Void>(this, new IllegalStateException("Not connected"));
         }
 
@@ -235,12 +199,13 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         disconnect().addObserver(new Observer<ObservableFuture<Void>>() {
             @Override
             public void notify(Object sender, ObservableFuture<Void> item) {
+                if (cascadeFailure(item, result)) {
+                    return;
+                }
+
                 if (item.isSuccess()) {
                     result.setSuccess(null);
-                } else if (item.isCancelled()) {
-                    result.cancel();
-                } else if (item.isFailed()) {
-                    result.setFailure(item.getCause());
+                    return;
                 }
 
                 throw new IllegalStateException("Not sure what state this is " + result);
@@ -255,138 +220,25 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return bindEvent;
     }
 
-    private final IOCallback callback = new IOCallback() {
-
+    private final Observer<JsonElement> messageProcessingObserver = new Observer<JsonElement>() {
         @Override
-        public void onConnect() {
-            if (connectFuture == null) {
-                // this must be a reconnect scenario
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("The connectFuture was null. I think this is a reconnect scenario. No bind needed?");
-                    return;
-                }
+        public void notify(Object sender, JsonElement element) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug(String.format("Parsing into json %s", element));
             }
 
-            synchronized (SignalProviderImpl.this) {
-                final MutableObservableFuture<Void> _connectFuture = connectFuture;
+            DeliveredMessage deliveredMessage;
 
-                // Our socket is connected, now we need to issue a bind request
-                String _clientId = getClientId();
-                String _token = calculateToken(clientId);
-                final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
-
-                ObservableFuture<BindResult> future = executeWithTimeout(
-                        new BindCallback(socketIO, _bindRequest, eventExecutor, gson),
-                        FutureDateUtil.in30Seconds());
-
-                // When this future is successful, we need to save the details
-                future.addObserver(new Observer<ObservableFuture<BindResult>>() {
-                    @Override
-                    public void notify(Object sender, ObservableFuture<BindResult> item) {
-                        synchronized (SignalProviderImpl.this) {
-                            if (_bindRequest != bindRequest) {
-                                LOGGER.error(String.format("Not the same bindRequest object. So quitting. %s/%s", _bindRequest, bindRequest));
-                                return;
-                            }
-
-                            if (item.isFailed()) {
-                                LOGGER.error("Bind future not successful! " + item);
-                                if (_connectFuture != null) {
-                                    _connectFuture.setFailure(new Exception("The bindFuture was not successful", item.getCause()));
-                                }
-
-                                return;
-                            } else if (item.isCancelled()) {
-                                LOGGER.error("Bind future cancelled! " + item);
-                                if (_connectFuture != null) {
-                                    _connectFuture.cancel();
-                                }
-
-                                return;
-                            }
-
-                            BindResult response = item.getResult();
-
-                            setClientId(response.getClientId(), response.getToken());
-
-                            if (_connectFuture != null) {
-                                _connectFuture.setSuccess(null);
-                            }
-
-                            bindEvent.notifyObservers(SignalProviderImpl.this, response);
-
-                            bindRequest = null;
-                        }
-                    }
-                });
-            }
-
-            connectionChangedEvent.notifyObservers(SignalProviderImpl.this, null);
-        }
-
-        @Override
-        public void onDisconnect() {
-            synchronized (SignalProviderImpl.this) {
-                if (disconnectFuture != null) {
-                    disconnectFuture.setSuccess(null);
-                    disconnectFuture = null;
-                }
-            }
-
-            connectionChangedEvent.notifyObservers(SignalProviderImpl.this, null);
-        }
-
-        @Override
-        public void onMessage(String message, IOAcknowledge ack) {
-            // parse the message, detect the type, throw the appropriate event
-
-            LOGGER.error("Received weird string message: " + message);
-
-            ack.ack();
-        }
-
-        @Override
-        public void onSessionId(String sessionId) {
-
-        }
-
-        @Override
-        public void onMessage(JsonElement element, IOAcknowledge ack) {
             try {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug(String.format("Parsing into json %s", element));
-                }
-
-                DeliveredMessage deliveredMessage;
-
-                try {
-                    // parse the message, detect the type, throw the appropriate event
-                    deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-                } catch (Exception e){
-                    LOGGER.error("Failed to parse json", e);
-                    exceptionEvent.notifyObservers(SignalProviderImpl.this, new JsonParseException(element.toString(), e));
-                    return;
-                }
-
-                bufferedOrderedQueue.append(deliveredMessage);
-            } finally {
-                ack.ack();
-            }
-        }
-
-        @Override
-        public void on(String s, IOAcknowledge ack, Object... objects) {
-            ack.ack();
-        }
-
-        @Override
-        public void onError(SocketIOException e) {
-            if (connectFuture != null) {
-                connectFuture.setFailure(e);
+                // parse the message, detect the type, throw the appropriate event
+                deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
+            } catch (Exception e){
+                LOGGER.error("Failed to parse json", e);
+                exceptionEvent.notifyObservers(SignalProviderImpl.this, new JsonParseException(element.toString(), e));
                 return;
             }
 
-            exceptionEvent.notifyObservers(SignalProviderImpl.this, e);
+            bufferedOrderedQueue.append(deliveredMessage);
         }
     };
 
@@ -529,11 +381,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return unsubscribeEvent;
     }
 
-    @Override
-    protected void onDestroy() {
-
-    }
-
     public void setSignalsSubscribeActor(SignalsSubscribeActor signalsSubscribeActor) {
         this.signalsSubscribeActor = signalsSubscribeActor;
     }
@@ -544,7 +391,42 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     @Override
     public boolean isConnected() {
-        return socketIO.isConnected();
+        return signalConnection.isConnected();
+    }
+
+    public SignalConnection getSignalConnection() {
+        return signalConnection;
+    }
+
+    public Gson getGson() {
+        return gson;
+    }
+
+    public void setGson(Gson gson) {
+        this.gson = gson;
+    }
+
+    @Override
+    protected void onDestroy() {
+
+    }
+
+    public void setSignalConnection(SignalConnection signalConnection) {
+        if (this.signalConnection != null) {
+            this.signalConnection.getConnectEvent().removeObserver(connectionChangedEvent);
+            this.signalConnection.getDisconnectEvent().removeObserver(connectionChangedEvent);
+            this.signalConnection.getExceptionEvent().removeObserver(exceptionEvent);
+            this.signalConnection.getMessageEvent().removeObserver(messageProcessingObserver);
+        }
+
+        this.signalConnection = signalConnection;
+
+        if (this.signalConnection != null) {
+            this.signalConnection.getConnectEvent().addObserver(connectionChangedEvent);
+            this.signalConnection.getDisconnectEvent().addObserver(connectionChangedEvent);
+            this.signalConnection.getExceptionEvent().addObserver(exceptionEvent);
+            this.signalConnection.getMessageEvent().addObserver(messageProcessingObserver);
+        }
     }
 
     private class SignalUnsubscribeCallback implements Callable<ObservableFuture<Void>> {
@@ -691,25 +573,88 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
     }
 
+    /**
+     * Our job is to do 2 things.
+     *
+     * 1. Connect to the server.
+     * 2. Bind to the server (send a BindRequest)
+     */
     private class ConnectTask implements Callable<ObservableFuture<Void>> {
 
-        private final MutableObservableFuture<Void> future;
+        private final MutableObservableFuture<Void> resultFuture;
 
-        public ConnectTask(MutableObservableFuture<Void> future) {
-            this.future = future;
+        public ConnectTask(MutableObservableFuture<Void> resultFuture) {
+            this.resultFuture = resultFuture;
         }
 
         @Override
         public ObservableFuture<Void> call() throws Exception {
-            synchronized (SignalProviderImpl.this) {
-                try {
-                    socketIO.connect(url, callback);
-                } catch (MalformedURLException e) {
-                    future.setFailure(e);
-                }
-            }
+            ObservableFuture<Void> connectFuture = signalConnection.connect();
 
-            return future;
+            connectFuture.addObserver(new Observer<ObservableFuture<Void>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<Void> item) {
+                    if (cascadeFailure(item, resultFuture)) {
+                        return;
+                    }
+
+                    synchronized (SignalProviderImpl.this) {
+                        // Our socket is connected, now we need to issue a bind request
+                        String _clientId = getClientId();
+                        String _token = calculateToken(clientId);
+                        final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
+
+                        ObservableFuture<BindResult> future = executeWithTimeout(
+                                new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
+                                FutureDateUtil.in30Seconds());
+
+                        // When this future is successful, we need to save the details
+                        future.addObserver(new Observer<ObservableFuture<BindResult>>() {
+                            @Override
+                            public void notify(Object sender, ObservableFuture<BindResult> item) {
+                                synchronized (SignalProviderImpl.this) {
+                                    if (_bindRequest != bindRequest) {
+                                        LOGGER.error(String.format("Not the same bindRequest object. So quitting. %s/%s", _bindRequest, bindRequest));
+                                        return;
+                                    }
+
+                                    if (item.isFailed()) {
+                                        LOGGER.error("Bind future not successful! " + item);
+                                        if (resultFuture != null) {
+                                            resultFuture.setFailure(new Exception("The bindFuture was not successful", item.getCause()));
+                                        }
+
+                                        return;
+                                    } else if (item.isCancelled()) {
+                                        LOGGER.error("Bind future cancelled! " + item);
+                                        if (resultFuture != null) {
+                                            resultFuture.cancel();
+                                        }
+
+                                        return;
+                                    }
+
+                                    BindResult response = item.getResult();
+
+                                    setClientId(response.getClientId(), response.getToken());
+
+                                    bindRequest = null;
+
+                                    if (resultFuture != null) {
+                                        resultFuture.setSuccess(null);
+                                    }
+
+                                    bindEvent.notifyObservers(SignalProviderImpl.this, response);
+                                }
+                            }
+                        });
+                    }
+
+                    connectionChangedEvent.notifyObservers(SignalProviderImpl.this, null);
+                }
+            });
+
+            return resultFuture;
         }
     }
 
@@ -719,41 +664,88 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private static class BindCallback implements Callable<ObservableFuture<BindResult>> {
 
         private final BindRequest request;
-        private final SocketIO socketIO;
+        private final SignalConnection connection;
         private final MutableObservableFuture<BindResult> result;
         private final Gson gson;
 
-        private BindCallback(SocketIO socketIO, BindRequest request, Executor executor, Gson gson) {
+        private BindCallback(SignalConnection connection, BindRequest request, Executor executor, Gson gson) {
             this.request = request;
-            this.socketIO = socketIO;
+            this.connection = connection;
             this.result = new DefaultObservableFuture<BindResult>(this, executor);
             this.gson = gson;
         }
 
         @Override
         public ObservableFuture<BindResult> call() throws Exception {
-            socketIO.emit("bind", ack, request);
+            ObservableFuture<ObservableFuture<Object[]>> emitFuture = connection.emit("bind", request);
+
+            emitFuture.addObserver(new ObserveAcknowledgementObserver(gson, result));
 
             return result;
         }
-
-        private final IOAcknowledge ack = new IOAcknowledge() {
-            @Override
-            public void ack(Object... args) {
-                if (CollectionUtil.isNullOrEmpty(args)) {
-                    result.setFailure(new Exception("No bind response received"));
-                    return;
-                }
-
-                JsonObject object = (JsonObject) args[0];
-                // TODO: Detect and handle failure
-                BindResult response = gson.fromJson(object, BindResult.class);
-
-                result.setSuccess(response);
-            }
-        };
     }
 
+    private static class ObserveAcknowledgementObserver implements Observer<ObservableFuture<ObservableFuture<Object[]>>> {
+
+        private final Gson gson;
+        private final MutableObservableFuture<BindResult> resultFuture;
+
+        private ObserveAcknowledgementObserver(Gson gson, MutableObservableFuture<BindResult> resultFuture) {
+            this.gson = gson;
+            this.resultFuture = resultFuture;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<ObservableFuture<Object[]>> item) {
+            if (cascadeFailure(item, resultFuture)) {
+                return;
+            }
+
+            ObservableFuture<Object[]> ackFuture = item.getResult();
+
+            ackFuture.addObserver(new ProcessAcknowledgementObserver(gson, resultFuture));
+        }
+    }
+
+    private static class ProcessAcknowledgementObserver implements Observer<ObservableFuture<Object[]>> {
+
+        private final Gson gson;
+        private final MutableObservableFuture<BindResult> resultFuture;
+
+        private ProcessAcknowledgementObserver(Gson gson, MutableObservableFuture<BindResult> resultFuture) {
+            this.gson = gson;
+            this.resultFuture = resultFuture;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<Object[]> item) {
+            if (cascadeFailure(item, resultFuture)) {
+                return;
+            }
+
+            Object[] objects = item.getResult();
+
+            processAcknowledgementFromServer(objects);
+        }
+
+        private void processAcknowledgementFromServer(Object[] args) {
+            if (CollectionUtil.isNullOrEmpty(args)) {
+                resultFuture.setFailure(new Exception("No bind response received"));
+                return;
+            }
+
+            Object object = args[0];
+            if (!(object instanceof JsonObject)) {
+                resultFuture.setFailure(new Exception("Wrong type: " + object));
+                return;
+            }
+
+            // TODO: Detect and handle failure
+            BindResult response = gson.fromJson((JsonObject) args[0], BindResult.class);
+
+            resultFuture.setSuccess(response);
+        }
+    }
 
     /**
      * Date: 8/22/13
@@ -807,5 +799,30 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             return subscriptionId.hashCode();
         }
     }
+
+
+    /**
+     * Helper function to check for failure.
+     *
+     * Return TRUE if the future was handled.
+     *
+     * @param source
+     * @param destination
+     * @return
+     */
+    private static boolean cascadeFailure(ObservableFuture<?> source, MutableObservableFuture<?> destination) {
+        if (source.isCancelled()) {
+            destination.cancel();
+            return true;
+        } else if (source.isFailed()) {
+            destination.setFailure(source.getCause());
+            return true;
+        } else if (!source.isDone()) {
+            return true;
+        }
+
+        return false;
+    }
+
 
 }

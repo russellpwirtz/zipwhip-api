@@ -1,8 +1,10 @@
 package com.zipwhip.api.signals;
 
+import com.google.gson.Gson;
 import com.ning.http.client.AsyncHttpClient;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.api.signals.dto.SubscribeResult;
+import com.zipwhip.api.signals.dto.json.SignalProviderGsonBuilder;
 import com.zipwhip.concurrent.ObservableFuture;
 import com.zipwhip.events.Observer;
 import com.zipwhip.important.ImportantTaskExecutor;
@@ -37,13 +39,22 @@ public class SignalProviderTest {
 
     SignalProviderImpl signalProvider;
     NingSignalsSubscribeActor actor = new NingSignalsSubscribeActor();
+    ImportantTaskExecutor importantTaskExecutor = new ImportantTaskExecutor();
+    Gson gson = SignalProviderGsonBuilder.getInstance();
 
     @Before
     public void setUp() throws Exception {
+        SocketIOSignalConnection signalConnection = new SocketIOSignalConnection();
+        signalConnection.setImportantTaskExecutor(importantTaskExecutor);
+        signalConnection.setGson(gson);
+        signalConnection.setUrl("http://localhost:23123/");
+
         signalProvider = new SignalProviderImpl();
         signalProvider.setSignalsSubscribeActor(actor);
         signalProvider.setBufferedOrderedQueue(new SilenceOnTheLineBufferedOrderedQueue<DeliveredMessage>());
-        signalProvider.setImportantTaskExecutor(new ImportantTaskExecutor());
+        signalProvider.setGson(gson);
+        signalProvider.setImportantTaskExecutor(importantTaskExecutor);
+        signalProvider.setSignalConnection(signalConnection);
 
         actor.setUrl("http://localhost:8080/signal/subscribe");
         actor.setClient(new AsyncHttpClient());
