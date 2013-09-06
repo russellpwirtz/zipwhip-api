@@ -45,7 +45,7 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
      *
      * @param connection     The connection to Zipwhip API
      * @param signalProvider The connection client for Zipwhip SignalServer.
-     * @param executor The executor that's used for aynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
+     * @param executor The executor that's used for asynchronous event processing (including ApiConnection.send() and signalProvider.onXXXXX()).
      */
     public DefaultZipwhipClient(SettingsStore store, Executor executor, ImportantTaskExecutor importantTaskExecutor, ApiConnection connection, SignalProvider signalProvider) {
         super(store, executor, importantTaskExecutor, connection, signalProvider);
