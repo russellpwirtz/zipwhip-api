@@ -37,6 +37,16 @@ public class AddressTypeConverter implements JsonSerializer<Address>, JsonDeseri
 
     @Override
     public JsonElement serialize(Address src, Type typeOfSrc, JsonSerializationContext context) {
-        return null;
+        JsonObject object = new JsonObject();
+
+        if (src instanceof ClientAddress) {
+            object.addProperty("clientId", ((ClientAddress) src).getClientId());
+        } else if (src instanceof ChannelAddress) {
+            object.addProperty("channel", ((ChannelAddress) src).getChannel());
+        } else {
+            throw new RuntimeException("Not sure what type : " + src);
+        }
+
+        return object;
     }
 }
