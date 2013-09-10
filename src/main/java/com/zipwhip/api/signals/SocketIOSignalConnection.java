@@ -77,7 +77,11 @@ public class SocketIOSignalConnection implements SignalConnection {
     }
 
     @Override
-    public ObservableFuture<Void> disconnect() {
+    public synchronized ObservableFuture<Void> disconnect() {
+        if (socketIO == null) {
+            return new FakeObservableFuture<Void>(this, null);
+        }
+
         socketIO.disconnect();
         socketIO = null;
 

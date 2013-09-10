@@ -63,8 +63,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private volatile ObservableFuture<Void> externalConnectFuture;
     private volatile MutableObservableFuture<Void> connectFuture;
 
-    private volatile MutableObservableFuture<Void> disconnectFuture;
-
     private volatile String clientId;
     private volatile String token;
     private volatile BindRequest bindRequest;
