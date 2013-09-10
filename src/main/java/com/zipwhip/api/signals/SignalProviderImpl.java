@@ -276,6 +276,11 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         // Therefore the 'subscriptionIds' field will be null.
         SubscribeCompleteContent result = (SubscribeCompleteContent) message.getContent();
         SubscriptionRequest request = pendingSubscriptionRequests.remove(result.getSubscriptionId());
+        if (request == null) {
+            LOGGER.error("SubscriptionRequest was null!");
+            return;
+        }
+
         MutableObservableFuture<SubscribeResult> future = request.getFuture();
         SubscribeResult subscribeResult = new SubscribeResult();
 

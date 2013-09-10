@@ -43,14 +43,17 @@ public class NingSignalsSubscribeActor implements SignalsSubscribeActor {
     public ObservableFuture<Void> subscribe(String clientId, String sessionKey, String subscriptionId, UserAgent userAgent) {
         AsyncHttpClient.BoundRequestBuilder builder = client.preparePost(url);
 
-        builder.addParameter("clientId", clientId);
-        builder.addParameter("session", sessionKey);
-        builder.addParameter("subscriptionId", subscriptionId);
-        builder.addParameter("userAgent", GSON.toJson(userAgent));
+        applyParameters(builder, clientId, sessionKey, subscriptionId);
 
         MutableObservableFuture<Void> future = new DefaultObservableFuture<Void>(this, eventExecutor);
 
         return executeAsync(builder, HANDLER, future);
+    }
+
+    protected void applyParameters(AsyncHttpClient.BoundRequestBuilder builder, String clientId, String sessionKey, String subscriptionId) {
+        builder.addParameter("clientId", clientId);
+        builder.addParameter("session", sessionKey);
+        builder.addParameter("subscriptionId", subscriptionId);
     }
 
     @Override
