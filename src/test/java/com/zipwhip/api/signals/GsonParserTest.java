@@ -2,8 +2,8 @@ package com.zipwhip.api.signals;
 
 import com.google.gson.Gson;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
-import com.zipwhip.api.signals.dto.SignalContentConverter;
 import com.zipwhip.api.signals.dto.json.SignalProviderGsonBuilder;
+import com.zipwhip.signals2.SignalContentConverter;
 import com.zipwhip.signals2.SignalMessage;
 import com.zipwhip.signals2.address.ClientAddress;
 import com.zipwhip.signals2.message.DefaultMessage;
