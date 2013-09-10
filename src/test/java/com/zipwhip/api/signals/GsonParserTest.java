@@ -2,7 +2,9 @@ package com.zipwhip.api.signals;
 
 import com.google.gson.Gson;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
+import com.zipwhip.api.signals.dto.SignalContentConverter;
 import com.zipwhip.api.signals.dto.json.SignalProviderGsonBuilder;
+import com.zipwhip.signals2.SignalMessage;
 import com.zipwhip.signals2.address.ClientAddress;
 import com.zipwhip.signals2.message.DefaultMessage;
 import com.zipwhip.signals2.message.Message;
@@ -12,6 +14,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Date: 9/10/13
@@ -36,48 +41,64 @@ public class GsonParserTest {
 
     @Test
     public void testMessage() throws Exception {
-        Map<String, Object> deliveredMessageMap = new HashMap<String, Object>();
-        Map<String, Object> content = new HashMap<String, Object>();
+        SignalMessage signal = new SignalMessage();
+
+        signal.setBody("body");
+        signal.setDateRead(435345245L);
+        signal.setAdvertisement("advertisement");
+        signal.setTransmissionState("DELIVERED");
+        signal.setContactId(4345345L);
+        signal.setMessageType("MO");
+        signal.setAddress("ptn:/234234");
+        signal.setFingerprint("fingerprint");
+        signal.setDeviceId(342343L);
+        signal.setFromName("fromName");
+        signal.setHasAttachments(true);
+        signal.setDateCreated(453453453L);
+        signal.setScheduledDate(null);
+        signal.setContactDeviceId(3424324L);
+
         Map<String, Object> msg = new HashMap<String, Object>();
-        deliveredMessageMap.put("message", msg);
 
-        long timestamp = System.currentTimeMillis();
-        long id = 34234234;
-
-        content.put("body", "body");
-        content.put("dateRead", 3242345345L);
-        content.put("advertisement", "advertisement");
-        content.put("transmissionState", "DELIVERED");
-        content.put("contactDeviceId", 234234L);
-        content.put("contactId", 34234L);
-        content.put("messageType", "MO");
-        content.put("scheduledDate", null);
-        content.put("fingerprint", "fingerprint");
-        content.put("address", "ptn:/23123123");
-        content.put("dateCreated", 324234324L);
-        content.put("attachments", true);
-        content.put("fromName", "fromName");
-        content.put("deviceId", 234243L);
-
-        msg.put("content", content);
+        msg.put("content", SignalContentConverter.toMap(signal));
         msg.put("address", new ClientAddress("clientId"));
-        msg.put("timestamp", timestamp);
-        msg.put("id", id);
+        msg.put("timestamp", System.currentTimeMillis());
+        msg.put("id", "34234234");
         msg.put("type", "message");
         msg.put("event", "receive");
 
+        Map<String, Object> deliveredMessageMap = new HashMap<String, Object>();
+
+        deliveredMessageMap.put("message", msg);
+
+        runJsonTestOnDeliveredMessageMap(deliveredMessageMap);
+    }
+
+    private void runJsonTestOnDeliveredMessageMap(Map<String, Object> deliveredMessageMap) {
+        Map<String, Object> messageMap = (Map<String, Object>) deliveredMessageMap.get("message");
+
+        // convert into json for testing.
         String json = gson.toJson(deliveredMessageMap);
 
+        // we have to specifically add the address field since gson isn't doing it right.
         DeliveredMessage deliveredMessage = gson.fromJson(json, DeliveredMessage.class);
         Message message = deliveredMessage.getMessage();
 
-        message.getTimestamp();
-        message.getEvent();
-        message.getType();
-        message.getId();
-        message.getContent();
+        assertEquals(messageMap.get("timestamp"), message.getTimestamp());
+        assertEquals(messageMap.get("event"), message.getEvent());
+        assertEquals(messageMap.get("type"), message.getType());
+        assertEquals(messageMap.get("id"), message.getId());
+        assertEquals(messageMap.get("address"), message.getAddress());
 
+        SignalMessage messageContent = (SignalMessage)message.getContent();
 
+        // this will pass when Russ finishes his part
+        assertNotNull(messageContent);
+
+        Object signal = messageMap.get("content");
+
+        // leverage existing .equals() method
+        assertEquals(signal, messageContent);
     }
 
     @Test
