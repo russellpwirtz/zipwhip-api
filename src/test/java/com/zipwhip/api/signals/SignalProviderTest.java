@@ -15,7 +15,6 @@ import com.zipwhip.signals2.presence.UserAgentCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +68,6 @@ public class SignalProviderTest {
         assertTrue(signalProvider.disconnect().isSuccess());
     }
 
-    @Ignore
     @Test
     public void testConnect() throws Exception {
         final String sessionKey = "sessionKey";
