@@ -35,9 +35,9 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
 
         message.setAddress((Address) context.deserialize(object.getAsJsonObject("address"), Address.class));
         message.setTimestamp(getLong(object.get("timestamp")));
-        message.setId(object.get("id").getAsString());
-        message.setEvent(object.get("event").getAsString());
-        message.setType(object.get("type").getAsString());
+        message.setId(GsonUtil.getString(object.get("id")));
+        message.setEvent(GsonUtil.getString(object.get("event")));
+        message.setType(GsonUtil.getString(object.get("type")));
 
         JsonElement content = object.get("content");
 
@@ -73,7 +73,6 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
 
         return message;
     }
-
 
     private static long getLong(JsonElement element) {
         if (element == null || element.isJsonNull()) {

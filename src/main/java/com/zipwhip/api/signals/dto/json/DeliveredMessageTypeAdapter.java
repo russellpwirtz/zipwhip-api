@@ -20,10 +20,11 @@ public class DeliveredMessageTypeAdapter implements JsonSerializer<DeliveredMess
     @Override
     public DeliveredMessage deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject object = (JsonObject)json;
+        JsonObject messageObject = (JsonObject)object.get("message");
 
         DeliveredMessage message = new DeliveredMessage();
 
-        message.setMessage(context.<DefaultMessage>deserialize(object.get("message"), DefaultMessage.class));
+        message.setMessage(context.<DefaultMessage>deserialize(messageObject, DefaultMessage.class));
 
         JsonArray array = object.getAsJsonArray("subscriptionIds");
         if (array != null && !array.isJsonNull() && array.size() > 0) {
