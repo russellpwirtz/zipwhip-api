@@ -3,6 +3,9 @@ package com.zipwhip.api.signals.dto.json;
 import com.google.gson.*;
 import com.zipwhip.api.signals.dto.SubscribeCompleteContent;
 import com.zipwhip.gson.GsonUtil;
+import com.zipwhip.signals2.SignalContact;
+import com.zipwhip.signals2.SignalConversation;
+import com.zipwhip.signals2.SignalMessage;
 import com.zipwhip.signals2.address.Address;
 import com.zipwhip.signals2.message.DefaultMessage;
 import com.zipwhip.signals2.message.Message;
@@ -47,6 +50,12 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
             }
         } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
             message.setContent(context.<Presence>deserialize(content, Presence.class));
+        } else if (StringUtil.equalsIgnoreCase(message.getType(), "message")) {
+            message.setContent(context.<SignalMessage>deserialize(content, SignalMessage.class));
+        } else if (StringUtil.equalsIgnoreCase(message.getType(), "contact")) {
+            message.setContent(context.<SignalContact>deserialize(content, SignalContact.class));
+        } else if (StringUtil.equalsIgnoreCase(message.getType(), "conversation")) {
+            message.setContent(context.<SignalConversation>deserialize(content, SignalConversation.class));
         }
 
         //
