@@ -51,7 +51,11 @@ public class MessageTypeAdapter implements JsonDeserializer<Message>, JsonSerial
         } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
             message.setContent(context.<Presence>deserialize(content, Presence.class));
         } else if (StringUtil.equalsIgnoreCase(message.getType(), "message")) {
-            message.setContent(context.<SignalMessage>deserialize(content, SignalMessage.class));
+            if (StringUtil.equalsIgnoreCase(message.getEvent(), "progress")) {
+                message.setContent(GsonUtil.getString(content));
+            } else {
+                message.setContent(context.<SignalMessage>deserialize(content, SignalMessage.class));
+            }
         } else if (StringUtil.equalsIgnoreCase(message.getType(), "contact")) {
             message.setContent(context.<SignalContact>deserialize(content, SignalContact.class));
         } else if (StringUtil.equalsIgnoreCase(message.getType(), "conversation")) {
