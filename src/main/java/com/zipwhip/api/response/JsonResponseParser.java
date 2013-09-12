@@ -405,6 +405,28 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public Map<String, String> parseFaceNames(final ServerResponse serverResponse) throws Exception {
+        if (serverResponse == null) return null;
+
+        final JSONObject response = new JSONObject(serverResponse.getRaw());
+        final Map<String, String> faceNameMap = new HashMap<String, String>(response.length());
+        final Iterator itr = response.keys();
+        String key = null;
+        String value = null;
+
+        while (itr.hasNext()) {
+            key = (String) itr.next();
+            value = response.optString(key);
+
+            if (!StringUtil.isNullOrEmpty(value)) {
+                faceNameMap.put(key, new JSONObject(value).optString("fullName"));
+            }
+        }
+
+        return faceNameMap;
+    }
+
+    @Override
     public Map<String, String> parseHostedContentSave(ServerResponse serverResponse) throws Exception {
 
         Map<String, String> result = new HashMap<String, String>();

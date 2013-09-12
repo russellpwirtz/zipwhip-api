@@ -106,6 +106,7 @@ public abstract class ZipwhipNetworkSupport extends CascadingDestroyableBase {
 
     public static final String FACE_IMAGE = "face/image";
     public static final String FACE_NAME = "face/name";
+    public static final String FACE_NAMES = "face/v2/name";
 
     public static final String ATTACHMENT_LIST = "messageAttachment/list";
     public static final String HOSTED_CONTENT_GET = "hostedContent/get";

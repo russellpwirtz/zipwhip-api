@@ -734,6 +734,24 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public Map<String, String> getFaceName(Collection<String> phoneNumbers) throws Exception {
+        if (CollectionUtil.isNullOrEmpty(phoneNumbers)) return null;
+
+        final StringBuilder builder = new StringBuilder();
+        for (String phoneNumber : phoneNumbers) {
+            if (StringUtil.exists(phoneNumber)) builder.append(phoneNumber).append(",");
+        }
+
+        final String phoneNumbersParam = builder.length() > 0 ? builder.substring(0, builder.length() - 1) : null;
+        if (StringUtil.isNullOrEmpty(phoneNumbersParam)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumbers", phoneNumbersParam);
+
+        return responseParser.parseFaceNames(executeSync(FACE_NAMES, params, false));
+    }
+
+    @Override
     public byte[] getGroupImage(final String address, final int size) throws Exception {
         if (StringUtil.isNullOrEmpty(address)) return null;
 
