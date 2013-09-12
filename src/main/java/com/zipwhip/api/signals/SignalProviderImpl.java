@@ -66,6 +66,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private volatile String clientId;
     private volatile String token;
     private volatile BindRequest bindRequest;
+    private volatile ObservableFuture<BindResult> bindFuture;
 
     public SignalProviderImpl() {
         this(SimpleExecutor.getInstance());
@@ -172,23 +173,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                 new SignalUnsubscribeCallback(sessionKey, subscriptionId), FutureDateUtil.in30Seconds());
     }
 
-    private Observer<ObservableFuture<Void>> RESET_CONNECT_FUTURE = new Observer<ObservableFuture<Void>>() {
-
-        @Override
-        public void notify(Object sender, ObservableFuture<Void> item) {
-            // Clean up the variables.
-            synchronized (SignalProviderImpl.this) {
-                if (externalConnectFuture != item) {
-                    LOGGER.debug(String.format("The futures did not match, so decided not to clear it out. %s/%s", connectFuture, item));
-                    return;
-                }
-
-                externalConnectFuture = null;
-                connectFuture = null;
-            }
-        }
-    };
-
     @Override
     public synchronized ObservableFuture<Void> resetDisconnectAndConnect() {
         // TODO: protect threading (what happens if the connection cycles during this process)
@@ -213,6 +197,53 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         return result;
     }
 
+    private Observer<ObservableFuture<Void>> RESET_CONNECT_FUTURE = new Observer<ObservableFuture<Void>>() {
+
+        @Override
+        public void notify(Object sender, ObservableFuture<Void> item) {
+            // Clean up the variables.
+            synchronized (SignalProviderImpl.this) {
+                if (externalConnectFuture != item) {
+                    LOGGER.debug(String.format("The futures did not match, so decided not to clear it out. %s/%s", connectFuture, item));
+                    return;
+                }
+
+                externalConnectFuture = null;
+                connectFuture = null;
+            }
+        }
+    };
+
+    private Observer<Void> issueBindRequestCallback = new Observer<Void>() {
+        @Override
+        public void notify(Object sender, Void item) {
+            synchronized (SignalProviderImpl.this) {
+                if (bindRequest != null) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("The bindRequest was not already null, so somebody else is already handling this.");
+                    }
+                    return;
+                }
+                final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), clientId, token);
+
+                ObservableFuture<BindResult> future = bindFuture = executeWithTimeout(
+                        new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
+                        FutureDateUtil.in30Seconds());
+
+                future.addObserver(new Observer<ObservableFuture<BindResult>>() {
+                    @Override
+                    public void notify(Object sender, ObservableFuture<BindResult> item) {
+                        synchronized (SignalProviderImpl.this) {
+                            if (!item.isSuccess() && _bindRequest == bindRequest) {
+                                signalConnection.reconnect();
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    };
+
     @Override
     public Observable<BindResult> getBindEvent() {
         return bindEvent;
@@ -230,7 +261,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             try {
                 // parse the message, detect the type, throw the appropriate event
                 deliveredMessage = gson.fromJson(element, DeliveredMessage.class);
-            } catch (Exception e){
+            } catch (Exception e) {
                 LOGGER.error("Failed to parse json", e);
                 exceptionEvent.notifyObservers(SignalProviderImpl.this, new JsonParseException(element.toString(), e));
                 return;
@@ -249,7 +280,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
                 handleSubscribeCommand(message);
             } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
-                presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence)message.getContent()));
+                presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence) message.getContent()));
             } else {
                 messageReceivedEvent.notifyObservers(this, deliveredMessage);
             }
@@ -423,6 +454,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
 
         this.signalConnection = signalConnection;
+        this.signalConnection.getConnectEvent().addObserver(issueBindRequestCallback);
 
         if (this.signalConnection != null) {
             this.signalConnection.getConnectEvent().addObserver(connectionChangedEvent);
@@ -578,7 +610,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     /**
      * Our job is to do 2 things.
-     *
+     * <p/>
      * 1. Connect to the server.
      * 2. Bind to the server (send a BindRequest)
      */
@@ -605,14 +637,24 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                         // Our socket is connected, now we need to issue a bind request
                         String _clientId = getClientId();
                         String _token = calculateToken(clientId);
-                        final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
 
-                        ObservableFuture<BindResult> future = executeWithTimeout(
-                                new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
-                                FutureDateUtil.in30Seconds());
+                        final BindRequest _bindRequest;
+
+                        if (bindRequest == null) {
+                            _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
+                            bindFuture = executeWithTimeout(
+                                    new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
+                                    FutureDateUtil.in30Seconds());
+                        } else {
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug("This bind request is already being handled.");
+                            }
+
+                            _bindRequest = bindRequest;
+                        }
 
                         // When this future is successful, we need to save the details
-                        future.addObserver(new Observer<ObservableFuture<BindResult>>() {
+                        bindFuture.addObserver(new Observer<ObservableFuture<BindResult>>() {
                             @Override
                             public void notify(Object sender, ObservableFuture<BindResult> item) {
                                 synchronized (SignalProviderImpl.this) {
@@ -622,9 +664,9 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                                     }
 
                                     if (item.isFailed()) {
-                                        LOGGER.error("Bind future not successful! " + item);
+                                        LOGGER.error("Bind future not successful! " + item.getCause().getMessage());
                                         if (resultFuture != null) {
-                                            resultFuture.setFailure(new Exception("The bindFuture was not successful", item.getCause()));
+                                            resultFuture.setFailure(new Exception("The bindFuture was not successful: " + item.getCause(), item.getCause()));
                                         }
 
                                         return;
@@ -806,7 +848,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     /**
      * Helper function to check for failure.
-     *
+     * <p/>
      * Return TRUE if the future was handled.
      *
      * @param source

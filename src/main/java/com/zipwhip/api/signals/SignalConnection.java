@@ -42,4 +42,5 @@ public interface SignalConnection {
      */
     ObservableFuture<ObservableFuture<Object[]>> emit(String event, Object... objects);
 
+    void reconnect();
 }
