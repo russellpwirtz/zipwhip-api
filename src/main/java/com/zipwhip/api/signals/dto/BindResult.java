@@ -1,6 +1,6 @@
 package com.zipwhip.api.signals.dto;
 
-import java.io.Serializable;
+import com.zipwhip.signals2.timeline.TimelineEvent;
 
 /**
  * Date: 8/27/13
@@ -9,16 +9,22 @@ import java.io.Serializable;
  * @author Michael
  * @version 1
  */
-public class BindResult implements Serializable {
+public class BindResult implements TimelineEvent {
 
     private static final long serialVersionUID = -41223725604503270L;
 
     private final String clientId;
     private final String token;
+    private final long timestamp;
 
-    public BindResult(String clientId, String token) {
+    public BindResult(String clientId, String token, long timestamp) {
         this.clientId = clientId;
         this.token = token;
+        this.timestamp = timestamp;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 
     public String getClientId() {
@@ -28,4 +34,5 @@ public class BindResult implements Serializable {
     public String getToken() {
         return token;
     }
+
 }

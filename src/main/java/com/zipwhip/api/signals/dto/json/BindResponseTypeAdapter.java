@@ -2,6 +2,7 @@ package com.zipwhip.api.signals.dto.json;
 
 import com.google.gson.*;
 import com.zipwhip.api.signals.dto.BindResult;
+import com.zipwhip.gson.GsonUtil;
 
 import java.lang.reflect.Type;
 
@@ -18,9 +19,10 @@ public class BindResponseTypeAdapter implements JsonDeserializer<BindResult> {
     public BindResult deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject object = (JsonObject)json;
 
-        String clientId = object.getAsJsonPrimitive("clientId").getAsString();
-        String token = object.getAsJsonPrimitive("token").getAsString();
+        String clientId = GsonUtil.getString(object, "clientId");
+        String token = GsonUtil.getString(object, "token");
+        long timestamp = GsonUtil.getLong(object.get("token"));
 
-        return new BindResult(clientId, token);
+        return new BindResult(clientId, token, timestamp);
     }
 }
