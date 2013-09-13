@@ -61,4 +61,5 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     TinyUrl parseTinyUrl(ServerResponse serverResponse) throws Exception;
 
+    Map<String, Boolean> parseFaceImages(ServerResponse serverResponse) throws Exception;
 }

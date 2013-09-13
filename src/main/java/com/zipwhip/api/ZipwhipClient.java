@@ -582,7 +582,8 @@ public interface ZipwhipClient extends Destroyable {
      *
      * @param phoneNumbers Collection of phone numbers you wish to query.
      * @return Map of phone number/full name
-     * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
      */
     public Map<String, String> getFaceName(Collection<String> phoneNumbers) throws Exception;
 
@@ -605,6 +606,16 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
     byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
+     * Check if the phone number has a face eco image
+     *
+     * @param phoneNumbers Collection of phone numbers you wish to query.
+     * @return Map of phone number/boolean (exists or not)
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
+     */
+    public Map<String, Boolean> hasFaceImage(Collection<String> phoneNumbers) throws Exception;
 
     /**
      * Query for a message's MMS attachment descriptors.

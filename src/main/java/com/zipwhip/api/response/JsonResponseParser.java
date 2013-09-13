@@ -427,6 +427,26 @@ public class JsonResponseParser implements ResponseParser {
     }
 
     @Override
+    public Map<String, Boolean> parseFaceImages(ServerResponse serverResponse) throws Exception {
+        if (serverResponse == null) return null;
+
+        final JSONObject response = new JSONObject(serverResponse.getRaw());
+        final Map<String, Boolean> faceImageMap = new HashMap<String, Boolean>(response.length());
+        final Iterator itr = response.keys();
+        String key = null;
+        boolean value;
+
+        while (itr.hasNext()) {
+            key = (String) itr.next();
+            value = response.optBoolean(key);
+
+            faceImageMap.put(key, value);
+        }
+
+        return faceImageMap;
+    }
+
+    @Override
     public Map<String, String> parseHostedContentSave(ServerResponse serverResponse) throws Exception {
 
         Map<String, String> result = new HashMap<String, String>();
