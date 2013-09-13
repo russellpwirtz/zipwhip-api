@@ -13,7 +13,7 @@ import java.lang.reflect.Type;
  * @author Michael
  * @version 1
  */
-public class BindResponseTypeAdapter implements JsonDeserializer<BindResult> {
+public class BindResultTypeAdapter implements JsonDeserializer<BindResult> {
 
     @Override
     public BindResult deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {

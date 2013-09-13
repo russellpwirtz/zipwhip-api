@@ -22,7 +22,7 @@ public class SignalProviderGsonBuilder {
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
             .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
             .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
-            .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())
+            .registerTypeHierarchyAdapter(BindResult.class, new BindResultTypeAdapter())
 
                     // We support dates in the System.currentTimeMillis() format.
                     // I wonder how to support BOTH the string format AND the millis format.
