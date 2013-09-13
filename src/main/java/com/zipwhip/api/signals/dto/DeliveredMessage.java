@@ -2,6 +2,7 @@ package com.zipwhip.api.signals.dto;
 
 import com.zipwhip.api.signals.Event;
 import com.zipwhip.signals2.timeline.TimelineEvent;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -87,5 +88,17 @@ public class DeliveredMessage<T extends Serializable> implements TimelineEvent, 
         } else {
             return 1;
         }
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("subscriptionIds", subscriptionIds)
+                .append("id", id)
+                .append("timestamp", timestamp)
+                .append("event", event)
+                .append("type", type)
+                .append("content", content)
+                .toString();
     }
 }
