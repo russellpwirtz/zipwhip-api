@@ -21,7 +21,7 @@ public class BindResponseTypeAdapter implements JsonDeserializer<BindResult> {
 
         String clientId = GsonUtil.getString(object, "clientId");
         String token = GsonUtil.getString(object, "token");
-        long timestamp = GsonUtil.getLong(object.get("token"));
+        long timestamp = GsonUtil.getLong(object.get("timestamp"));
 
         return new BindResult(clientId, token, timestamp);
     }
