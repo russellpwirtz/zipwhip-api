@@ -64,7 +64,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     private volatile String clientId;
     private volatile String token;
-    private volatile BindRequest bindRequest;
     private volatile ObservableFuture<BindResult> bindFuture;
 
     public SignalProviderImpl() {
@@ -213,35 +212,67 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
     };
 
-    private Observer<Void> issueBindRequestCallback = new Observer<Void>() {
+    private Observer<Void> issueBindRequestOnConnectCallback = new Observer<Void>() {
         @Override
         public void notify(Object sender, Void item) {
             synchronized (SignalProviderImpl.this) {
-                if (bindRequest != null) {
+                if (bindFuture != null) {
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("The bindRequest was not already null, so somebody else is already handling this.");
+                        LOGGER.debug("(issueBindRequestOnConnectCallback) The bindFuture was not already null, so somebody else is already handling this.");
                     }
                     return;
                 }
-                final BindRequest _bindRequest = bindRequest = new BindRequest(getUserAgent(), clientId, token);
 
-                ObservableFuture<BindResult> future = bindFuture = executeWithTimeout(
-                        new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
-                        FutureDateUtil.in30Seconds());
-
-                future.addObserver(new Observer<ObservableFuture<BindResult>>() {
-                    @Override
-                    public void notify(Object sender, ObservableFuture<BindResult> item) {
-                        synchronized (SignalProviderImpl.this) {
-                            if (!item.isSuccess() && _bindRequest == bindRequest) {
-                                signalConnection.reconnect();
-                            }
-                        }
-                    }
-                });
+                executeBindRequest();
             }
         }
     };
+
+    private synchronized ObservableFuture<BindResult> executeBindRequest() {
+        return executeBindRequest(clientId, token, true);
+    }
+
+    private synchronized ObservableFuture<BindResult> executeBindRequest(String clientId, String token, boolean reconnect) {
+        if (bindFuture != null) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("BindRequest already existed. Not going to make a new one?!");
+            }
+
+            return bindFuture;
+        }
+
+        final BindRequest _bindRequest = new BindRequest(getUserAgent(), clientId, token);
+
+        ObservableFuture<BindResult> future = bindFuture = executeWithTimeout(
+                new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
+                FutureDateUtil.in30Seconds());
+
+        if (reconnect) {
+            future.addObserver(new ReconnectOnFailureObserver(future));
+        } else {
+            future.addObserver(new DisconnectOnFailureObserver(future));
+        }
+
+        // Self heal the bindFuture object
+        future.addObserver(new Observer<ObservableFuture<BindResult>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<BindResult> item) {
+                synchronized (SignalProviderImpl.this) {
+                    if (bindFuture != item) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Avoided a bug? The futures were not the same!");
+                        }
+
+                        return;
+                    }
+
+                    bindFuture = null;
+                }
+            }
+        });
+
+        return future;
+    }
 
     @Override
     public Observable<BindResult> getBindEvent() {
@@ -452,7 +483,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
 
         this.signalConnection = signalConnection;
-        this.signalConnection.getConnectEvent().addObserver(issueBindRequestCallback);
+        this.signalConnection.getConnectEvent().addObserver(issueBindRequestOnConnectCallback);
 
         if (this.signalConnection != null) {
             this.signalConnection.getConnectEvent().addObserver(connectionChangedEvent);
@@ -636,35 +667,22 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
                         String _clientId = getClientId();
                         String _token = calculateToken(clientId);
 
-                        final BindRequest _bindRequest;
-
-                        if (bindRequest == null) {
-                            _bindRequest = bindRequest = new BindRequest(getUserAgent(), _clientId, _token);
-                            bindFuture = executeWithTimeout(
-                                    new BindCallback(signalConnection, _bindRequest, eventExecutor, gson),
-                                    FutureDateUtil.in30Seconds());
-                        } else {
-                            if (LOGGER.isDebugEnabled()) {
-                                LOGGER.debug("This bind request is already being handled.");
-                            }
-
-                            _bindRequest = bindRequest;
-                        }
+                        final ObservableFuture<BindResult> _bindFuture = executeBindRequest(_clientId, _token, false);
 
                         // When this future is successful, we need to save the details
-                        bindFuture.addObserver(new Observer<ObservableFuture<BindResult>>() {
+                        _bindFuture.addObserver(new Observer<ObservableFuture<BindResult>>() {
                             @Override
                             public void notify(Object sender, ObservableFuture<BindResult> item) {
                                 synchronized (SignalProviderImpl.this) {
-                                    if (_bindRequest != bindRequest) {
-                                        LOGGER.error(String.format("Not the same bindRequest object. So quitting. %s/%s", _bindRequest, bindRequest));
-                                        return;
-                                    }
+//                                    if (_bindFuture != bindFuture) {
+//                                        LOGGER.error(String.format("Not the same bindRequest object. So quitting. %s/%s", _bindFuture, bindFuture));
+//                                        return;
+//                                    }
 
                                     if (item.isFailed()) {
-                                        LOGGER.error("Bind future not successful! " + item.getCause().getMessage());
+                                        LOGGER.error("Bind future not successful!", item.getCause());
                                         if (resultFuture != null) {
-                                            resultFuture.setFailure(new Exception("The bindFuture was not successful: " + item.getCause(), item.getCause()));
+                                            resultFuture.setFailure(new Exception("The bindFuture was not successful", item.getCause()));
                                         }
 
                                         return;
@@ -681,8 +699,6 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
                                     setClientId(response.getClientId(), response.getToken());
 
-                                    bindRequest = null;
-
                                     if (resultFuture != null) {
                                         resultFuture.setSuccess(null);
                                     }
@@ -698,6 +714,72 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             });
 
             return resultFuture;
+        }
+    }
+
+    private class ReconnectOnFailureObserver implements Observer<ObservableFuture<BindResult>> {
+
+        private final ObservableFuture<BindResult> bindFuture;
+
+        private ReconnectOnFailureObserver(ObservableFuture<BindResult> bindFuture) {
+            this.bindFuture = bindFuture;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<BindResult> item) {
+            synchronized (SignalProviderImpl.this) {
+                if (item.isSuccess()) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Decided not to fire because future was successful.");
+                    }
+
+                    return;
+                }
+
+                if (bindFuture != item) {
+                    LOGGER.warn(String.format("The bindFuture were not equal. Did we just prevent a bug? %s/%s", bindFuture, SignalProviderImpl.this.bindFuture));
+                    return;
+                }
+
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Reconnecting the connection because the future failed.");
+                }
+
+                signalConnection.reconnect();
+            }
+        }
+    }
+
+    private class DisconnectOnFailureObserver implements Observer<ObservableFuture<BindResult>> {
+
+        private final ObservableFuture<BindResult> bindFuture;
+
+        private DisconnectOnFailureObserver(ObservableFuture<BindResult> bindFuture) {
+            this.bindFuture = bindFuture;
+        }
+
+        @Override
+        public void notify(Object sender, ObservableFuture<BindResult> item) {
+            synchronized (SignalProviderImpl.this) {
+                if (item.isSuccess()) {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Decided not to fire because future was successful.");
+                    }
+
+                    return;
+                }
+
+                if (bindFuture != item) {
+                    LOGGER.warn(String.format("The bindFuture were not equal. Did we just prevent a bug? %s/%s", bindFuture, SignalProviderImpl.this.bindFuture));
+                    return;
+                }
+
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Disconnecting the connection because the future failed.");
+                }
+
+                signalConnection.disconnect();
+            }
         }
     }
 
@@ -866,6 +948,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
         return false;
     }
+
 
 
 }
