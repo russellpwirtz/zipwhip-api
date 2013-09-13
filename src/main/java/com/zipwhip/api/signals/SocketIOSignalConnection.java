@@ -12,15 +12,19 @@ import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
+import com.zipwhip.important.ZipwhipSchedulerTimer;
+import com.zipwhip.reliable.retry.RetryStrategy;
+import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FutureDateUtil;
-import io.socket.IOAcknowledge;
-import io.socket.IOCallback;
-import io.socket.SocketIO;
-import io.socket.SocketIOException;
+import io.socket.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Date: 9/5/13
@@ -31,9 +35,12 @@ import java.util.concurrent.Executor;
  */
 public class SocketIOSignalConnection implements SignalConnection {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketIOSignalConnection.class);
+
     private volatile SocketIO socketIO;
     private volatile ObservableFuture<Void> externalConnectFuture;
     private volatile MutableObservableFuture<Void> connectFuture;
+    private volatile int retryCount = 0;
 
     private final ObservableHelper<JsonElement> messageEvent;
     private final ObservableHelper<Void> disconnectEvent;
@@ -45,6 +52,8 @@ public class SocketIOSignalConnection implements SignalConnection {
 
     private Gson gson;
     private ImportantTaskExecutor importantTaskExecutor;
+    private RetryStrategy retryStrategy;
+    private ZipwhipSchedulerTimer timer;
 
     private String url;
 
@@ -67,6 +76,10 @@ public class SocketIOSignalConnection implements SignalConnection {
             @Override
             public void notify(Object sender, ObservableFuture<Void> item) {
                 synchronized (SocketIOSignalConnection.this) {
+                    if (item.isSuccess()){
+                        retryCount = 0;
+                    }
+
                     connectFuture = null;
                     externalConnectFuture = null;
                 }
@@ -82,10 +95,19 @@ public class SocketIOSignalConnection implements SignalConnection {
             return new FakeObservableFuture<Void>(this, null);
         }
 
+        retryCount = 0;
         socketIO.disconnect();
         socketIO = null;
 
         return new FakeObservableFuture<Void>(this, null);
+    }
+
+    public void setRetryStrategy(RetryStrategy retryStrategy) {
+        this.retryStrategy = retryStrategy;
+    }
+
+    public void setTimer(ZipwhipSchedulerTimer timer) {
+        this.timer = timer;
     }
 
     private class ConnectTask implements Callable<ObservableFuture<Void>> {
@@ -106,6 +128,29 @@ public class SocketIOSignalConnection implements SignalConnection {
             }
         }
     }
+
+    private TimerTask reconnectTimerTask = new TimerTask() {
+        @Override
+        public void run(Timeout timeout) throws Exception {
+            if (isConnected()) {
+                return;
+            }
+
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Reconnecting.");
+            }
+
+            connect().addObserver(new Observer<ObservableFuture<Void>>() {
+                @Override
+                public void notify(Object sender, ObservableFuture<Void> item) {
+                    if (!item.isSuccess()) {
+                        reconnectLater();
+                    }
+                }
+            });
+
+        }
+};
 
     private final IOCallback callback = new IOCallback() {
         @Override
@@ -162,7 +207,30 @@ public class SocketIOSignalConnection implements SignalConnection {
 
             exceptionEvent.notifyObservers(SocketIOSignalConnection.this, socketIOException);
         }
+
+        @Override
+        public void onState(int state) {
+            if (state != IOConnection.STATE_INTERRUPTED) {
+                return;
+            }
+
+            socketIO.disconnect();
+            socketIO = null;
+
+            reconnectLater();
+        }
     };
+
+    private synchronized void reconnectLater() {
+        long retryInSeconds = retryStrategy.getNextRetryInterval(retryCount);
+
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(String.format("Scheduling reconnect in %s seconds.", FutureDateUtil.inFuture(retryInSeconds, TimeUnit.SECONDS)));
+        }
+
+        timer.newTimeout(reconnectTimerTask, retryInSeconds, TimeUnit.SECONDS);
+        retryCount++;
+    }
 
     @Override
     public boolean isConnected() {
@@ -184,6 +252,20 @@ public class SocketIOSignalConnection implements SignalConnection {
         // We have to just fake the "transmit" part of the future.
 
         return new FakeObservableFuture<ObservableFuture<Object[]>>(this, ackFuture);
+    }
+
+    @Override
+    public void reconnect() {
+        disconnect().addObserver(new Observer<ObservableFuture<Void>>() {
+            @Override
+            public void notify(Object sender, ObservableFuture<Void> item) {
+                if (item.isSuccess()) {
+                    connect();
+                } else {
+                    reconnectLater();
+                }
+            }
+        });
     }
 
     private static class SendWithAckTask implements Callable<ObservableFuture<Object[]>> {
