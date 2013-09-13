@@ -12,30 +12,12 @@ import java.util.Set;
  * @author Michael
  * @version 1
  */
-public class Event<T extends Serializable> implements TimelineEvent {
+public interface Event<T extends Serializable> extends TimelineEvent {
 
-    private static final long serialVersionUID = -392586795960592389L;
+    public long getTimestamp();
 
-    private final long timestamp;
-    private final Set<String> subscriptionIds;
-    private final T data;
+    public Set<String> getSubscriptionIds();
 
-    public Event(long timestamp, Set<String> subscriptionIds, T data) {
-        this.timestamp = timestamp;
-        this.subscriptionIds = subscriptionIds;
-        this.data = data;
-    }
+    public T getContent();
 
-    @Override
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public Set<String> getSubscriptionIds() {
-        return subscriptionIds;
-    }
-
-    public T getData() {
-        return data;
-    }
 }

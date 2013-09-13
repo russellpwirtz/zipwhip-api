@@ -19,6 +19,18 @@ public class GsonUtil {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GsonUtil.class);
 
+    public static Long getLong(JsonElement element) {
+        if (isNull(element)) {
+            return null;
+        }
+
+        if (element instanceof JsonPrimitive) {
+            return element.getAsLong();
+        }
+
+        return null;
+    }
+
     public static String getString(JsonElement element) {
         if (isNull(element)) {
             return null;
@@ -129,5 +141,4 @@ public class GsonUtil {
 
         throw new JsonParseException("Not primitive?");
     }
-
 }

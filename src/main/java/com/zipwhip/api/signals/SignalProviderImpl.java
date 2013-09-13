@@ -12,7 +12,6 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.lifecycle.CascadingDestroyableBase;
-import com.zipwhip.signals2.message.Message;
 import com.zipwhip.signals2.presence.Presence;
 import com.zipwhip.signals2.presence.UserAgent;
 import com.zipwhip.util.CollectionUtil;
@@ -242,21 +241,20 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
 
     public final Observer<DeliveredMessage> releaseMessageObserver = new Observer<DeliveredMessage>() {
         @Override
-        public void notify(Object sender, DeliveredMessage deliveredMessage) {
-            Message message = deliveredMessage.getMessage();
+        public void notify(Object sender, DeliveredMessage message) {
 
             // first check for system commands
             if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
                 handleSubscribeCommand(message);
             } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
-                presenceChangedEvent.notifyObservers(this, new Event<Presence>(message.getTimestamp(), deliveredMessage.getSubscriptionIds(), (Presence)message.getContent()));
+                presenceChangedEvent.notifyObservers(this, message);
             } else {
-                messageReceivedEvent.notifyObservers(this, deliveredMessage);
+                messageReceivedEvent.notifyObservers(this, message);
             }
         }
     };
 
-    private void handleSubscribeCommand(Message message) {
+    private void handleSubscribeCommand(DeliveredMessage message) {
         if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
 
             handleSubscribeComplete(message);
@@ -265,7 +263,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         }
     }
 
-    private void handleSubscribeComplete(Message message) {
+    private void handleSubscribeComplete(DeliveredMessage message) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Got SubscriptionComplete: " + message);
         }

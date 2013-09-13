@@ -1,8 +1,9 @@
 package com.zipwhip.api.signals.dto;
 
-import com.zipwhip.signals2.message.Message;
+import com.zipwhip.api.signals.Event;
 import com.zipwhip.signals2.timeline.TimelineEvent;
 
+import java.io.Serializable;
 import java.util.Set;
 
 /**
@@ -12,18 +13,18 @@ import java.util.Set;
  * @author Michael
  * @version 1
  */
-public class DeliveredMessage implements TimelineEvent, Comparable<DeliveredMessage> {
+public class DeliveredMessage<T extends Serializable> implements TimelineEvent, Comparable<DeliveredMessage>, Event<T> {
 
     private static final long serialVersionUID = 4614754472272105186L;
 
     private Set<String> subscriptionIds;
-    private Message message;
+    private String id;
+    private long timestamp;
+    private String event;
+    private String type;
+    private T content;
 
     public DeliveredMessage() {
-    }
-
-    public DeliveredMessage(Message message) {
-        this.message = message;
     }
 
     public Set<String> getSubscriptionIds() {
@@ -34,21 +35,44 @@ public class DeliveredMessage implements TimelineEvent, Comparable<DeliveredMess
         this.subscriptionIds = subscriptionIds;
     }
 
-    public Message getMessage() {
-        return message;
+    public String getId() {
+        return id;
     }
 
-    public void setMessage(Message message) {
-        this.message = message;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    @Override
     public long getTimestamp() {
-        if (message == null) {
-            return 0;
-        }
+        return timestamp;
+    }
 
-        return message.getTimestamp();
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getEvent() {
+        return event;
+    }
+
+    public void setEvent(String event) {
+        this.event = event;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public T getContent() {
+        return content;
+    }
+
+    public void setContent(T content) {
+        this.content = content;
     }
 
     @Override

@@ -47,7 +47,7 @@ public class SignalProviderTest {
         SocketIOSignalConnection signalConnection = new SocketIOSignalConnection();
         signalConnection.setImportantTaskExecutor(importantTaskExecutor);
         signalConnection.setGson(gson);
-        signalConnection.setUrl("http://localhost:23123/");
+        signalConnection.setUrl("http://localhost:8000/");
 
         signalProvider = new SignalProviderImpl();
         signalProvider.setSignalsSubscribeActor(actor);
@@ -70,7 +70,7 @@ public class SignalProviderTest {
 
     @Test
     public void testConnect() throws Exception {
-        final String sessionKey = "sessionKey";
+        final String sessionKey = "7bd08322-b2d7-4ca3-880c-5a400cb3f429:677606";
         final String subscriptionId = "subscriptionId";
         final String clientId;
 
@@ -104,9 +104,9 @@ public class SignalProviderTest {
                 assertEquals(1, item.getSubscriptionIds().size());
                 assertEquals(subscriptionId, item.getSubscriptionIds().iterator().next());
 
-                assertEquals(new ClientAddress(clientId), item.getData().getAddress());
-                assertEquals(Boolean.TRUE, item.getData().getConnected());
-                assertEquals(userAgent, item.getData().getUserAgent());
+                assertEquals(new ClientAddress(clientId), item.getContent().getAddress());
+                assertEquals(Boolean.TRUE, item.getContent().getConnected());
+                assertEquals(userAgent, item.getContent().getUserAgent());
 
                 presenceCountDownLatch.countDown();
             }
@@ -119,7 +119,7 @@ public class SignalProviderTest {
                 assertFalse(signalSubscribeResult.isFailed());
                 assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
                 assertEquals(signalSubscribeResult.getSubscriptionId(), subscriptionId);
-                assertEquals(2, signalSubscribeResult.getChannels().size());
+                assertEquals(3, signalSubscribeResult.getChannels().size());
 
                 subscribeCountDownLatch.countDown();
             }
@@ -130,7 +130,7 @@ public class SignalProviderTest {
         signalProvider.getMessageReceivedEvent().addObserver(new Observer<DeliveredMessage>() {
             @Override
             public void notify(Object sender, DeliveredMessage item) {
-                LOGGER.debug(String.format("Received a signal for subscriptionId(%s) and address (%s) : %s", item.getSubscriptionIds(), item.getMessage().getAddress(), item.getMessage().getContent()));
+                LOGGER.debug(String.format("Received a signal for subscriptionId(%s) : %s", item.getSubscriptionIds(), item.getContent()));
             }
         });
 
@@ -143,7 +143,7 @@ public class SignalProviderTest {
         assertFalse(signalSubscribeResult.isFailed());
         assertEquals(signalSubscribeResult.getSessionKey(), sessionKey);
         assertEquals(signalSubscribeResult.getSubscriptionId(), subscriptionId);
-        assertEquals(2, signalSubscribeResult.getChannels().size());
+        assertEquals(3, signalSubscribeResult.getChannels().size());
 
         LOGGER.debug("Everything looks good, starting the wait cycle to allow messages to be received!");
 

@@ -5,7 +5,6 @@ import com.zipwhip.api.signals.dto.BindResult;
 import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.api.signals.dto.SubscribeCompleteContent;
 import com.zipwhip.signals2.address.Address;
-import com.zipwhip.signals2.message.DefaultMessage;
 
 import java.lang.reflect.Type;
 import java.util.Date;
@@ -21,7 +20,6 @@ public class SignalProviderGsonBuilder {
 
     private static final Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(DeliveredMessage.class, new DeliveredMessageTypeAdapter())
-            .registerTypeHierarchyAdapter(DefaultMessage.class, new MessageTypeAdapter())
             .registerTypeHierarchyAdapter(Address.class, new AddressTypeConverter())
             .registerTypeHierarchyAdapter(SubscribeCompleteContent.class, new SubscribeCompleteContentTypeAdapter())
             .registerTypeHierarchyAdapter(BindResult.class, new BindResponseTypeAdapter())

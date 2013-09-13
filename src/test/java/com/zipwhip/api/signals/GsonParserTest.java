@@ -7,7 +7,6 @@ import com.zipwhip.signals2.SignalContentConverter;
 import com.zipwhip.signals2.SignalMessage;
 import com.zipwhip.signals2.address.ClientAddress;
 import com.zipwhip.signals2.message.DefaultMessage;
-import com.zipwhip.signals2.message.Message;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -15,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
 
+import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -81,14 +81,12 @@ public class GsonParserTest {
         String json = gson.toJson(deliveredMessageMap);
 
         // we have to specifically add the address field since gson isn't doing it right.
-        DeliveredMessage deliveredMessage = gson.fromJson(json, DeliveredMessage.class);
-        Message message = deliveredMessage.getMessage();
+        DeliveredMessage message = gson.fromJson(json, DeliveredMessage.class);
 
         assertEquals(messageMap.get("timestamp"), message.getTimestamp());
         assertEquals(messageMap.get("event"), message.getEvent());
         assertEquals(messageMap.get("type"), message.getType());
         assertEquals(messageMap.get("id"), message.getId());
-        assertEquals(messageMap.get("address"), message.getAddress());
 
         SignalMessage messageContent = (SignalMessage)message.getContent();
 
@@ -115,9 +113,9 @@ public class GsonParserTest {
 
         DeliveredMessage message = new DeliveredMessage();
         message.setSubscriptionIds(new TreeSet<String>(Arrays.asList("subscriptionId1")));
-        message.setMessage(new DefaultMessage());
 
         gson.fromJson(json, DeliveredMessage.class);
 
+        fail("This should be improved");
     }
 }

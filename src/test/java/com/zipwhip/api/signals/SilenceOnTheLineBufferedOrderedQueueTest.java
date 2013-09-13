@@ -2,7 +2,6 @@ package com.zipwhip.api.signals;
 
 import com.zipwhip.api.signals.dto.DeliveredMessage;
 import com.zipwhip.events.Observer;
-import com.zipwhip.signals2.message.DefaultMessage;
 import com.zipwhip.timers.HashedWheelTimer;
 import org.junit.Test;
 
@@ -26,14 +25,14 @@ public class SilenceOnTheLineBufferedOrderedQueueTest {
 
     @Test
     public void testCorrectOrdering() throws Exception {
-        DefaultMessage message1 = new DefaultMessage();
+        DeliveredMessage message1 = new DeliveredMessage();
         message1.setTimestamp(1);
 
-        DefaultMessage message2 = new DefaultMessage();
+        DeliveredMessage message2 = new DeliveredMessage();
         message2.setTimestamp(2);
 
-        queue.append(new DeliveredMessage(message1));
-        queue.append(new DeliveredMessage(message2));
+        queue.append(message1);
+        queue.append(message2);
 
         final List<DeliveredMessage> list = new ArrayList<DeliveredMessage>();
         final CountDownLatch latch = new CountDownLatch(2);
