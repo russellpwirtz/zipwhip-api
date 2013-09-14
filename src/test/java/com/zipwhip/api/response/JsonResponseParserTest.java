@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -131,7 +132,7 @@ public class JsonResponseParserTest {
         List<Message> messages = parser.parseMessagesFromConversation(response);
         Assert.assertNotNull(messages);
         Assert.assertEquals(1, messages.size());
-        
+
         //Look at a few values in the message object, to confirm that they're valid.
         Message m = messages.get(0);
         Assert.assertEquals(196731185526153216l, m.getId());
@@ -185,7 +186,7 @@ public class JsonResponseParserTest {
         Assert.assertEquals("", c.getFingerprint());
         Assert.assertEquals(0l, c.getLastContactDeviceId());
         Assert.assertEquals(2252293l, c.getDeviceId());
-        
+
     }
 
     /**
@@ -196,9 +197,9 @@ public class JsonResponseParserTest {
         String responseString = "[ ]";
         JSONArray o = new JSONArray(responseString);
         response = new ArrayServerResponse(responseString, true, o, null);
-        
+
         List<Conversation> conversations = parser.parseConversations(response);
-        
+
         Assert.assertNotNull(conversations);
         Assert.assertEquals(0, conversations.size());
     }
@@ -216,7 +217,7 @@ public class JsonResponseParserTest {
 
         Assert.assertNotNull(contacts);
         Assert.assertEquals(2, contacts.size());
-        
+
         Contact c = contacts.get(0);
 
         Assert.assertEquals(1964179401l, c.getId());
@@ -241,13 +242,13 @@ public class JsonResponseParserTest {
         Assert.assertNotNull(contacts);
         Assert.assertEquals(0, contacts.size());
     }
-    
+
     @Test
     public void testUserGetResponseParsingAsUser() throws Exception {
         String responseString = "{\"user\": {\"firstName\": \"Craig\",\"lastName\": \"Erickson\",\"mobileNumber\": \"3609900541\",\"carrier\": \"Tmo\",\"fullName\": \"Craig Erickson\",\"phoneKey\": \"PHONE KEY???\",\"email\": \"craigerick@gmail.com\",\"zipcode\": \"\",\"birthday\": \"\",\"loc\": \"Seattle,WA\",\"notes\": \"First test of the revised user save functionality.\",\"websiteDeviceKey\": \"89cbcf8f-7a22-42ec-86e0-27300ff24774\",\"websiteDeviceId\": 2252293,\"MOCount\": 121,\"ZOCount\": 0},\"settings\": {\"smartForwarding_enabled\": false,\"smartForwarding_timeout\": 0,\"smartForwarding_instant\": false,\"corkboard_send\": false,\"corkboard_receive\": true,\"riser_enabled\": true,\"riser_volume\": 50,\"sendMessage_keepOpen\": false,\"sendMessage_ding\": true,\"mobilePhone_share\": true,\"login_persist\": true,\"login_timeout\": 30,\"contacts_connected\": true,\"contacts_autoAdd\": true,\"signature_mode\": \"firstinitial\",\"signature_custom\": \"\",\"textSuggest_enabled\": true, \"sendMessage_characterCounterAlert\": true, \"wizard_seen\": true},\"groups\": [ ]}";
         JSONObject o = new JSONObject(responseString);
         response = new ObjectServerResponse(responseString, true, o, null);
-        
+
         User user = parser.parseUser(response);
 
         Assert.assertNotNull(user);
@@ -283,7 +284,7 @@ public class JsonResponseParserTest {
         Assert.assertEquals("Seattle,WA", user.getLoc());
         Assert.assertEquals(0l, user.getVersion());
     }
-    
+
     @Test
     public void testFaceEcosystemNameParsing() throws Exception {
         String responseString = "{\"firstName\":\"Craig\",\"lastName\":\"Erickson\",\"fullName\":\"Craig Erickson\"}";
@@ -291,9 +292,27 @@ public class JsonResponseParserTest {
         response = new ObjectServerResponse(responseString, true, o, null);
 
         String name = parser.parseFaceName(response);
-        
+
         Assert.assertEquals("Craig Erickson", name);
-        
+
+    }
+
+    @Test
+    public void parseFaceNames() throws Exception {
+        String responseString = "{" +
+                "111:{\"firstName\":\"a\",\"lastName\":\"1\",\"fullName\":\"a 1\"}," +
+                "222:{\"firstName\":\"b\",\"lastName\":\"2\",\"fullName\":\"b 2\"}," +
+                "333:{\"firstName\":\"c\",\"lastName\":\"3\",\"fullName\":\"c 3\"}" +
+                "}";
+        JSONObject o = new JSONObject(responseString);
+        response = new ObjectServerResponse(responseString, true, o, null);
+
+        final Map<String, String> result = parser.parseFaceNames(response);
+        Assert.assertNotNull(result);
+        Assert.assertEquals("a 1", result.get("111"));
+        Assert.assertEquals("b 2", result.get("222"));
+        Assert.assertEquals("c 3", result.get("333"));
+        System.out.println();
     }
 
     @Test
@@ -308,11 +327,11 @@ public class JsonResponseParserTest {
 
         Assert.assertEquals(tokens.get(0).getMessage(), "215924819606511616");
         Assert.assertEquals(tokens.get(0).getFingerprint(), "228782999");
-        Assert.assertEquals(tokens.get(0).getContactId(), (long)1167259903);
-        Assert.assertEquals(tokens.get(0).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(0).getContactId(), (long) 1167259903);
+        Assert.assertEquals(tokens.get(0).getDeviceId(), (long) 119021003);
         Assert.assertEquals(tokens.get(0).getRootMessage(), "215924819606511616");
-        
-        
+
+
         //Test for situations in which we receive a response containing multiple MessageTokens.
         String resposneStringMultipleTokens = "{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorResponse\",\"fingerprint\":null,\"root\":\"215923266879361026\",\"tokens\":[{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":1260602403,\"device\":119021003,\"fingerprint\":\"1206227859\",\"message\":\"215923266879361024\"},{\"class\":\"com.zipwhip.outgoing.distributor.OutgoingMessageDistributorToken\",\"contact\":1260602503,\"device\":119021003,\"fingerprint\":\"4284805295\",\"message\":\"215923266879361025\"}]}";
         o = new JSONObject(resposneStringMultipleTokens);
@@ -324,15 +343,15 @@ public class JsonResponseParserTest {
 
         Assert.assertEquals(tokens.get(0).getMessage(), "215923266879361024");
         Assert.assertEquals(tokens.get(0).getFingerprint(), "1206227859");
-        Assert.assertEquals(tokens.get(0).getContactId(), (long)1260602403);
-        Assert.assertEquals(tokens.get(0).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(0).getContactId(), (long) 1260602403);
+        Assert.assertEquals(tokens.get(0).getDeviceId(), (long) 119021003);
         Assert.assertEquals(tokens.get(0).getRootMessage(), "215923266879361026");
 
         Assert.assertEquals(tokens.get(1).getMessage(), "215923266879361025");
         Assert.assertEquals(tokens.get(1).getFingerprint(), "4284805295");
-        Assert.assertEquals(tokens.get(1).getContactId(), (long)1260602503);
-        Assert.assertEquals(tokens.get(1).getDeviceId(), (long)119021003);
+        Assert.assertEquals(tokens.get(1).getContactId(), (long) 1260602503);
+        Assert.assertEquals(tokens.get(1).getDeviceId(), (long) 119021003);
         Assert.assertEquals(tokens.get(1).getRootMessage(), "215923266879361026");
-        
+
     }
 }

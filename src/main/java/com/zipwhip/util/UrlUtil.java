@@ -3,6 +3,8 @@ package com.zipwhip.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+
 /**
  * Created by IntelliJ IDEA.
  * User: jed
@@ -16,10 +18,10 @@ public class UrlUtil {
     /**
      * Get an authenticated URL for posting to Zipwhip.
      *
-     * @param host The host portion of the url.
+     * @param host       The host portion of the url.
      * @param apiVersion The Zipwhip API version.
-     * @param method The method to be called on the Zipwhip API.
-     * @param params A string of query params.
+     * @param method     The method to be called on the Zipwhip API.
+     * @param params     A string of query params.
      * @param sessionKey The user's sessionKey.
      * @return A Zipwhip URL that is signed.
      * @throws Exception If an error occurs creating or signing the URL.
@@ -31,10 +33,10 @@ public class UrlUtil {
     /**
      * Get an authenticated URL for posting to Zipwhip.
      *
-     * @param host The host portion of the url.
-     * @param apiVersion The Zipwhip API version.
-     * @param method The method to be called on the Zipwhip API.
-     * @param params A string of query params.
+     * @param host          The host portion of the url.
+     * @param apiVersion    The Zipwhip API version.
+     * @param method        The method to be called on the Zipwhip API.
+     * @param params        A string of query params.
      * @param authenticator A SignTool to use for signing the URL.
      * @return A Zipwhip URL that is signed.
      * @throws Exception If an error occurs creating or signing the URL.
@@ -46,11 +48,11 @@ public class UrlUtil {
     /**
      * Get an authenticated URL for posting to Zipwhip.
      *
-     * @param host The host portion of the url.
-     * @param apiVersion The Zipwhip API version.
-     * @param method The method to be called on the Zipwhip API.
-     * @param params A string of query params.
-     * @param sessionKey The user's sessionKey.
+     * @param host          The host portion of the url.
+     * @param apiVersion    The Zipwhip API version.
+     * @param method        The method to be called on the Zipwhip API.
+     * @param params        A string of query params.
+     * @param sessionKey    The user's sessionKey.
      * @param authenticator A SignTool to use for signing the URL.
      * @return A Zipwhip URL that is signed.
      * @throws Exception If an error occurs creating or signing the URL.
@@ -101,7 +103,7 @@ public class UrlUtil {
      * Sign a URL.
      *
      * @param authenticator The SignTool to use in signing.
-     * @param url The URL to sign
+     * @param url           The URL to sign
      * @return The encrypted secret of an empty string.
      * @throws Exception Id an error occurs signing the URL.
      */
@@ -120,13 +122,32 @@ public class UrlUtil {
     /**
      * Build a String representing a Zipwhip URL. No validation is done ensure this is a valid URL.
      *
-     * @param host The host portion of the url.
+     * @param host       The host portion of the url.
      * @param apiVersion The Zipwhip API version.
-     * @param method The method to be called on the Zipwhip API.
+     * @param method     The method to be called on the Zipwhip API.
      * @return A non-validated Zipwhip URL.
      */
     private static String getUrl(String host, String apiVersion, String method) {
         return host + apiVersion + method;
+    }
+
+    /**
+     * Converts a String collection to a string of values separated by a separator
+     *
+     * @param collection - string collection
+     * @param separator  - separator
+     * @return
+     */
+    public static String collectionToString(Collection<String> collection, final char separator) {
+        if (CollectionUtil.isNullOrEmpty(collection)) return null;
+
+        final StringBuilder builder = new StringBuilder();
+        for (String string : collection) {
+            if (StringUtil.exists(string)) builder.append(string).append(separator);
+        }
+
+        final String result = builder.length() > 0 ? builder.substring(0, builder.length() - 1) : null;
+        return StringUtil.isNullOrEmpty(result) ? null : result;
     }
 
 }

@@ -570,11 +570,22 @@ public interface ZipwhipClient extends Destroyable {
     /**
      * Query Zipwhip Face Ecosystem for a user's preferred profile name.
      *
-     * @param mobileNumber The mobile number of the user you wish to query.
+     * @param phoneNumber The phone number of the user you wish to query.
      * @return The user's full name if it exists or empty string.
      * @throws Exception if an error occurs communicating with Zipwhip or parsing the response.
      */
-    String getFaceName(String mobileNumber) throws Exception;
+    String getFaceName(String phoneNumber) throws Exception;
+
+
+    /**
+     * Bulk Query Zipwhip Face Ecosystem for a users' preferred profile names.
+     *
+     * @param phoneNumbers Collection of phone numbers you wish to query.
+     * @return Map of phone number/full name
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
+     */
+    public Map<String, String> getFaceName(Collection<String> phoneNumbers) throws Exception;
 
     /**
      * Query Zipwhip Face Ecosystem for a user's preferred profile image.
@@ -595,6 +606,16 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
     byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
+     * Check if the phone number has a face eco image
+     *
+     * @param phoneNumbers Collection of phone numbers you wish to query.
+     * @return Map of phone number/boolean (exists or not)
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
+     */
+    public Map<String, Boolean> hasFaceImage(Collection<String> phoneNumbers) throws Exception;
 
     /**
      * Query for a message's MMS attachment descriptors.

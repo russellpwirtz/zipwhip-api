@@ -55,8 +55,11 @@ public interface ResponseParser extends Parser<String, ServerResponse> {
 
     String parseFaceName(ServerResponse serverResponse) throws Exception;
 
+    Map<String, String> parseFaceNames(ServerResponse serverResponse) throws Exception;
+
     Map<String, String> parseHostedContentSave(ServerResponse serverResponse) throws Exception;
 
     TinyUrl parseTinyUrl(ServerResponse serverResponse) throws Exception;
 
+    Map<String, Boolean> parseFaceImages(ServerResponse serverResponse) throws Exception;
 }
