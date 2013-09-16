@@ -8,7 +8,6 @@ import com.zipwhip.timers.HashedWheelTimer;
 import com.zipwhip.timers.Timeout;
 import com.zipwhip.timers.Timer;
 import com.zipwhip.timers.TimerTask;
-import com.zipwhip.util.BufferedRunnable;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FlexibleTimedEvictionMap;
 
@@ -75,12 +74,6 @@ public class SlidingWindow<P> extends DestroyableBase {
     // How long to wait for holes to fill in
     private int holeTimeoutMillis = 5000;
 
-    // this is how we notify the observers.
-    // we're buffering the request to prevent dupes.
-    private Runnable notifyObserversOfHolesRunnable;
-    // We need this to prevent sending dupe requests to the server.
-    private Set<Long> pendingHolesToBeAnnounced = new TreeSet<Long>();
-
     /**
      * Construct a SlidingWindow with a default window size and eviction time.
      */
@@ -95,10 +88,6 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @param minimumEvictionTimeMillis The time in milliseconds that a packet will be kept in the window.
      */
     public SlidingWindow(Timer timer, String key, int idealSize, long minimumEvictionTimeMillis) {
-        this(timer, key, idealSize, minimumEvictionTimeMillis, 5000);
-    }
-
-    public SlidingWindow(Timer timer, String key, int idealSize, long minimumEvictionTimeMillis, long bufferDurationInMillis) {
         if (timer == null) {
             timer = new HashedWheelTimer(new NamedThreadFactory("SlidingWindow-"));
         }
@@ -106,30 +95,7 @@ public class SlidingWindow<P> extends DestroyableBase {
         this.key = key;
         this.window = new FlexibleTimedEvictionMap<Long, P>(idealSize, minimumEvictionTimeMillis);
         this.holes = new TreeSet<Long>();
-
-        notifyObserversOfHolesRunnable = new BufferedRunnable(timer, announceHolesRunnable, bufferDurationInMillis, TimeUnit.MILLISECONDS);
     }
-
-    private final Runnable announceHolesRunnable = new Runnable() {
-        @Override
-        public void run() {
-            Set<HoleRange> ranges;
-
-            synchronized (SlidingWindow.this) {
-                // prune the list down.
-                ranges = buildHoleRanges(pruneFilledHoles(pendingHolesToBeAnnounced));
-                pendingHolesToBeAnnounced.clear();
-            }
-
-            if (CollectionUtil.isNullOrEmpty(ranges)) {
-                return;
-            }
-
-            for (HoleRange holeRange : ranges) {
-                holeTimeoutEvent.notifyObservers(this, holeRange);
-            }
-        }
-    };
 
     public long getIndexSequence() {
         return indexSequence;
@@ -368,7 +334,7 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @return
      */
     protected Set<Long> getExistingHoles(Map<Long, Void> holes) {
-        return pruneAbandonedOrFilledHoles(holes.keySet());
+        return getExistingHoles(holes.keySet());
     }
 
     /**
@@ -377,29 +343,11 @@ public class SlidingWindow<P> extends DestroyableBase {
      * @param holes
      * @return
      */
-    protected Set<Long> pruneAbandonedOrFilledHoles(Set<Long> holes) {
+    protected Set<Long> getExistingHoles(Set<Long> holes) {
         Set<Long> result = new TreeSet<Long>();
 
         for (Long sequence : holes) {
             if (this.holes.contains(sequence)) {
-                result.add(sequence);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * From this set, get the ones that are not holes (might have been flushed) but are still not resolved.
-     *
-     * @param holes
-     * @return
-     */
-    protected Set<Long> pruneFilledHoles(Set<Long> holes) {
-        Set<Long> result = new TreeSet<Long>();
-
-        for (Long sequence : holes) {
-            if (!this.window.containsKey(sequence)) {
                 result.add(sequence);
             }
         }
@@ -416,22 +364,19 @@ public class SlidingWindow<P> extends DestroyableBase {
             @Override
             public void run(Timeout timeout) throws Exception {
                 synchronized (SlidingWindow.this) {
-                    final Set<Long> existingHoles = pruneAbandonedOrFilledHoles(discoveredHoles);
+                    final Set<Long> existingHoles = getExistingHoles(discoveredHoles);
                     if (CollectionUtil.isNullOrEmpty(existingHoles)) {
                         // All of the holes we were looking for are no longer holes!
                         return;
                     }
 
-                    // enqueue the holes to be processed later.
-                    pendingHolesToBeAnnounced.addAll(existingHoles);
-                    // buffered 5 seconds. Will prune.
-                    notifyObserversOfHolesRunnable.run();
+                    notifyObserversOfHoles(existingHoles);
 
                     timer.newTimeout(new TimerTask() {
                         @Override
                         public void run(Timeout timeout) throws Exception {
                             // we need to clean up any holes and just discard them.
-                            Set<Long> currentHoles = pruneAbandonedOrFilledHoles(existingHoles);
+                            Set<Long> currentHoles = getExistingHoles(existingHoles);
 
                             flushAndReleaseHoles(sequence, currentHoles);
                         }
@@ -447,6 +392,14 @@ public class SlidingWindow<P> extends DestroyableBase {
         List<P> results = getResultsAfterAndMoveIndex(sequence);
 
         packetsReleasedEvent.notifyObservers(SlidingWindow.this, results);
+    }
+
+    private void notifyObserversOfHoles(Set<Long> existingHoles) {
+        Set<HoleRange> ranges = buildHoleRanges(existingHoles);
+
+        for (HoleRange range : ranges) {
+            holeTimeoutEvent.notifyObservers(this, range);
+        }
     }
 
     /**
@@ -506,8 +459,8 @@ public class SlidingWindow<P> extends DestroyableBase {
         return holes.contains(sequence);
     }
 
-    protected Set<HoleRange> getHoleRanges(Set<Long> keys) {
-        Set<HoleRange> holes = new TreeSet<HoleRange>(HOLE_RANGE_COMPARATOR);
+    protected List<HoleRange> getHoles(Set<Long> keys) {
+        List<HoleRange> holes = new ArrayList<HoleRange>();
 
         if ((keys.size() == 1) && keys.contains(indexSequence)) {
             // there are no holes?
@@ -535,8 +488,8 @@ public class SlidingWindow<P> extends DestroyableBase {
         return holes;
     }
 
-    public Set<HoleRange> getHoleRanges() {
-        return getHoleRanges(window.keySet());
+    public List<HoleRange> getHoles() {
+        return getHoles(window.keySet());
     }
 
     protected P getValue(long sequence) {
