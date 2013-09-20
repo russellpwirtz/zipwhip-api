@@ -730,7 +730,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             synchronized (SignalProviderImpl.this) {
                 if (item.isSuccess()) {
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Decided not to fire because future was successful.");
+                        LOGGER.debug("Decided not to fire our ReconnectOnFailureObserver because future was successful.");
                     }
 
                     return;
@@ -762,8 +762,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         public void notify(Object sender, ObservableFuture<BindResult> item) {
             synchronized (SignalProviderImpl.this) {
                 if (item.isSuccess()) {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Decided not to fire because future was successful.");
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Decided not to fire our DisconnectOnFailureObserver because future was successful.");
                     }
 
                     return;
