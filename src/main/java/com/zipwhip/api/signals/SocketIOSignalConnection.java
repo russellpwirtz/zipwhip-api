@@ -2,6 +2,7 @@ package com.zipwhip.api.signals;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FakeObservableFuture;
@@ -11,12 +12,15 @@ import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
 import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
+import com.zipwhip.gson.GsonUtil;
 import com.zipwhip.important.ImportantTaskExecutor;
 import com.zipwhip.important.ZipwhipSchedulerTimer;
 import com.zipwhip.reliable.retry.RetryStrategy;
+import com.zipwhip.signals2.SignalServerException;
 import com.zipwhip.timers.Timeout;
 import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FutureDateUtil;
+import com.zipwhip.util.StringUtil;
 import io.socket.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +37,9 @@ import java.util.concurrent.TimeUnit;
  * @author Michael
  * @version 1
  */
-public class SocketIOSignalConnection implements SignalConnection {
+public class SocketIoSignalConnection implements SignalConnection {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SocketIOSignalConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SocketIoSignalConnection.class);
 
     private volatile SocketIO socketIO;
     private volatile ObservableFuture<Void> externalConnectFuture;
@@ -57,7 +61,7 @@ public class SocketIOSignalConnection implements SignalConnection {
 
     private String url;
 
-    public SocketIOSignalConnection() {
+    public SocketIoSignalConnection() {
         exceptionEvent = new ObservableHelper<Throwable>("ExceptionEvent", eventExecutor);
         connectEvent = new ObservableHelper<Void>("ConnectEvent", eventExecutor);
         disconnectEvent = new ObservableHelper<Void>("DisconnectEvent", eventExecutor);
@@ -75,7 +79,7 @@ public class SocketIOSignalConnection implements SignalConnection {
         result.addObserver(new Observer<ObservableFuture<Void>>() {
             @Override
             public void notify(Object sender, ObservableFuture<Void> item) {
-                synchronized (SocketIOSignalConnection.this) {
+                synchronized (SocketIoSignalConnection.this) {
                     if (item.isSuccess()){
                         retryCount = 0;
                     }
@@ -113,7 +117,7 @@ public class SocketIOSignalConnection implements SignalConnection {
     private class ConnectTask implements Callable<ObservableFuture<Void>> {
         @Override
         public ObservableFuture<Void> call() throws Exception {
-            synchronized (SocketIOSignalConnection.this) {
+            synchronized (SocketIoSignalConnection.this) {
                 connectFuture = new DefaultObservableFuture<Void>(this, eventExecutor);
 
                 try {
@@ -155,24 +159,24 @@ public class SocketIOSignalConnection implements SignalConnection {
     private final IOCallback callback = new IOCallback() {
         @Override
         public void onDisconnect() {
-            synchronized (SocketIOSignalConnection.this) {
+            synchronized (SocketIoSignalConnection.this) {
                 if (connectFuture != null) {
                     connectFuture.setFailure(new Exception("Disconnected"));
                 }
             }
 
-            disconnectEvent.notifyObservers(SocketIOSignalConnection.this, null);
+            disconnectEvent.notifyObservers(SocketIoSignalConnection.this, null);
         }
 
         @Override
         public void onConnect() {
-            synchronized (SocketIOSignalConnection.this) {
+            synchronized (SocketIoSignalConnection.this) {
                 if (connectFuture != null) {
                     connectFuture.setSuccess(null);
                 }
             }
 
-            connectEvent.notifyObservers(SocketIOSignalConnection.this, null);
+            connectEvent.notifyObservers(SocketIoSignalConnection.this, null);
         }
 
         @Override
@@ -188,15 +192,33 @@ public class SocketIOSignalConnection implements SignalConnection {
         @Override
         public void onMessage(JsonElement json, IOAcknowledge ack) {
             try {
-                messageEvent.notifyObservers(SocketIOSignalConnection.this, json);
+                messageEvent.notifyObservers(SocketIoSignalConnection.this, json);
             } finally {
-                ack.ack();
+                if (ack != null) {
+                    ack.ack();
+                }
             }
         }
 
         @Override
         public void on(String event, IOAcknowledge ack, Object... args) {
-            ack.ack();
+            try {
+                if (StringUtil.equals(event, "error")) {
+                    for (Object arg : args) {
+                        JsonObject object = (JsonObject) arg;
+
+                        SignalServerException exception = new SignalServerException(
+                                GsonUtil.getInt(object.get("code")),
+                                GsonUtil.getString(object.get("message")));
+
+                        exceptionEvent.notifyObservers(SocketIoSignalConnection.this, exception);
+                    }
+                }
+            } finally {
+                if (ack != null) {
+                    ack.ack();
+                }
+            }
         }
 
         @Override
@@ -205,7 +227,7 @@ public class SocketIOSignalConnection implements SignalConnection {
                 connectFuture.setFailure(socketIOException);
             }
 
-            exceptionEvent.notifyObservers(SocketIOSignalConnection.this, socketIOException);
+            exceptionEvent.notifyObservers(SocketIoSignalConnection.this, socketIOException);
         }
 
         @Override

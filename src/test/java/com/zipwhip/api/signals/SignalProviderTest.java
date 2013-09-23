@@ -44,7 +44,7 @@ public class SignalProviderTest {
 
     @Before
     public void setUp() throws Exception {
-        SocketIOSignalConnection signalConnection = new SocketIOSignalConnection();
+        SocketIoSignalConnection signalConnection = new SocketIoSignalConnection();
         signalConnection.setImportantTaskExecutor(importantTaskExecutor);
         signalConnection.setGson(gson);
         signalConnection.setUrl("http://localhost:8000/");
