@@ -21,7 +21,11 @@ public class BindResultTypeAdapter implements JsonDeserializer<BindResult> {
 
         String clientId = GsonUtil.getString(object, "clientId");
         String token = GsonUtil.getString(object, "token");
-        long timestamp = GsonUtil.getLong(object.get("timestamp"));
+        Long timestamp = GsonUtil.getLong(object.get("timestamp"));
+
+        if (timestamp == null) {
+            timestamp = System.currentTimeMillis();
+        }
 
         return new BindResult(clientId, token, timestamp);
     }
