@@ -35,9 +35,9 @@ public class SilenceOnTheLineBufferedOrderedQueue<T extends TimelineEvent> exten
     private final PriorityQueue<T> queue = new PriorityQueue<T>();
     private final ObservableHelper<T> itemEvent;
 
-    public SilenceOnTheLineBufferedOrderedQueue(Executor executor, Timer timer, long delay, TimeUnit timeUnit) {
+    public SilenceOnTheLineBufferedOrderedQueue(Executor eventExecutor, Timer timer, long delay, TimeUnit timeUnit) {
         this.runnable = new BufferedRunnable(timer, this, delay, timeUnit);
-        this.itemEvent = new ObservableHelper<T>("BufferedOrderedQueue/itemEvent", executor);
+        this.itemEvent = new ObservableHelper<T>("BufferedOrderedQueue/itemEvent", eventExecutor);
     }
 
     public SilenceOnTheLineBufferedOrderedQueue(Timer timer, long delay, TimeUnit timeUnit) {
