@@ -35,9 +35,26 @@ public class NingSignalsSubscribeActor implements SignalsSubscribeActor {
     private static final AsyncHandler<Void> HANDLER = new NullAsyncCompletionHandler<Void>();
 
     private AsyncHttpClient client;
-    private String url;
+    private String url = "http://network.zipwhip.com/signal/subscribe";
     private Executor executor = SimpleExecutor.getInstance();
     private Executor eventExecutor = SimpleExecutor.getInstance();
+
+    public NingSignalsSubscribeActor() {
+
+    }
+
+    public NingSignalsSubscribeActor(AsyncHttpClient client, String url) {
+        this.client = client;
+        this.url = url;
+    }
+
+    public NingSignalsSubscribeActor(String url) {
+        this.url = url;
+    }
+
+    public NingSignalsSubscribeActor(AsyncHttpClient client) {
+        this.client = client;
+    }
 
     @Override
     public ObservableFuture<Void> subscribe(String clientId, String sessionKey, String subscriptionId, UserAgent userAgent) {
@@ -122,34 +139,6 @@ public class NingSignalsSubscribeActor implements SignalsSubscribeActor {
 
         return result;
     }
-
-//    private class ReflectionCompletionHandler<T> extends AsyncCompletionHandler<T> {
-//
-//        private final Class<T> clazz;
-//        private final MutableObservableFuture<T> future;
-//
-//        private ReflectionCompletionHandler(Class<T> clazz, MutableObservableFuture<T> future) {
-//            this.clazz = clazz;
-//            this.future = future;
-//        }
-//
-//        @Override
-//        public T onCompleted(Response response) throws Exception {
-//            switch (response.getStatusCode()) {
-//                case 200:
-//                    return GSON.fromJson(response.getResponseBody(), clazz);
-//                default:
-//                    throw new Exception(response.getStatusText());
-//            }
-//        }
-//
-//        @Override
-//        public void onThrowable(Throwable t) {
-//            super.onThrowable(t);
-//
-//            future.setFailure(t);
-//        }
-//    }
 
     private static class ListenerRunnable<T> implements Runnable {
 
