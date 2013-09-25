@@ -99,7 +99,7 @@ public interface SignalProvider extends Destroyable {
      */
     Observable<Event<Presence>> getPresenceChangedEvent();
 
-    Observable<DeliveredMessage> getMessageReceivedEvent();
+    Observable<DeliveredMessage> getSignalReceivedEvent();
 
     /**
      * If any parsing exception occurs, or connection exception. Should generally test for the exception type

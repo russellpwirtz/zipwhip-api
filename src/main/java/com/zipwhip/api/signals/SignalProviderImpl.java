@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.zipwhip.api.signals.dto.*;
+import com.zipwhip.api.signals.dto.json.SignalProviderGsonBuilder;
 import com.zipwhip.concurrent.*;
 import com.zipwhip.events.Observable;
 import com.zipwhip.events.ObservableHelper;
@@ -44,7 +45,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private final ObservableHelper<SubscribeResult> unsubscribeEvent;
     private final ObservableHelper<Throwable> exceptionEvent;
     private final ObservableHelper<Void> connectionChangedEvent;
-    private final ObservableHelper<DeliveredMessage> messageReceivedEvent;
+    private final ObservableHelper<DeliveredMessage> signalReceivedEvent;
     private final ObservableHelper<Event<Presence>> presenceChangedEvent;
     private final ObservableHelper<BindResult> bindEvent;
 
@@ -54,7 +55,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     private SignalsSubscribeActor signalsSubscribeActor;
     private ImportantTaskExecutor importantTaskExecutor;
     private BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue;
-    private Gson gson;
+    private Gson gson = SignalProviderGsonBuilder.getInstance();
     private SignalConnection signalConnection;
 
     private final Map<String, SubscriptionRequest> pendingSubscriptionRequests = new ConcurrentHashMap<String, SubscriptionRequest>();
@@ -75,7 +76,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
         exceptionEvent = new ObservableHelper<Throwable>("ExceptionEvent", eventExecutor);
         subscribeEvent = new ObservableHelper<SubscribeResult>("SubscribeEvent", eventExecutor);
         unsubscribeEvent = new ObservableHelper<SubscribeResult>("UnsubscribeEvent", eventExecutor);
-        messageReceivedEvent = new ObservableHelper<DeliveredMessage>("MessageReceivedEvent", eventExecutor);
+        signalReceivedEvent = new ObservableHelper<DeliveredMessage>("MessageReceivedEvent", eventExecutor);
         bindEvent = new ObservableHelper<BindResult>("BindEvent", eventExecutor);
         presenceChangedEvent = new ObservableHelper<Event<Presence>>("PresenceChangedEvent", eventExecutor);
     }
@@ -311,7 +312,7 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
                 presenceChangedEvent.notifyObservers(this, message);
             } else {
-                messageReceivedEvent.notifyObservers(this, message);
+                signalReceivedEvent.notifyObservers(this, message);
             }
         }
     };
@@ -387,8 +388,8 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     }
 
     @Override
-    public Observable<DeliveredMessage> getMessageReceivedEvent() {
-        return messageReceivedEvent;
+    public Observable<DeliveredMessage> getSignalReceivedEvent() {
+        return signalReceivedEvent;
     }
 
     @Override
