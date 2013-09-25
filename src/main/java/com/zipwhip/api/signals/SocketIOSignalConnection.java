@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.zipwhip.api.signals.dto.json.SignalProviderGsonBuilder;
 import com.zipwhip.concurrent.DefaultObservableFuture;
 import com.zipwhip.concurrent.FakeObservableFuture;
 import com.zipwhip.concurrent.MutableObservableFuture;
@@ -14,10 +15,10 @@ import com.zipwhip.events.Observer;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.gson.GsonUtil;
 import com.zipwhip.important.ImportantTaskExecutor;
-import com.zipwhip.important.ZipwhipSchedulerTimer;
 import com.zipwhip.reliable.retry.RetryStrategy;
 import com.zipwhip.signals2.SignalServerException;
 import com.zipwhip.timers.Timeout;
+import com.zipwhip.timers.Timer;
 import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.FutureDateUtil;
 import com.zipwhip.util.StringUtil;
@@ -54,10 +55,10 @@ public class SocketIoSignalConnection implements SignalConnection {
     private Executor eventExecutor = SimpleExecutor.getInstance();
     private Executor executor = SimpleExecutor.getInstance();
 
-    private Gson gson;
+    private Gson gson = SignalProviderGsonBuilder.getInstance();
     private ImportantTaskExecutor importantTaskExecutor;
     private RetryStrategy retryStrategy;
-    private ZipwhipSchedulerTimer timer;
+    private Timer timer;
 
     private String url;
 
@@ -110,7 +111,7 @@ public class SocketIoSignalConnection implements SignalConnection {
         this.retryStrategy = retryStrategy;
     }
 
-    public void setTimer(ZipwhipSchedulerTimer timer) {
+    public void setTimer(Timer timer) {
         this.timer = timer;
     }
 

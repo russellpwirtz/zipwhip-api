@@ -127,7 +127,7 @@ public class SignalProviderTest {
 
         ObservableFuture<SubscribeResult> future1 = signalProvider.subscribe(sessionKey, subscriptionId);
 
-        signalProvider.getMessageReceivedEvent().addObserver(new Observer<DeliveredMessage>() {
+        signalProvider.getSignalReceivedEvent().addObserver(new Observer<DeliveredMessage>() {
             @Override
             public void notify(Object sender, DeliveredMessage item) {
                 LOGGER.debug(String.format("Received a signal for subscriptionId(%s) : %s", item.getSubscriptionIds(), item.getContent()));
