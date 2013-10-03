@@ -10,6 +10,8 @@ import com.zipwhip.timers.Timer;
 import com.zipwhip.timers.TimerTask;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.FlexibleTimedEvictionMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +23,8 @@ import java.util.concurrent.TimeUnit;
  * Time: 12:40 PM
  */
 public class SlidingWindow<P> extends DestroyableBase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SlidingWindow.class);
 
     protected static final int INITIAL_CONDITION = -1;
 
@@ -193,18 +197,24 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         // DUPLICATE_SEQUENCE
         if (window.containsKey(sequence)) {
+            LOGGER.debug(String.format("DUPLICATE_SEQUENCE (sequence: %d)", sequence));
+
             // No results to release, this packet gets dropped
             return ReceiveResult.DUPLICATE_SEQUENCE;
         }
 
         // DUPLICATE?
         // It's not in the window, but it might be the "initial condition"
-        if (sequence == indexSequence) {
+        if (sequence.equals(indexSequence)) {
+            LOGGER.debug(String.format("DUPLICATE_SEQUENCE (sequence: %d)", sequence));
+
             return ReceiveResult.DUPLICATE_SEQUENCE;
         }
 
         // HOLE_FILLED
         if (hasHoles() && fillsAHole(sequence)) {
+            LOGGER.debug(String.format("HOLE_FILLED (sequence: %d, hasHoles: %b, fillsAHole: %b)", sequence, hasHoles(), fillsAHole(sequence)));
+
             window.put(sequence, value);
 
             // We only want to add the results if the filled hole was the first hole
@@ -220,6 +230,8 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         // EXPECTED_SEQUENCE
         if (indexSequence == INITIAL_CONDITION || sequence.equals(indexSequence + step)) {
+            LOGGER.debug(String.format("EXPECTED_SEQUENCE (indexSequence: %d, step: %d, sequence: %d)", indexSequence, step, sequence));
+
             // Add a single result
             results.add(value);
 
@@ -232,6 +244,8 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         // POSITIVE_HOLE
         if (sequence > expectedSequence) {
+            LOGGER.debug(String.format("POSITIVE_HOLE (indexSequence: %d, step: %d, sequence: %d, idealSize: %d)", indexSequence, step, sequence, window.getIdealSize()));
+
             Set<Long> holes = getHolesBetween(indexSequence, sequence);
             window.put(sequence, value);
             this.holes.addAll(holes);
@@ -245,9 +259,11 @@ public class SlidingWindow<P> extends DestroyableBase {
 
         // NEGATIVE_HOLE
         if (sequence < indexSequence + step) {
+            LOGGER.debug(String.format("NEGATIVE_HOLE (indexSequence: %d, step: %d, sequence: %d, idealSize: %d)", indexSequence, step, sequence, window.getIdealSize()));
 
             // This sequence is much lower, must be a reset
             if (indexSequence + step - sequence > window.getIdealSize()) {
+                LOGGER.warn("Detected a version reset, clearing window!");
                 indexSequence = sequence;
                 window.clear();
                 holes.clear();
