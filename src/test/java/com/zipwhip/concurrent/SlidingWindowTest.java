@@ -411,10 +411,10 @@ public class SlidingWindowTest {
     public void testRangeBuilderNormal() throws Exception {
         Set<Long> holes = new TreeSet<Long>(Arrays.asList(0L, 1L, 2L));
 
-        Set<SlidingWindow.HoleRange> ranges = window.buildHoleRanges(holes);
+        Set<HoleRange> ranges = window.buildHoleRanges(holes);
 
         assertEquals(1, ranges.size());
-        SlidingWindow.HoleRange range = ranges.iterator().next();
+        HoleRange range = ranges.iterator().next();
         assertTrue(range.getKey().equals(key));
         assertTrue(range.getStart() == 0L);
         assertTrue(range.getEnd() == 2L);
@@ -424,13 +424,13 @@ public class SlidingWindowTest {
     public void testRangeBuilderGap() throws Exception {
         Set<Long> holes = new TreeSet<Long>(Arrays.asList(0L, 2L));
 
-        Set<SlidingWindow.HoleRange> ranges = window.buildHoleRanges(holes);
+        Set<HoleRange> ranges = window.buildHoleRanges(holes);
 
         assertEquals(2, ranges.size());
 
-        Iterator<SlidingWindow.HoleRange> iterator = ranges.iterator();
+        Iterator<HoleRange> iterator = ranges.iterator();
 
-        SlidingWindow.HoleRange range = iterator.next();
+        HoleRange range = iterator.next();
         assertTrue(range.getKey().equals(key));
         assertEquals(0L, range.getStart());
         assertEquals(0L, range.getEnd());
@@ -445,13 +445,13 @@ public class SlidingWindowTest {
     public void testRangeBuilderGap2() throws Exception {
         Set<Long> holes = new TreeSet<Long>(Arrays.asList(0L, 1L, 3L, 4L));
 
-        Set<SlidingWindow.HoleRange> ranges = window.buildHoleRanges(holes);
+        Set<HoleRange> ranges = window.buildHoleRanges(holes);
 
         assertEquals(2, ranges.size());
 
-        Iterator<SlidingWindow.HoleRange> iterator = ranges.iterator();
+        Iterator<HoleRange> iterator = ranges.iterator();
 
-        SlidingWindow.HoleRange range = iterator.next();
+        HoleRange range = iterator.next();
         assertTrue(range.getKey().equals(key));
         assertTrue(range.getStart() == 0L);
         assertTrue(range.getEnd() == 1L);
@@ -466,13 +466,13 @@ public class SlidingWindowTest {
     public void testRangeBuilderGap3() throws Exception {
         Set<Long> holes = new TreeSet<Long>(Arrays.asList(0L, 1L, 3L, 4L, 6L));
 
-        Set<SlidingWindow.HoleRange> ranges = window.buildHoleRanges(holes);
+        Set<HoleRange> ranges = window.buildHoleRanges(holes);
 
         assertEquals(3, ranges.size());
 
-        Iterator<SlidingWindow.HoleRange> iterator = ranges.iterator();
+        Iterator<HoleRange> iterator = ranges.iterator();
 
-        SlidingWindow.HoleRange range = iterator.next();
+        HoleRange range = iterator.next();
         assertTrue(range.getKey().equals(key));
         assertEquals(0L, range.getStart());
         assertEquals(1L, range.getEnd());
@@ -714,7 +714,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(0, window.getHoles(keys).size());
 
         keys.add(3L);
-        List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
+        List<HoleRange> holes = window.getHoles(keys);
         Assert.assertEquals(1, holes.size());
         Assert.assertEquals(2L, holes.get(0).start);
         Assert.assertEquals(2L, holes.get(0).end);
@@ -738,7 +738,7 @@ public class SlidingWindowTest {
         Assert.assertEquals(0, window.getHoles(keys).size());
 
         keys.add(5L);
-        List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
+        List<HoleRange> holes = window.getHoles(keys);
         Assert.assertEquals(1, holes.size());
         Assert.assertEquals(3L, holes.get(0).start);
         Assert.assertEquals(4L, holes.get(0).end);
@@ -750,19 +750,19 @@ public class SlidingWindowTest {
         Assert.assertEquals(0, window.getHoles(keys).size());
 
         keys.add(5L);
-        List<SlidingWindow.HoleRange> holes = window.getHoles(keys);
+        List<HoleRange> holes = window.getHoles(keys);
         Assert.assertEquals(1, holes.size());
         Assert.assertEquals(0L, holes.get(0).start);
         Assert.assertEquals(4L, holes.get(0).end);
     }
 
-    private class HoleTimeoutObserver implements Observer<SlidingWindow.HoleRange> {
+    private class HoleTimeoutObserver implements Observer<HoleRange> {
 
-        protected SlidingWindow.HoleRange hole;
+        protected HoleRange hole;
         public CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void notify(Object sender, SlidingWindow.HoleRange item) {
+        public void notify(Object sender, HoleRange item) {
             hole = item;
             latch.countDown();
         }

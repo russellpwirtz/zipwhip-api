@@ -1110,9 +1110,9 @@ public class SocketSignalProvider extends SignalProviderBase implements SignalPr
         signalVerificationReceivedEvent.notifyObservers(this, null);
     }
 
-    private final Observer<SlidingWindow.HoleRange> signalHoleObserver = new Observer<SlidingWindow.HoleRange>() {
+    private final Observer<HoleRange> signalHoleObserver = new Observer<HoleRange>() {
         @Override
-        public void notify(Object sender, SlidingWindow.HoleRange hole) {
+        public void notify(Object sender, HoleRange hole) {
             LOGGER.debug("Signal hole detected, requesting backfill for  " + hole.toString());
             signalConnection.send(new BackfillCommand(hole.getRange(), hole.getKey()));
         }
