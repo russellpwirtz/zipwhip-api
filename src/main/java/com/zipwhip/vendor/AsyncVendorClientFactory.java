@@ -1,6 +1,7 @@
 package com.zipwhip.vendor;
 
 import com.zipwhip.api.ApiConnection;
+import com.zipwhip.api.ApiConnectionConfiguration;
 import com.zipwhip.api.ApiConnectionFactory;
 import com.zipwhip.api.NingApiConnectionFactory;
 import com.zipwhip.util.Factory;
@@ -32,7 +33,7 @@ public class AsyncVendorClientFactory implements Factory<AsyncVendorClient> {
 
         ApiConnectionFactory connectionFactory = new NingApiConnectionFactory();
 
-        connectionFactory.setHost(ApiConnection.DEFAULT_SIGNALS_HOST);
+        connectionFactory.setHost(ApiConnectionConfiguration.SIGNALS_HOST);
         connectionFactory.setApiVersion(API_VERSION);
         connectionFactory.setApiKey(apiKey);
         connectionFactory.setSecret(secret);

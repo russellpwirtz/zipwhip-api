@@ -19,9 +19,12 @@ public interface VersionRange {
     // Remove and return current holes
     List<HoleRange> takeHoles();
 
-    Observable<HoleRange> getHoleDetectedEvent();
-
     // Track the latest
     Long getHighestVersion();
 
+    // Notifies when holes are detected
+    Observable<HoleRange> getHoleDetectedEvent();
+
+    // Notifies when version reset is detected
+    Observable<Long> getResetDetectedEvent();
 }

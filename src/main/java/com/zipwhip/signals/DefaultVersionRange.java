@@ -24,23 +24,33 @@ public class DefaultVersionRange implements VersionRange {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultVersionRange.class);
 
     private final ObservableHelper<HoleRange> holeDetectedEvent =
-            new ObservableHelper<HoleRange>("SignalManager/Event", SimpleExecutor.getInstance());
+            new ObservableHelper<HoleRange>("DefaultVersionRange/HoleEvent", SimpleExecutor.getInstance());
+
+    private final ObservableHelper<Long> resetDetectedEvent =
+            new ObservableHelper<Long>("DefaultVersionRange/ResetEvent", SimpleExecutor.getInstance());
+
+    protected static final int DEFAULT_HOLE_NOTIFY_TIMEOUT = 3;
+    protected static final int DEFAULT_MAX_RANGE = 50;
 
     private final Timer timer;
 
     private String key;
     private BufferedRunnable holeDetectedEventRunnable;
     protected List<Value> list = new LinkedList<Value>();
-    private Set<Long> holes = new TreeSet<Long>();
-
-    public DefaultVersionRange(Timer timer) {
-        this.timer = timer;
-        this.holeDetectedEventRunnable = new BufferedRunnable(this.timer, this.notifyHoles, 3, TimeUnit.SECONDS);
-    }
+    protected Set<Long> holes = new TreeSet<Long>();
 
     public DefaultVersionRange(Timer timer, String key) {
         this(timer);
         this.key = key;
+    }
+
+    public DefaultVersionRange(Timer timer) {
+        this(timer, DEFAULT_HOLE_NOTIFY_TIMEOUT, TimeUnit.SECONDS);
+    }
+
+    public DefaultVersionRange(Timer timer, int notifyHoleTimeout, TimeUnit timeUnit) {
+        this.timer = timer;
+        this.holeDetectedEventRunnable = new BufferedRunnable(this.timer, this.notifyHoles, notifyHoleTimeout, timeUnit);
     }
 
     @Override
@@ -87,30 +97,42 @@ public class DefaultVersionRange implements VersionRange {
         // Is there a hole?
         boolean holeToLeft = !(isToTheLeft(toTheLeft, value) || toTheLeft.equals(value));
         boolean holeToRight = !(isToTheRight(toTheRight, value) || toTheRight.equals(value));
-        boolean anyHole = holeToLeft || holeToRight;
 
         if (holeToLeft) {
-            // TODO: if over max hole range, reset
             long neighborVersion = value.getLong() - 1;
             while (neighborVersion != toTheLeft.getLong()) {
-                LOGGER.debug("Detected negative hole! Version: " + neighborVersion);
+                LOGGER.debug("Detected hole to the left! Version: " + neighborVersion);
                 holes.add(neighborVersion);
                 neighborVersion--;
             }
         }
 
         if (holeToRight) {
-            // TODO: if over max hole range, reset
+            if (version + DEFAULT_MAX_RANGE < getHighestVersion()) {
+                LOGGER.warn("Received much lower version, must have been a version reset!");
+                holes.clear();
+                list.clear();
+                list.add(value);
+
+                resetDetectedEvent.notifyObservers(DefaultVersionRange.this, version);
+
+                return true;
+            }
+
             long neighborVersion = value.getLong() + 1;
             while (neighborVersion != toTheRight.getLong()) {
-                LOGGER.debug("Detected positive hole! Version: " + neighborVersion);
+                LOGGER.debug("Detected hole to the right! Version: " + neighborVersion);
                 holes.add(neighborVersion);
                 neighborVersion++;
             }
         }
 
-        if (anyHole) {
-            LOGGER.debug("Running holeDetectedEventRunnable for " + holes.size() + " holes.");
+        if (CollectionUtil.exists(holes)) {
+            if (holes.contains(version)) {
+                // not a hole anymore, we just received it!
+                holes.remove(version);
+            }
+
             holeDetectedEventRunnable.run();
         }
 
@@ -122,6 +144,8 @@ public class DefaultVersionRange implements VersionRange {
     private final Runnable notifyHoles = new Runnable() {
         @Override
         public void run() {
+            LOGGER.debug(String.format("Running holeDetectedEventRunnable for %d holes.", holes.size()));
+
             synchronized (DefaultVersionRange.this) {
                 List<HoleRange> holes = takeHoles();
 
@@ -135,7 +159,6 @@ public class DefaultVersionRange implements VersionRange {
     };
 
     private boolean isToTheRight(Value toTheRight, Value value) {
-        // TODO: is this the correct use of .equals?
         return toTheRight.getLong().equals(value.getLong() + 1);
     }
 
@@ -157,27 +180,17 @@ public class DefaultVersionRange implements VersionRange {
             Value toTheLeft = lookBehind(index);
             Value toTheRight = lookAhead(index);
 
-            // Verify the begin edge condition
-
+            // Keep the first element for tracking
             if (index == 0) {
-                if (toTheRight == null) {
-                    // It's a hole, or the first one of a list of 1.
-                    // We've already verified that the list contains more than 1 item.
-                    throw new RuntimeException("This should never happen");
-                } else if (isToTheRight(toTheRight, currentValue)) {
+                continue;
+            }
+
+            if (toTheLeft != null && toTheLeft.getLong() == currentValue.getLong() - 1) {
+                if (toTheRight != null && toTheRight.getLong() == currentValue.getLong() + 1) {
+                    toTheLeft.setTrimmedToRight(true);
                     toTheRight.setTrimmedToLeft(true);
 
-                    if (toTheLeft != null) {
-                        toTheLeft.setTrimmedToRight(true);
-                    }
-
-                    // Correct sequence
-                    // Remove this current position because beginning edges are destructable.
                     thingsToRemove.add(currentValue.getLong());
-                    continue;
-                } else {
-                    // Incorrect sequence
-                    // This needs to stay in the list
                     continue;
                 }
             }
@@ -283,19 +296,24 @@ public class DefaultVersionRange implements VersionRange {
     }
 
     @Override
+    public Observable<Long> getResetDetectedEvent() {
+        return resetDetectedEvent;
+    }
+
+    @Override
     public Long getHighestVersion() {
         if (CollectionUtil.isNullOrEmpty(list)) {
             return null;
         }
-
-        LOGGER.debug(String.format("Getting highest version out of %d versions. First entry: %s, last entry: %s",
-                list.size(), list.get(0).getLong(), list.get(list.size() - 1).getLong()));
 
         Value value = list.get(list.size() - 1);
 
         if (value == null) {
             return null;
         }
+
+        LOGGER.debug(String.format("Getting highest version: [%d] out of %d versions.",
+                value.getLong(), list.size()));
 
         return value.getLong();
     }
@@ -379,7 +397,6 @@ public class DefaultVersionRange implements VersionRange {
             return (int) (value ^ (value >>> 32));
         }
 
-        // TODO: validate this comparison
         @Override
         public int compareTo(Value o) {
             if (o == null) {
