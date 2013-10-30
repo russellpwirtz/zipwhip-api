@@ -14,7 +14,7 @@ import com.zipwhip.util.Factory;
 public class SignalProviderFactory implements Factory<SignalProvider> {
 
     private ImportantTaskExecutor importantTaskExecutor;
-    private BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue;
+    private Factory<BufferedOrderedQueue<DeliveredMessage>> bufferedOrderedQueueFactory;
     private Factory<SignalConnection> signalConnectionFactory;
     private SignalsSubscribeActor signalsSubscribeActor;
 
@@ -23,7 +23,7 @@ public class SignalProviderFactory implements Factory<SignalProvider> {
         SignalProviderImpl signalProvider = new SignalProviderImpl();
 
         signalProvider.setImportantTaskExecutor(importantTaskExecutor);
-        signalProvider.setBufferedOrderedQueue(bufferedOrderedQueue);
+        signalProvider.setBufferedOrderedQueue(bufferedOrderedQueueFactory.create());
         signalProvider.setSignalConnection(signalConnectionFactory.create());
         signalProvider.setSignalsSubscribeActor(signalsSubscribeActor);
 
@@ -38,12 +38,12 @@ public class SignalProviderFactory implements Factory<SignalProvider> {
         this.importantTaskExecutor = importantTaskExecutor;
     }
 
-    public BufferedOrderedQueue<DeliveredMessage> getBufferedOrderedQueue() {
-        return bufferedOrderedQueue;
+    public Factory<BufferedOrderedQueue<DeliveredMessage>> getBufferedOrderedQueueFactory() {
+        return bufferedOrderedQueueFactory;
     }
 
-    public void setBufferedOrderedQueue(BufferedOrderedQueue<DeliveredMessage> bufferedOrderedQueue) {
-        this.bufferedOrderedQueue = bufferedOrderedQueue;
+    public void setBufferedOrderedQueueFactory(Factory<BufferedOrderedQueue<DeliveredMessage>> bufferedOrderedQueueFactory) {
+        this.bufferedOrderedQueueFactory = bufferedOrderedQueueFactory;
     }
 
     public Factory<SignalConnection> getSignalConnectionFactory() {
