@@ -47,7 +47,7 @@ public class GsonParserTest {
         signal.setDateRead(435345245L);
         signal.setAdvertisement("advertisement");
         signal.setTransmissionState("DELIVERED");
-        signal.setContactId(4345345L);
+//        signal.setContactId(4345345L);
         signal.setMessageType("MO");
         signal.setAddress("ptn:/234234");
         signal.setFingerprint("fingerprint");
