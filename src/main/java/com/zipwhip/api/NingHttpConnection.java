@@ -108,7 +108,6 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
 
     private void init() {
         final AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
-        if (getProxyServer() != null) builder.setProxyServer(getProxyServer());
         builder.setConnectionTimeoutInMs(10000);
         asyncHttpClient = new AsyncHttpClient(builder.build());
     }
@@ -227,7 +226,12 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
 
             final Request request = builder.build();
             LOGGER.debug("==> Cloud Request: " + request.getUrl());
-            asyncHttpClient.prepareRequest(request).execute(new AsyncCompletionHandler<Object>() {
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder = asyncHttpClient.prepareRequest(request);
+            if (proxyServer != null) {
+                requestBuilder.setProxyServer(proxyServer);
+            }
+
+            requestBuilder.execute(new AsyncCompletionHandler<Object>() {
 
                 @Override
                 public Object onCompleted(Response response) throws Exception {
@@ -272,7 +276,11 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
         final ObservableFuture<InputStream> responseFuture = new DefaultObservableFuture<InputStream>(this, workerExecutor);
 
         try {
-            asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder = asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator));
+            if (proxyServer != null) {
+                requestBuilder.setProxyServer(proxyServer);
+            }
+            requestBuilder.execute(new AsyncCompletionHandler<Object>() {
 
                 @Override
                 public Object onCompleted(Response response) throws Exception {
@@ -326,8 +334,5 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
         return proxyServer;
     }
 
-//    public void setProxyServer(ProxyServer proxyServer) {
-//        this.proxyServer = proxyServer;
-//    }
 }
 
