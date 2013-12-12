@@ -10,7 +10,8 @@ import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.util.concurrent.Executor;
  */
 public class NingHttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NingHttpConnection.class);
 
     private String apiVersion = DEFAULT_API_VERSION;
     private String host = ApiConnectionConfiguration.API_HOST;
