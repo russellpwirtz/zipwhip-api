@@ -12,6 +12,7 @@ import com.zipwhip.signals2.presence.Presence;
 import com.zipwhip.signals2.presence.UserAgentCategory;
 import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.StringUtil;
+import com.zipwhip.util.UrlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -610,6 +611,14 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public Group getGroup(final String address) throws Exception {
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("address", address);
+
+        return responseParser.parseGroup(executeSync(GROUP_GET, params));
+    }
+
+    @Override
     public void saveContact(String address, String firstName, String lastName, String phoneKey, String notes) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -661,6 +670,41 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
     }
 
     @Override
+    public Map<String, String> getFaceName(Collection<String> phoneNumbers) throws Exception {
+        if (CollectionUtil.isNullOrEmpty(phoneNumbers)) {
+            return null;
+        }
+
+        if (phoneNumbers.size() > 100) {
+            throw new IllegalArgumentException("phoneNumbers size should be <= 100");
+        }
+
+        final String phoneNumbersParam = UrlUtil.collectionToString(phoneNumbers, ',');
+        if (StringUtil.isNullOrEmpty(phoneNumbersParam)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumbers", phoneNumbersParam);
+
+        return responseParser.parseFaceNames(executeSync(FACE_NAMES, params, false));
+    }
+
+    @Override
+    public byte[] getGroupImage(final String address, final int size) throws Exception {
+        if (StringUtil.isNullOrEmpty(address)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("address", address);
+        if (size > 0) params.put("size", size);
+        params.put("time", System.currentTimeMillis());//Do not cache
+
+        ObservableFuture<byte[]> binaryResponseFuture = executeAsyncBinaryResponse(GROUP_IMAGE, params, true);
+
+        // Block and wait...
+        binaryResponseFuture.awaitUninterruptibly();
+        return binaryResponseFuture.getResult();
+    }
+
+    @Override
     public byte[] getFaceImage(String mobileNumber, boolean thumbnail) throws Exception {
 
         final Map<String, Object> params = new HashMap<String, Object>();
@@ -687,6 +731,25 @@ public class DefaultZipwhipClient extends ClientZipwhipNetworkSupport implements
         // Block and wait...
         binaryResponseFuture.awaitUninterruptibly();
         return binaryResponseFuture.getResult();
+    }
+
+    @Override
+    public Map<String, Boolean> hasFaceImage(Collection<String> phoneNumbers) throws Exception {
+        if (CollectionUtil.isNullOrEmpty(phoneNumbers)) {
+            return null;
+        }
+
+        if (phoneNumbers.size() > 100) {
+            throw new IllegalArgumentException("phoneNumbers size should be <= 100");
+        }
+
+        final String phoneNumbersParam = UrlUtil.collectionToString(phoneNumbers, ',');
+        if (StringUtil.isNullOrEmpty(phoneNumbersParam)) return null;
+
+        final Map<String, Object> params = new HashMap<String, Object>();
+        params.put("mobileNumbers", phoneNumbersParam);
+
+        return responseParser.parseFaceImages(executeSync(FACE_IMAGES, params));
     }
 
     @Override

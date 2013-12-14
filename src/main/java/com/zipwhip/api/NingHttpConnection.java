@@ -11,7 +11,8 @@ import com.zipwhip.util.CollectionUtil;
 import com.zipwhip.util.SignTool;
 import com.zipwhip.util.StringUtil;
 import com.zipwhip.util.UrlUtil;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +32,7 @@ import java.util.concurrent.Executor;
  */
 public class NingHttpConnection extends CascadingDestroyableBase implements ApiConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(NingHttpConnection.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NingHttpConnection.class);
 
     private String apiVersion = DEFAULT_API_VERSION;
     private String host = ApiConnectionConfiguration.API_HOST;
@@ -109,7 +110,6 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
 
     private void init() {
         final AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
-        if (getProxyServer() != null) builder.setProxyServer(getProxyServer());
         builder.setConnectionTimeoutInMs(10000);
         asyncHttpClient = new AsyncHttpClient(builder.build());
     }
@@ -228,7 +228,12 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
 
             final Request request = builder.build();
             LOGGER.debug("==> Cloud Request: " + request.getUrl());
-            asyncHttpClient.prepareRequest(request).execute(new AsyncCompletionHandler<Object>() {
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder = asyncHttpClient.prepareRequest(request);
+            if (proxyServer != null) {
+                requestBuilder.setProxyServer(proxyServer);
+            }
+
+            requestBuilder.execute(new AsyncCompletionHandler<Object>() {
 
                 @Override
                 public Object onCompleted(Response response) throws Exception {
@@ -273,13 +278,17 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
         final MutableObservableFuture<InputStream> responseFuture = new DefaultObservableFuture<InputStream>(this, workerExecutor);
 
         try {
-            asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator)).execute(new AsyncCompletionHandler<Object>() {
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder = asyncHttpClient.prepareGet(UrlUtil.getSignedUrl(host, apiVersion, method, rb.build(), sessionKey, authenticator));
+            if (proxyServer != null) {
+                requestBuilder.setProxyServer(proxyServer);
+            }
+            requestBuilder.execute(new AsyncCompletionHandler<Object>() {
 
                 @Override
                 public Object onCompleted(Response response) throws Exception {
 
                     // TODO Remove this once zipwhip uses real HTTP codes
-                    if (response.getContentType().contains("json")) {
+                    if (response.getContentType() != null && response.getContentType().contains("json")) {
                         responseFuture.setFailure(new Exception("404 - Resource not found"));
                         return response;
                     }
@@ -327,8 +336,8 @@ public class NingHttpConnection extends CascadingDestroyableBase implements ApiC
         return proxyServer;
     }
 
-//    public void setProxyServer(ProxyServer proxyServer) {
-//        this.proxyServer = proxyServer;
-//    }
+    public void setProxyServer(ProxyServer proxyServer) {
+        this.proxyServer = proxyServer;
+    }
 }
 

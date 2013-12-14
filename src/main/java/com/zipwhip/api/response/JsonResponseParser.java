@@ -217,6 +217,14 @@ public class JsonResponseParser implements ResponseParser {
         }
     }
 
+    @Override
+    public Group parseGroup(ServerResponse serverResponse) throws Exception {
+        if (serverResponse instanceof ObjectServerResponse) {
+            return parser.parseGroup(((ObjectServerResponse) serverResponse).response);
+        } else {
+            throw new Exception("ServerResponse must by an ObjectServerResponse");
+        }
+    }
 
     @Override
     public User parseUser(ServerResponse serverResponse) throws Exception {
@@ -393,6 +401,48 @@ public class JsonResponseParser implements ResponseParser {
         }
 
         return name;
+    }
+
+    @Override
+    public Map<String, String> parseFaceNames(final ServerResponse serverResponse) throws Exception {
+        if (serverResponse == null) return null;
+
+        final JSONObject response = new JSONObject(serverResponse.getRaw());
+        final Map<String, String> faceNameMap = new HashMap<String, String>(response.length());
+        final Iterator itr = response.keys();
+        String key = null;
+        String value = null;
+
+        while (itr.hasNext()) {
+            key = (String) itr.next();
+            value = response.optString(key);
+
+            if (!StringUtil.isNullOrEmpty(value)) {
+                faceNameMap.put(key, new JSONObject(value).optString("fullName"));
+            }
+        }
+
+        return faceNameMap;
+    }
+
+    @Override
+    public Map<String, Boolean> parseFaceImages(ServerResponse serverResponse) throws Exception {
+        if (serverResponse == null) return null;
+
+        final JSONObject response = new JSONObject(serverResponse.getRaw());
+        final Map<String, Boolean> faceImageMap = new HashMap<String, Boolean>(response.length());
+        final Iterator itr = response.keys();
+        String key = null;
+        boolean value;
+
+        while (itr.hasNext()) {
+            key = (String) itr.next();
+            value = response.optBoolean(key);
+
+            faceImageMap.put(key, value);
+        }
+
+        return faceImageMap;
     }
 
     @Override

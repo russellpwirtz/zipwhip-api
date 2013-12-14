@@ -141,6 +141,14 @@ public interface ZipwhipClient extends Destroyable {
     Contact saveGroup(String type, String advertisement) throws Exception;
 
     /**
+     * Returns the Group for the provided device address
+     *
+     * @param address - the group address
+     * @return
+     */
+    Group getGroup(String address) throws Exception;
+
+    /**
      * Create a new group.
      *
      * @return A {@link Contact} representing the new group.
@@ -543,6 +551,17 @@ public interface ZipwhipClient extends Destroyable {
      */
     String getFaceName(String mobileNumber) throws Exception;
 
+
+    /**
+     * Bulk Query Zipwhip Face Ecosystem for a users' preferred profile names.
+     *
+     * @param phoneNumbers Collection of phone numbers you wish to query.
+     * @return Map of phone number/full name
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
+     */
+    public Map<String, String> getFaceName(Collection<String> phoneNumbers) throws Exception;
+
     /**
      * Query Zipwhip Face Ecosystem for a user's preferred profile image.
      *
@@ -562,6 +581,16 @@ public interface ZipwhipClient extends Destroyable {
      * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
      */
     byte[] getFaceImage(String mobileNumber, int size) throws Exception;
+
+    /**
+     * Check if the phone number has a face eco image
+     *
+     * @param phoneNumbers Collection of phone numbers you wish to query.
+     * @return Map of phone number/boolean (exists or not)
+     * @throws Exception                if an error occurs communicating with Zipwhip or parsing the response.
+     * @throws IllegalArgumentException if the phoneNumber size is larger than 100.
+     */
+    public Map<String, Boolean> hasFaceImage(Collection<String> phoneNumbers) throws Exception;
 
     /**
      * Query for a message's MMS attachment descriptors.
@@ -651,4 +680,13 @@ public interface ZipwhipClient extends Destroyable {
      */
     void setSettingsStore(SettingsStore store);
 
+    /**
+     * Query Group image by address.
+     *
+     * @param address group address.
+     * @param size    thumbnail size.
+     * @return A byte[] of the group's image.
+     * @throws Exception if an error occurs communicating with Zipwhip or the image is not found.
+     */
+    byte[] getGroupImage(String address, int size) throws Exception;
 }
