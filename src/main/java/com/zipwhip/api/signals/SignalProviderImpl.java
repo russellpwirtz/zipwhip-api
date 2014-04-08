@@ -305,6 +305,9 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
     public final Observer<DeliveredMessage> releaseMessageObserver = new Observer<DeliveredMessage>() {
         @Override
         public void notify(Object sender, DeliveredMessage message) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Releasing message from bufferedOrderedQueue: " + message);
+            }
 
             // first check for system commands
             if (StringUtil.equalsIgnoreCase(message.getType(), "subscribe")) {
@@ -312,14 +315,21 @@ public class SignalProviderImpl extends CascadingDestroyableBase implements Sign
             } else if (StringUtil.equalsIgnoreCase(message.getType(), "presence")) {
                 presenceChangedEvent.notifyObservers(this, message);
             } else {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Notifying observers to signalReceivedEvent: " + message);
+                }
+
                 signalReceivedEvent.notifyObservers(this, message);
             }
         }
     };
 
     private void handleSubscribeCommand(DeliveredMessage message) {
-        if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Got SubscribeCommand: " + message);
+        }
 
+        if (StringUtil.equalsIgnoreCase(message.getEvent(), "complete")) {
             handleSubscribeComplete(message);
         } else {
             throw new IllegalStateException("Not sure what event this is: " + message.getEvent());
